@@ -1,0 +1,50 @@
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+ :: Spring Boot ::               (v2.7.18)
+
+2026-06-24 16:18:33.228  INFO 32100 --- [           main] com.codeperf.demo.DemoApplication        : Starting DemoApplication using Java 1.8.0_341 on zhangzhao with PID 32100 (D:\workspace\codeperf\codeperf-demo\target\codeperf-demo.jar started by zhang in D:\workspace\codeperf)
+2026-06-24 16:18:33.228  INFO 32100 --- [           main] com.codeperf.demo.DemoApplication        : No active profile set, falling back to 1 default profile: "default"
+2026-06-24 16:18:34.115  INFO 32100 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port(s): 8080 (http)
+2026-06-24 16:18:34.115  INFO 32100 --- [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-06-24 16:18:34.115  INFO 32100 --- [           main] org.apache.catalina.core.StandardEngine  : Starting Servlet engine: [Apache Tomcat/9.0.83]
+2026-06-24 16:18:34.206  INFO 32100 --- [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-06-24 16:18:34.206  INFO 32100 --- [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 939 ms
+2026-06-24 16:18:34.285  INFO 32100 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-06-24 16:18:34.475  INFO 32100 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-06-24 16:18:34.726  INFO 32100 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port(s): 8080 (http) with context path ''
+2026-06-24 16:18:34.736  INFO 32100 --- [           main] com.codeperf.demo.DemoApplication        : Started DemoApplication in 1.804 seconds (JVM running for 2.101)
+2026-06-24 16:18:34.820  INFO 32100 --- [nio-8080-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-06-24 16:18:34.820  INFO 32100 --- [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-06-24 16:18:34.822  INFO 32100 --- [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 2 ms
+2026-06-24 16:18:34.834  WARN 32100 --- [nio-8080-exec-1] .w.s.m.s.DefaultHandlerExceptionResolver : Resolved [org.springframework.web.HttpRequestMethodNotSupportedException: Request method 'GET' not supported]
+[codeperf] agent starting, AgentConfig{targetPackages=[com.codeperf.demo], entry=POST /api/orders/report, slowSqlMs=500, output=D:\workspace\codeperf\perf-data.raw, sampleMs=10, mode=session}
+[Byte Buddy] TRANSFORM com.zaxxer.hikari.pool.HikariProxyPreparedStatement [org.springframework.boot.loader.LaunchedURLClassLoader@6433a2, null, Thread[Attach Listener,5,system], loaded=true]
+[Byte Buddy] TRANSFORM com.zaxxer.hikari.pool.ProxyPreparedStatement [org.springframework.boot.loader.LaunchedURLClassLoader@6433a2, null, Thread[Attach Listener,5,system], loaded=true]
+[Byte Buddy] TRANSFORM org.h2.jdbc.JdbcPreparedStatement [org.springframework.boot.loader.LaunchedURLClassLoader@6433a2, null, Thread[Attach Listener,5,system], loaded=true]
+[Byte Buddy] TRANSFORM com.codeperf.demo.repo.UserRepository$$EnhancerBySpringCGLIB$$61fc3e31 [org.springframework.boot.loader.LaunchedURLClassLoader@6433a2, null, Thread[Attach Listener,5,system], loaded=true]
+[Byte Buddy] TRANSFORM com.codeperf.demo.domain.Order [org.springframework.boot.loader.LaunchedURLClassLoader@6433a2, null, Thread[Attach Listener,5,system], loaded=true]
+[Byte Buddy] TRANSFORM com.codeperf.demo.domain.User [org.springframework.boot.loader.LaunchedURLClassLoader@6433a2, null, Thread[Attach Listener,5,system], loaded=true]
+[Byte Buddy] TRANSFORM com.zaxxer.hikari.pool.HikariProxyStatement [org.springframework.boot.loader.LaunchedURLClassLoader@6433a2, null, Thread[Attach Listener,5,system], loaded=true]
+[Byte Buddy] TRANSFORM com.zaxxer.hikari.pool.ProxyStatement [org.springframework.boot.loader.LaunchedURLClassLoader@6433a2, null, Thread[Attach Listener,5,system], loaded=true]
+[Byte Buddy] TRANSFORM org.h2.jdbc.JdbcStatement [org.springframework.boot.loader.LaunchedURLClassLoader@6433a2, null, Thread[Attach Listener,5,system], loaded=true]
+[Byte Buddy] TRANSFORM com.zaxxer.hikari.pool.HikariProxyConnection [org.springframework.boot.loader.LaunchedURLClassLoader@6433a2, null, Thread[Attach Listener,5,system], loaded=true]
+[Byte Buddy] TRANSFORM com.zaxxer.hikari.pool.ProxyConnection [org.springframework.boot.loader.LaunchedURLClassLoader@6433a2, null, Thread[Attach Listener,5,system], loaded=true]
+[Byte Buddy] TRANSFORM org.h2.jdbc.JdbcConnection [org.springframework.boot.loader.LaunchedURLClassLoader@6433a2, null, Thread[Attach Listener,5,system], loaded=true]
+[Byte Buddy] TRANSFORM com.codeperf.demo.DemoApplication$$EnhancerBySpringCGLIB$$23c89b [org.springframework.boot.loader.LaunchedURLClassLoader@6433a2, null, Thread[Attach Listener,5,system], loaded=true]
+[Byte Buddy] TRANSFORM com.codeperf.demo.web.ReportController [org.springframework.boot.loader.LaunchedURLClassLoader@6433a2, null, Thread[Attach Listener,5,system], loaded=true]
+[Byte Buddy] TRANSFORM com.codeperf.demo.service.OrderReportService [org.springframework.boot.loader.LaunchedURLClassLoader@6433a2, null, Thread[Attach Listener,5,system], loaded=true]
+[Byte Buddy] TRANSFORM com.codeperf.demo.repo.UserRepository [org.springframework.boot.loader.LaunchedURLClassLoader@6433a2, null, Thread[Attach Listener,5,system], loaded=true]
+[Byte Buddy] TRANSFORM com.codeperf.demo.DataSeeder [org.springframework.boot.loader.LaunchedURLClassLoader@6433a2, null, Thread[Attach Listener,5,system], loaded=true]
+[Byte Buddy] TRANSFORM org.springframework.web.servlet.DispatcherServlet [org.springframework.boot.loader.LaunchedURLClassLoader@6433a2, null, Thread[Attach Listener,5,system], loaded=true]
+[Byte Buddy] TRANSFORM com.codeperf.demo.DemoApplication [org.springframework.boot.loader.LaunchedURLClassLoader@6433a2, null, Thread[Attach Listener,5,system], loaded=true]
+[Byte Buddy] TRANSFORM com.sun.proxy.$Proxy56 [null, null, Thread[Attach Listener,5,system], loaded=true]
+[codeperf] instrumentation installed; waiting for entry: POST /api/orders/report
+[demo] >>>  ’µΩ«Î«Û POST/GET /api/orders/report
+[Byte Buddy] TRANSFORM com.codeperf.demo.repo.UserRepository$$FastClassBySpringCGLIB$$dff70a71 [org.springframework.boot.loader.LaunchedURLClassLoader@6433a2, null, Thread[http-nio-8080-exec-2,5,main], loaded=false]
+[Byte Buddy] TRANSFORM com.codeperf.demo.repo.UserRepository$$EnhancerBySpringCGLIB$$61fc3e31$$FastClassBySpringCGLIB$$39493d10 [org.springframework.boot.loader.LaunchedURLClassLoader@6433a2, null, Thread[http-nio-8080-exec-2,5,main], loaded=false]
+[codeperf] session data written to D:\workspace\codeperf\perf-data.raw

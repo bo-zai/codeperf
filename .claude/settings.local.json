@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls -la \"D:\\\\workspace\\\\codeperf\"/mvnw*)",
+      "Read(//d/Java8/jdk1.8.0_341/bin/\" 2>/dev/**)",
+      "Bash(ls D:/workspace/codeperf/mvnw*)",
+      "Bash(java -cp /tmp/cpout:__TRACKED_VAR__ com.codeperf.cli.Main scan --target-package com.codeperf.demo --classes-dir codeperf-demo/target/classes --output /tmp/perf-static.json --report /tmp/static-report.html)",
+      "Bash(java -cp /tmp/cpout:__TRACKED_VAR__ com.codeperf.cli.Main report --input perf-data.raw --static /tmp/perf-static.json --output /tmp/merged-report.html --fail-on warn)",
+      "Bash(echo \"EXIT=$?\")",
+      "Bash(java -cp /tmp/cpout:__TRACKED_VAR__ com.codeperf.cli.Main report --input perf-data.raw --static /tmp/perf-static.json --output /tmp/m.html --fail-on warn)",
+      "Bash(echo \"REPORT_GATE_EXIT=$?\")",
+      "Bash(java -cp /tmp/cpout:__TRACKED_VAR__ com.codeperf.cli.Main scan --target-package com.codeperf.demo --classes-dir codeperf-demo/target/classes --output /tmp/s.json)",
+      "Bash(echo \"SCAN_EXIT=$?\")",
+      "Bash(bash -n scripts/run-demo.sh)",
+      "Bash(chmod +x scripts/run-demo.sh)",
+      "Bash(java -cp /tmp/cpout:__TRACKED_VAR__ com.codeperf.cli.Main report --input perf-data.raw --static /tmp/perf-static.json --output /tmp/script-step4.html --fail-on warn)",
+      "Bash(echo \"report rc=$?  \\(3=门禁触发，符合预期\\)\")"
+    ]
+  }
+}

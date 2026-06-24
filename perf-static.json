@@ -1,0 +1,54 @@
+{
+  "targetPackage" : "com.codeperf.demo",
+  "classesScanned" : 7,
+  "findings" : [ {
+    "type" : "N+1 嫌疑（循环内远程操作）",
+    "severity" : "WARN",
+    "confidence" : "HIGH",
+    "description" : "方法在循环体内执行远程/数据访问操作，可能是 N+1：1 次批量被拆成 N 次独立 I/O。",
+    "evidence" : "数据访问层（Repository/DAO/Mapper）：循环内调用 com.codeperf.demo.repo.UserRepository#findOrdersByUserId()（指令 #26）",
+    "classMethod" : "com.codeperf.demo.service.OrderReportService.generateReport"
+  }, {
+    "type" : "O(n²) 嫌疑（嵌套循环 / 循环内 contains）",
+    "severity" : "WARN",
+    "confidence" : "MEDIUM",
+    "description" : "方法存在两层及以上嵌套循环，可能是 O(n²) 计算或匹配。",
+    "evidence" : "检测到嵌套循环区间（内层循环位于外层循环体内）。",
+    "classMethod" : "com.codeperf.demo.DataSeeder.run"
+  }, {
+    "type" : "O(n²) 嫌疑（嵌套循环 / 循环内 contains）",
+    "severity" : "WARN",
+    "confidence" : "HIGH",
+    "description" : "循环体内对 List 做 contains 线性查找，整体复杂度退化为 O(n²)。建议改用 Set/Map。",
+    "evidence" : "循环内调用 java.util.List#contains()（指令 #19），线性查找嵌套在循环中 → O(n²)。",
+    "classMethod" : "com.codeperf.demo.service.OrderReportService.distinctItemNames"
+  }, {
+    "type" : "计算密集（CPU 热点嫌疑）",
+    "severity" : "WARN",
+    "confidence" : "MEDIUM",
+    "description" : "方法包含密集数学运算或大循环，若被入口路径调用可能成为 CPU 热点。",
+    "evidence" : "出现大常量 20260623（疑似大循环边界）",
+    "classMethod" : "com.codeperf.demo.DataSeeder.run"
+  }, {
+    "type" : "计算密集（CPU 热点嫌疑）",
+    "severity" : "WARN",
+    "confidence" : "MEDIUM",
+    "description" : "方法包含密集数学运算或大循环，若被入口路径调用可能成为 CPU 热点。",
+    "evidence" : "出现大常量 40000000（疑似大循环边界）",
+    "classMethod" : "com.codeperf.demo.service.OrderReportService.computeScore"
+  }, {
+    "type" : "计算密集（CPU 热点嫌疑）",
+    "severity" : "WARN",
+    "confidence" : "MEDIUM",
+    "description" : "方法包含密集数学运算或大循环，若被入口路径调用可能成为 CPU 热点。",
+    "evidence" : "出现大常量 1048576（疑似大循环边界）",
+    "classMethod" : "com.codeperf.demo.service.OrderReportService.buildReportText"
+  }, {
+    "type" : "大数组分配",
+    "severity" : "WARN",
+    "confidence" : "MEDIUM",
+    "description" : "循环体内分配数组，可能造成高频内存分配与 GC 压力。",
+    "evidence" : "循环内数组分配（1048576 字节，指令 #8）。",
+    "classMethod" : "com.codeperf.demo.service.OrderReportService.buildReportText"
+  } ]
+}

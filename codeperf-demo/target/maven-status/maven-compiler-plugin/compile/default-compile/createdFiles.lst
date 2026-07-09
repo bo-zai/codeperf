@@ -1,7 +1,0 @@
-com\codeperf\demo\repo\UserRepository.class
-com\codeperf\demo\domain\Order.class
-com\codeperf\demo\web\ReportController.class
-com\codeperf\demo\domain\User.class
-com\codeperf\demo\DataSeeder.class
-com\codeperf\demo\service\OrderReportService.class
-com\codeperf\demo\DemoApplication.class

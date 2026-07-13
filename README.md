@@ -40,6 +40,14 @@ mvn -q -pl codeperf-demo package
 java -jar codeperf-cli/target/codeperf-cli.jar local-scan --config .codeperf.yml
 ```
 
+在 demo 模块目录下手工验证 CLI：
+
+```bash
+cd codeperf-demo
+mvn -q package
+java -jar ../codeperf-cli/target/codeperf-cli.jar local-scan --config .codeperf.yml
+```
+
 CI 示例：
 
 ```bash

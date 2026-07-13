@@ -1,3 +1,9 @@
+CREATE DATABASE IF NOT EXISTS codeperf
+  DEFAULT CHARACTER SET utf8mb4
+  DEFAULT COLLATE utf8mb4_unicode_ci;
+
+USE codeperf;
+
 CREATE TABLE IF NOT EXISTS analysis_task (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
   task_id VARCHAR(64) NOT NULL UNIQUE,
@@ -7,6 +13,9 @@ CREATE TABLE IF NOT EXISTS analysis_task (
   env_name VARCHAR(64),
   status VARCHAR(32) NOT NULL,
   risk_level VARCHAR(32) NOT NULL,
+  static_risk_level VARCHAR(32) NOT NULL DEFAULT 'NONE',
+  static_payload JSON,
+  dynamic_payload JSON,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX idx_analysis_task_project_commit (project, commit_sha),

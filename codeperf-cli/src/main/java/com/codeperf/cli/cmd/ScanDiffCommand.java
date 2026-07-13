@@ -2,16 +2,10 @@ package com.codeperf.cli.cmd;
 
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
-import com.codeperf.analysis.staticanalysis.ClasspathResolver;
-import com.codeperf.analysis.staticanalysis.StaticResult;
-import com.codeperf.analysis.staticanalysis.StaticScanner;
+import com.codeperf.cli.git.GitDiffResolver;
 import com.codeperf.cli.server.CodePerfServerClient;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
+import com.codeperf.cli.workflow.StaticScanWorkflow;
 
-import java.io.File;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -54,19 +48,30 @@ public class ScanDiffCommand {
                 return 2;
             }
         }
-        File dir = ClasspathResolver.resolve(classesDir);
-        if (dir == null) {
-            System.err.println("[codeperf] 未找到编译产物目录。请用 --classes-dir 指定。");
+        if (CommandSupport.isBlank(targetPackage)) {
+            System.err.println("[codeperf] --target-package 不能为空");
+            return 2;
+        }
+        if (CommandSupport.isBlank(classesDir)) {
+            System.err.println("[codeperf] --classes-dir 不能为空");
             return 2;
         }
         try {
-            StaticResult result = new StaticScanner().scan(dir, targetPackage, effectiveSourceRoots());
-            ObjectMapper mapper = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
-            Files.write(Paths.get(output), mapper.writeValueAsBytes(result));
+            StaticScanWorkflow.Result result = new StaticScanWorkflow().scanDiff(new StaticScanWorkflow.Request(
+                    Paths.get("."),
+                    base,
+                    head,
+                    GitDiffResolver.MODE_RANGE,
+                    targetPackage,
+                    classesDir,
+                    effectiveSourceRoots(),
+                    output));
             System.out.println("[codeperf] scan-diff base=" + base + ", head=" + head
-                    + ", findings=" + result.getFindings().size());
+                    + ", changedJavaFiles=" + result.getChangedJavaFiles().size()
+                    + ", findings=" + result.getStaticResult().getFindings().size()
+                    + ", risk=" + result.getRiskLevel());
             if (upload) {
-                new CodePerfServerClient(server).uploadStaticResult(taskId, mapper.writeValueAsString(result));
+                new CodePerfServerClient(server).uploadStaticResult(taskId, result.getJson());
                 System.out.println("[codeperf] 静态结果已上传: task=" + taskId);
             }
             return 0;

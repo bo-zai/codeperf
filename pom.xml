@@ -35,6 +35,7 @@
         <jcommander.version>1.82</jcommander.version>
         <jackson.version>2.13.5</jackson.version>
         <lombok.version>1.18.32</lombok.version>
+        <mybatis-plus.version>3.5.8</mybatis-plus.version>
         <snakeyaml.version>1.33</snakeyaml.version>
         <shade.plugin.version>3.4.1</shade.plugin.version>
         <mysql.version>8.0.33</mysql.version>
@@ -79,6 +80,11 @@
                 <groupId>org.yaml</groupId>
                 <artifactId>snakeyaml</artifactId>
                 <version>${snakeyaml.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.baomidou</groupId>
+                <artifactId>mybatis-plus-boot-starter</artifactId>
+                <version>${mybatis-plus.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.mysql</groupId>

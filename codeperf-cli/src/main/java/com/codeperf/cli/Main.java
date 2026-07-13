@@ -1,7 +1,9 @@
 package com.codeperf.cli;
 
 import com.beust.jcommander.JCommander;
+import com.codeperf.cli.cmd.CiRunCommand;
 import com.codeperf.cli.cmd.GateCommand;
+import com.codeperf.cli.cmd.LocalScanCommand;
 import com.codeperf.cli.cmd.ReportCommand;
 import com.codeperf.cli.cmd.ScanCommand;
 import com.codeperf.cli.cmd.ScanDiffCommand;
@@ -18,6 +20,8 @@ public class Main {
         ReportCommand report = new ReportCommand();
         ScanCommand scan = new ScanCommand();
         ScanDiffCommand scanDiff = new ScanDiffCommand();
+        LocalScanCommand localScan = new LocalScanCommand();
+        CiRunCommand ciRun = new CiRunCommand();
         GateCommand gate = new GateCommand();
 
         JCommander jc = JCommander.newBuilder()
@@ -26,6 +30,8 @@ public class Main {
                 .addCommand("report", report)
                 .addCommand("scan", scan)
                 .addCommand("scan-diff", scanDiff)
+                .addCommand("local-scan", localScan)
+                .addCommand("ci-run", ciRun)
                 .addCommand("gate", gate)
                 .build();
 
@@ -55,6 +61,12 @@ public class Main {
                         break;
                     case "scan-diff":
                         exitCode = scanDiff.execute();
+                        break;
+                    case "local-scan":
+                        exitCode = localScan.execute();
+                        break;
+                    case "ci-run":
+                        exitCode = ciRun.execute();
                         break;
                     case "gate":
                         exitCode = gate.execute();

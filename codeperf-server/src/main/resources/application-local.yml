@@ -1,0 +1,10 @@
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: ${CODEPERF_LOCAL_DB_URL:jdbc:mysql://120.48.112.239:3306/codeperf?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai}
+    username: mysqladmin
+    password: 123456
+
+codeperf:
+  storage:
+    mode: mysql

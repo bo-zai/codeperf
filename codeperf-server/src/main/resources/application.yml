@@ -1,6 +1,16 @@
 server:
   port: 9090
 
+spring:
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local}
+
 codeperf:
   storage:
-    mode: memory
+    mode: ${CODEPERF_STORAGE_MODE:memory}
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+  global-config:
+    banner: false

@@ -19,6 +19,16 @@
 - Add tests under each module using the module's existing test layout. If test directories are absent, create `src/test/java` in the touched module.
 - Keep `AttachCommand` and `AttachHelper` present as local debug compatibility in this phase, but remove them from the official flow and help text where new enterprise commands are documented.
 
+## Implementation Quality Rules
+
+- Do not make per-task commits during implementation. Each task may have a verification checkpoint, but code is committed only once after all tasks pass final verification.
+- Treat this as a real refactor, not incremental patching. If an existing class becomes responsible for unrelated concerns, split responsibilities instead of adding another branch to the same class.
+- Keep coupling low: CLI command parsing, static analysis, server HTTP client, agent configuration, evidence upload, and report merging must be separated by explicit interfaces or small focused services.
+- Keep cyclomatic complexity low. Prefer small classifiers, mappers, DTOs, and services over long nested conditionals.
+- Delete dead code that is no longer part of the official flow. Keep legacy attach only as local debug compatibility if still referenced, and make that boundary explicit in docs and command help.
+- Avoid broad dependencies and hidden global state. New utilities should be module-local unless a clear cross-module contract exists.
+- Final commit must contain the complete implementation after all tests, docs checks, and code quality review pass.
+
 ## Task 1: Static Finding Source Locations
 
 **Files:**
@@ -52,12 +62,9 @@ Run: `mvn -pl codeperf-cli -Dtest=BytecodeAnalyzerTest test`
 
 Expected: PASS and the assertion confirms a positive line number for the loop-body call.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 5: Checkpoint review**
 
-```bash
-git add codeperf-cli/src/main/java/com/codeperf/analysis/staticanalysis codeperf-cli/src/test/java/com/codeperf/analysis/staticanalysis/BytecodeAnalyzerTest.java
-git commit -m "feat: capture static finding source locations"
-```
+Review the task diff for focused responsibilities, unnecessary compatibility branches, and unused code. Do not commit.
 
 ## Task 2: Static Rule Extension Interface
 
@@ -107,12 +114,9 @@ Run: `mvn -pl codeperf-cli -Dtest=StaticRuleRegistryTest test`
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 5: Checkpoint review**
 
-```bash
-git add codeperf-cli/src/main/java/com/codeperf/analysis/staticanalysis codeperf-cli/src/test/java/com/codeperf/analysis/staticanalysis/rule/StaticRuleRegistryTest.java
-git commit -m "feat: add static rule extension interface"
-```
+Review the task diff for clean rule interfaces, low coupling, and naming consistency. Do not commit.
 
 ## Task 3: Loop I/O Amplification Rule
 
@@ -165,12 +169,9 @@ Run: `mvn -pl codeperf-cli -Dtest=LoopIoAmplificationRuleTest test`
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 5: Checkpoint review**
 
-```bash
-git add codeperf-cli/src/main/java/com/codeperf/analysis/staticanalysis codeperf-cli/src/test/java/com/codeperf/analysis/staticanalysis/rules/LoopIoAmplificationRuleTest.java
-git commit -m "feat: detect loop io amplification statically"
-```
+Review the task diff for classifier clarity, duplicated pattern logic, and dead compatibility code. Do not commit.
 
 ## Task 4: Source Root and Scan-Diff CLI Flow
 
@@ -224,12 +225,9 @@ Run: `mvn -pl codeperf-cli test`
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 5: Checkpoint review**
 
-```bash
-git add codeperf-cli/src/main/java/com/codeperf/cli codeperf-cli/src/test/java/com/codeperf/cli
-git commit -m "feat: add scan diff cli flow"
-```
+Review the task diff for command parsing separation, Git helper isolation, and source-root mapping clarity. Do not commit.
 
 ## Task 5: Server Module and MySQL Schema
 
@@ -279,12 +277,9 @@ Run: `mvn -pl codeperf-server test`
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 5: Checkpoint review**
 
-```bash
-git add pom.xml codeperf-server
-git commit -m "feat: add codeperf server module"
-```
+Review the task diff for minimal server bootstrapping, schema clarity, and dependency scope. Do not commit.
 
 ## Task 6: Server Task and Upload APIs
 
@@ -319,12 +314,9 @@ Run: `mvn -pl codeperf-server -Dtest=TaskApiTest test`
 
 Expected: PASS.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 4: Checkpoint review**
 
-```bash
-git add codeperf-server/src/main/java/com/codeperf/server codeperf-server/src/test/java/com/codeperf/server/api/TaskApiTest.java
-git commit -m "feat: add server task upload apis"
-```
+Review the task diff for controller/service separation, DTO clarity, and absence of business logic in controllers. Do not commit.
 
 ## Task 7: CLI Server Integration
 
@@ -375,12 +367,9 @@ Run: `mvn -pl codeperf-cli test`
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 6: Checkpoint review**
 
-```bash
-git add codeperf-cli/src/main/java/com/codeperf/cli codeperf-cli/src/test/java/com/codeperf/cli
-git commit -m "feat: integrate cli with codeperf server"
-```
+Review the task diff for HTTP client isolation, command cohesion, timeout handling, and unused helper code. Do not commit.
 
 ## Task 8: Agent Config and HTTP Upload
 
@@ -429,12 +418,9 @@ Run: `mvn -pl codeperf-agent test`
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 6: Checkpoint review**
 
-```bash
-git add codeperf-agent/pom.xml codeperf-agent/src/main/java/com/codeperf/agent codeperf-agent/src/test/java/com/codeperf/agent
-git commit -m "feat: configure agent with yaml and http upload"
-```
+Review the task diff for agent config boundaries, classpath shading, upload failure isolation, and dead semicolon-arg paths. Do not commit.
 
 ## Task 9: Dynamic External Call Evidence
 
@@ -486,12 +472,9 @@ Run: `mvn -pl codeperf-agent test`
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 6: Checkpoint review**
 
-```bash
-git add codeperf-agent/src/main/java/com/codeperf/agent codeperf-agent/src/test/java/com/codeperf/agent
-git commit -m "feat: collect dynamic external call evidence"
-```
+Review the task diff for instrumentation scope, Recorder complexity, aggregation model clarity, and upload coupling. Do not commit.
 
 ## Task 10: Server Merge, Report, and Gate Result
 
@@ -546,12 +529,9 @@ Run: `mvn -pl codeperf-server test`
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 5: Checkpoint review**
 
-```bash
-git add codeperf-server/src/main/java/com/codeperf/server codeperf-server/src/test/java/com/codeperf/server
-git commit -m "feat: merge evidence and calculate gate result"
-```
+Review the task diff for merge key correctness, gate decision explainability, and report model separation. Do not commit.
 
 ## Task 11: Documentation and Official Flow Update
 
@@ -595,12 +575,9 @@ rg "attach|javaagent|analysis_task_id|scan-diff|LoopIoAmplificationRule|MySQL" R
 
 Expected: output contains the new official flow terms and marks attach as non-official local debug flow.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 6: Checkpoint review**
 
-```bash
-git add README.md docs/02-agent-core.md docs/03-cli.md docs/06-static-dynamic-layering.md
-git commit -m "docs: document static dynamic enterprise flow"
-```
+Review the docs diff for consistency with the official flow and for clear deprecation of attach. Do not commit.
 
 ## Task 12: End-to-End Verification Script
 
@@ -655,12 +632,9 @@ bash scripts/run-layered-demo.sh --dry-run
 
 Expected: prints task create, scan-diff upload, javaagent config, demo request, and gate wait commands.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 5: Checkpoint review**
 
-```bash
-git add scripts/run-layered-demo.sh
-git commit -m "chore: add layered flow demo script"
-```
+Review the script for dry-run safety, clear environment variables, and no accidental production assumptions. Do not commit.
 
 ## Final Verification
 
@@ -695,3 +669,20 @@ git status --short
 ```
 
 Expected: only intentional files are modified or the working tree is clean after commits.
+
+- [ ] Perform one final cleanup pass before committing:
+
+```bash
+rg "TODO|TBD|attach.*official|System.out.println|printStackTrace" codeperf-cli codeperf-agent codeperf-server README.md docs
+```
+
+Expected: no unresolved placeholders; attach is mentioned only as local debug compatibility; logging and exception handling are intentional.
+
+- [ ] Create one final implementation commit:
+
+```bash
+git add pom.xml README.md docs codeperf-cli codeperf-agent codeperf-server scripts
+git commit -m "feat: add static dynamic layered codeperf flow"
+```
+
+Expected: one commit contains the complete implementation after all task checkpoints and final verification pass.

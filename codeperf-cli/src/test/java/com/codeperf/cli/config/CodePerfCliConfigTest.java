@@ -8,6 +8,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class CodePerfCliConfigTest {
 
@@ -15,30 +17,70 @@ public class CodePerfCliConfigTest {
     private Path tempDir;
 
     @Test
-    public void should_LoadConfig_When_CodePerfYamlProvided() throws Exception {
+    public void should_LoadAstLocalScanConfig_When_NewYamlProvided() throws Exception {
         Path config = tempDir.resolve(".codeperf.yml");
         Files.write(config, (
-                "serverUrl: http://127.0.0.1:9090\n"
-                        + "project: codeperf-demo\n"
-                        + "targetPackage: com.codeperf.demo\n"
-                        + "classesDir: codeperf-demo/target/classes\n"
-                        + "baseRef: origin/main\n"
-                        + "headRef: HEAD\n"
-                        + "diffMode: range\n"
-                        + "failOn: WARN\n"
-                        + "sourceRoots:\n"
-                        + "  - codeperf-demo/src/main/java\n").getBytes(StandardCharsets.UTF_8));
+                "project: order-service\n"
+                        + "staticScan:\n"
+                        + "  enabled: true\n"
+                        + "  mode: changed\n"
+                        + "  sourceRoots:\n"
+                        + "    - src/main/java\n"
+                        + "  includeTests: false\n"
+                        + "  baseRef: origin/master\n"
+                        + "  headRef: HEAD\n"
+                        + "  failOn: WARN\n"
+                        + "  callChain:\n"
+                        + "    enabled: true\n"
+                        + "    maxDepth: 2\n"
+                        + "  ioTypes:\n"
+                        + "    - mysql\n"
+                        + "    - redis\n"
+                        + "agent:\n"
+                        + "  enabled: true\n"
+                        + "  serverUrl: http://codeperf.company.com\n"
+                        + "  configPath: .codeperf/agent.yml\n"
+                        + "  jarPath: /opt/codeperf/codeperf-agent.jar\n"
+                        + "  targetPackages:\n"
+                        + "    - com.company.order\n").getBytes(StandardCharsets.UTF_8));
 
         CodePerfCliConfig loaded = CodePerfCliConfig.load(config);
 
-        assertEquals("http://127.0.0.1:9090", loaded.getServerUrl());
-        assertEquals("codeperf-demo", loaded.getProject());
-        assertEquals("com.codeperf.demo", loaded.getTargetPackage());
-        assertEquals("codeperf-demo/target/classes", loaded.getClassesDir());
-        assertEquals("origin/main", loaded.getBaseRef());
+        assertEquals("order-service", loaded.getProject());
+        assertTrue(loaded.getStaticScan().isEnabled());
+        assertEquals("changed", loaded.getStaticScan().getMode());
+        assertEquals("src/main/java", loaded.getStaticScan().getSourceRoots().get(0));
+        assertFalse(loaded.getStaticScan().isIncludeTests());
+        assertEquals("origin/master", loaded.getStaticScan().getBaseRef());
         assertEquals("HEAD", loaded.getHeadRef());
-        assertEquals("range", loaded.getDiffMode());
+        assertEquals("HEAD", loaded.getStaticScan().getHeadRef());
+        assertEquals("WARN", loaded.getStaticScan().getFailOn());
+        assertTrue(loaded.getStaticScan().getCallChain().isEnabled());
+        assertEquals(2, loaded.getStaticScan().getCallChain().getMaxDepth());
+        assertEquals("mysql", loaded.getStaticScan().getIoTypes().get(0));
+        assertEquals("redis", loaded.getStaticScan().getIoTypes().get(1));
+        assertTrue(loaded.getAgent().isEnabled());
+        assertEquals("http://codeperf.company.com", loaded.getAgent().getServerUrl());
+        assertEquals(".codeperf/agent.yml", loaded.getAgent().getConfigPath());
+        assertEquals("/opt/codeperf/codeperf-agent.jar", loaded.getAgent().getJarPath());
+        assertEquals("com.company.order", loaded.getAgent().getTargetPackages().get(0));
+    }
+
+    @Test
+    public void should_ProvideSafeDefaults_When_MinimalYamlProvided() throws Exception {
+        Path config = tempDir.resolve(".codeperf.yml");
+        Files.write(config, "project: demo\n".getBytes(StandardCharsets.UTF_8));
+
+        CodePerfCliConfig loaded = CodePerfCliConfig.load(config);
+
+        assertEquals("demo", loaded.getProject());
+        assertTrue(loaded.getStaticScan().isEnabled());
+        assertEquals("changed", loaded.getStaticScan().getMode());
+        assertEquals("src/main/java", loaded.getStaticScan().getSourceRoots().get(0));
+        assertEquals("origin/master", loaded.getStaticScan().getBaseRef());
+        assertEquals("HEAD", loaded.getStaticScan().getHeadRef());
         assertEquals("WARN", loaded.getFailOn());
-        assertEquals("codeperf-demo/src/main/java", loaded.getSourceRoots().get(0));
+        assertTrue(loaded.getStaticScan().getCallChain().isEnabled());
+        assertEquals(2, loaded.getStaticScan().getCallChain().getMaxDepth());
     }
 }

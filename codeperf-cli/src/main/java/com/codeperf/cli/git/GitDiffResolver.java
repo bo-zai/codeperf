@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -25,6 +26,19 @@ public final class GitDiffResolver {
                                                 String diffMode) throws IOException {
         List<String> output = runGitNameOnlyDiff(workingDirectory, base, head, diffMode);
         return parseChangedJavaFiles(output);
+    }
+
+    public static List<Path> changedJavaFilePaths(Path workingDirectory, String base, String head,
+                                                  String diffMode) throws IOException {
+        List<String> changed = changedJavaFiles(workingDirectory, base, head, diffMode);
+        List<Path> paths = new ArrayList<>();
+        for (String file : changed) {
+            Path path = workingDirectory.resolve(file).toAbsolutePath().normalize();
+            if (Files.isRegularFile(path)) {
+                paths.add(path);
+            }
+        }
+        return paths;
     }
 
     public static List<String> parseChangedJavaFiles(List<String> nameOnlyOutput) {

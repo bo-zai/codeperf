@@ -1,13 +1,10 @@
 package com.codeperf.cli;
 
 import com.beust.jcommander.JCommander;
-import com.codeperf.cli.cmd.CiRunCommand;
-import com.codeperf.cli.cmd.GateCommand;
-import com.codeperf.cli.cmd.LocalScanCommand;
-import com.codeperf.cli.cmd.ReportCommand;
+import com.codeperf.cli.cmd.DoctorCommand;
+import com.codeperf.cli.cmd.InitCommand;
+import com.codeperf.cli.cmd.InstallHooksCommand;
 import com.codeperf.cli.cmd.ScanCommand;
-import com.codeperf.cli.cmd.ScanDiffCommand;
-import com.codeperf.cli.cmd.TaskCommand;
 
 /**
  * CLI 入口：JCommander 装配子命令并分发。
@@ -16,23 +13,17 @@ import com.codeperf.cli.cmd.TaskCommand;
 public class Main {
 
     public static void main(String[] args) {
-        TaskCommand task = new TaskCommand();
-        ReportCommand report = new ReportCommand();
+        InitCommand init = new InitCommand();
         ScanCommand scan = new ScanCommand();
-        ScanDiffCommand scanDiff = new ScanDiffCommand();
-        LocalScanCommand localScan = new LocalScanCommand();
-        CiRunCommand ciRun = new CiRunCommand();
-        GateCommand gate = new GateCommand();
+        DoctorCommand doctor = new DoctorCommand();
+        InstallHooksCommand installHooks = new InstallHooksCommand();
 
         JCommander jc = JCommander.newBuilder()
                 .programName("codeperf-cli")
-                .addCommand("task", task)
-                .addCommand("report", report)
+                .addCommand("init", init)
                 .addCommand("scan", scan)
-                .addCommand("scan-diff", scanDiff)
-                .addCommand("local-scan", localScan)
-                .addCommand("ci-run", ciRun)
-                .addCommand("gate", gate)
+                .addCommand("doctor", doctor)
+                .addCommand("install-hooks", installHooks)
                 .build();
 
         if (args.length == 0) {
@@ -50,26 +41,17 @@ public class Main {
         } else {
             try {
                 switch (parsed) {
-                    case "task":
-                        exitCode = task.execute();
-                        break;
-                    case "report":
-                        exitCode = report.execute();
+                    case "init":
+                        exitCode = init.execute();
                         break;
                     case "scan":
                         exitCode = scan.execute();
                         break;
-                    case "scan-diff":
-                        exitCode = scanDiff.execute();
+                    case "doctor":
+                        exitCode = doctor.execute();
                         break;
-                    case "local-scan":
-                        exitCode = localScan.execute();
-                        break;
-                    case "ci-run":
-                        exitCode = ciRun.execute();
-                        break;
-                    case "gate":
-                        exitCode = gate.execute();
+                    case "install-hooks":
+                        exitCode = installHooks.execute();
                         break;
                     default:
                         System.err.println("未知命令: " + parsed);

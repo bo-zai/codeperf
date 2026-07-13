@@ -37,6 +37,7 @@
         <lombok.version>1.18.32</lombok.version>
         <mybatis-plus.version>3.5.8</mybatis-plus.version>
         <snakeyaml.version>1.33</snakeyaml.version>
+        <javaparser.version>3.26.3</javaparser.version>
         <shade.plugin.version>3.4.1</shade.plugin.version>
         <mysql.version>8.0.33</mysql.version>
     </properties>
@@ -80,6 +81,16 @@
                 <groupId>org.yaml</groupId>
                 <artifactId>snakeyaml</artifactId>
                 <version>${snakeyaml.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.github.javaparser</groupId>
+                <artifactId>javaparser-core</artifactId>
+                <version>${javaparser.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.github.javaparser</groupId>
+                <artifactId>javaparser-symbol-solver-core</artifactId>
+                <version>${javaparser.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.baomidou</groupId>

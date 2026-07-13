@@ -2,116 +2,109 @@ package com.codeperf.cli.cmd;
 
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
-import com.codeperf.analysis.HtmlReport;
-import com.codeperf.analysis.staticanalysis.ClasspathResolver;
-import com.codeperf.analysis.staticanalysis.StaticResult;
-import com.codeperf.analysis.staticanalysis.StaticScanner;
-import com.codeperf.cli.server.CodePerfServerClient;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
+import com.codeperf.analysis.source.SourceFinding;
+import com.codeperf.analysis.source.SourceScanRequest;
+import com.codeperf.analysis.source.SourceScanResult;
+import com.codeperf.analysis.source.SourceScanner;
+import com.codeperf.cli.config.StaticScanConfig;
+import com.codeperf.cli.git.GitDiffResolver;
+import com.codeperf.cli.project.ProjectContext;
+import com.codeperf.cli.project.ProjectContextResolver;
+import com.codeperf.cli.report.SourceScanJsonReportWriter;
 
-import java.io.File;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
-/**
- * scan 子命令：静态扫描已编译的 .class，产出 perf-static.json（可选 HTML）。
- * 见 docs/05-static-analysis.md 第 6 节。
- */
-@Parameters(commandDescription = "Static bytecode scan for performance suspects (no app launch needed)")
+@Parameters(commandDescription = "Local AST scan for changed Java source files")
 public class ScanCommand {
 
-    @Parameter(names = "--target-package", description = "Application package prefix to scan", required = true)
-    private String targetPackage;
+    @Parameter(names = "--all", description = "Scan all configured source files")
+    private boolean scanAll;
 
-    @Parameter(names = "--classes-dir", description = "Compiled classes dir (auto-detected if omitted)")
-    private String classesDir;
+    @Parameter(names = "--output", description = "Source scan JSON output")
+    private String output = ".codeperf/report/source-report.json";
 
-    @Parameter(names = "--output", description = "Static result JSON output")
-    private String output = "perf-static.json";
-
-    @Parameter(names = "--report", description = "If set, also write a static-only HTML report to this path")
-    private String report;
-
-    @Parameter(names = "--source-root", description = "Source root(s), repeat or comma-separate; defaults to src/main/java,src/test/java")
-    private List<String> sourceRoots = new ArrayList<>();
-
-    @Parameter(names = "--server", description = "CodePerf Server URL")
-    private String server;
-
-    @Parameter(names = "--task-id", description = "Analysis task ID")
-    private String taskId;
-
-    @Parameter(names = "--upload", description = "Upload static result to CodePerf Server")
-    private boolean upload;
+    private Path workingDirectory;
 
     public int execute() {
-        if (upload && (CommandSupport.isBlank(server) || CommandSupport.isBlank(taskId))) {
-            System.err.println("[codeperf] --upload requires --server and --task-id");
-            return 2;
-        }
-        File dir = ClasspathResolver.resolve(classesDir);
-        if (dir == null) {
-            System.err.println("[codeperf] 未找到编译产物目录。请用 --classes-dir 指定 (如 target/classes)。");
-            return 2;
-        }
-        System.out.println("[codeperf] 扫描目录: " + dir.getPath());
-        System.out.println("[codeperf] 目标包: " + targetPackage);
-
         try {
-            StaticScanner scanner = new StaticScanner();
-            StaticResult result = scanner.scan(dir, targetPackage, effectiveSourceRoots());
-
-            ObjectMapper mapper = new ObjectMapper();
-            mapper.enable(SerializationFeature.INDENT_OUTPUT);
-            String json = mapper.writeValueAsString(result);
-            Files.write(Paths.get(output), json.getBytes(StandardCharsets.UTF_8));
-
-            System.out.println("[codeperf] 扫描类数: " + result.getClassesScanned()
-                    + "，静态发现: " + result.getFindings().size() + " 条");
-            System.out.println("[codeperf] 静态结果已写入: " + output);
-
-            if (report != null && !report.trim().isEmpty()) {
-                String html = HtmlReport.generateStatic(result);
-                Files.write(Paths.get(report), html.getBytes(StandardCharsets.UTF_8));
-                System.out.println("[codeperf] 静态 HTML 报告: " + report);
-            }
-            if (upload) {
-                new CodePerfServerClient(server).uploadStaticResult(taskId, json);
-                System.out.println("[codeperf] 静态结果已上传: task=" + taskId);
-            }
-            return 0;
+            Path cwd = workingDirectory == null ? Paths.get(".") : workingDirectory;
+            ProjectContext context = new ProjectContextResolver().resolve(cwd);
+            StaticScanConfig config = context.getConfig().getStaticScan();
+            List<Path> files = scanAll
+                    ? resolveAllSourceFiles(context, config)
+                    : GitDiffResolver.changedJavaFilePaths(context.getRootDirectory(),
+                    config.getBaseRef(), config.getHeadRef(), "range");
+            SourceScanResult result = new SourceScanner().scan(new SourceScanRequest(
+                    context.getRootDirectory(), filterConfiguredSourceFiles(context, config, files), config));
+            new SourceScanJsonReportWriter().write(context.resolvePath(output), result);
+            System.out.println("[codeperf] sourceFiles=" + result.getFilesScanned()
+                    + ", findings=" + result.getFindings().size()
+                    + ", parseErrors=" + result.getParseErrors().size());
+            return hasFailure(result, config.getFailOn()) ? 1 : 0;
         } catch (Exception e) {
-            System.err.println("[codeperf] 静态扫描失败: " + e.getClass().getSimpleName() + ": " + e.getMessage());
+            System.err.println("[codeperf] scan 失败: " + e.getMessage());
             return 2;
         }
     }
 
-    private List<String> effectiveSourceRoots() {
-        List<String> roots = new ArrayList<>();
-        if (sourceRoots != null) {
-            for (String value : sourceRoots) {
-                if (value == null) {
-                    continue;
+    void setWorkingDirectoryForTest(Path workingDirectory) {
+        this.workingDirectory = workingDirectory;
+    }
+
+    void setOutputForTest(String output) {
+        this.output = output;
+    }
+
+    private List<Path> resolveAllSourceFiles(ProjectContext context, StaticScanConfig config) throws Exception {
+        List<Path> files = new ArrayList<>();
+        for (String sourceRoot : config.getSourceRoots()) {
+            Path root = context.resolvePath(sourceRoot);
+            if (!Files.isDirectory(root)) {
+                continue;
+            }
+            try (Stream<Path> walk = Files.walk(root)) {
+                files.addAll(walk
+                        .filter(Files::isRegularFile)
+                        .filter(path -> path.toString().endsWith(".java"))
+                        .collect(Collectors.toList()));
+            }
+        }
+        return files;
+    }
+
+    private List<Path> filterConfiguredSourceFiles(ProjectContext context, StaticScanConfig config, List<Path> files) {
+        List<Path> roots = new ArrayList<>();
+        for (String sourceRoot : config.getSourceRoots()) {
+            roots.add(context.resolvePath(sourceRoot));
+        }
+        List<Path> filtered = new ArrayList<>();
+        for (Path file : files) {
+            Path normalized = file.toAbsolutePath().normalize();
+            if (!normalized.toString().endsWith(".java")) {
+                continue;
+            }
+            for (Path root : roots) {
+                if (normalized.startsWith(root)) {
+                    filtered.add(normalized);
+                    break;
                 }
-                roots.addAll(Arrays.asList(value.split(",")));
             }
         }
-        List<String> cleaned = new ArrayList<>();
-        for (String root : roots) {
-            String r = root.trim();
-            if (!r.isEmpty()) {
-                cleaned.add(r);
+        return filtered;
+    }
+
+    private boolean hasFailure(SourceScanResult result, String failOn) {
+        for (SourceFinding finding : result.getFindings()) {
+            if (CommandSupport.shouldFail(finding.getSeverity().name(), failOn)) {
+                return true;
             }
         }
-        if (cleaned.isEmpty()) {
-            cleaned.add("src/main/java");
-            cleaned.add("src/test/java");
-        }
-        return cleaned;
+        return false;
     }
 }

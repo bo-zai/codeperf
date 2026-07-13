@@ -1,11 +1,30 @@
-serverUrl: http://127.0.0.1:9090
 project: codeperf-demo
-targetPackage: com.codeperf.demo
-classesDir: codeperf-demo/target/classes
-sourceRoots:
-  - codeperf-demo/src/main/java
-baseRef: origin/master
-headRef: HEAD
-diffMode: range
-failOn: WARN
-env: ci
+
+staticScan:
+  enabled: true
+  mode: changed
+  sourceRoots:
+    - codeperf-demo/src/main/java
+  includeTests: false
+  baseRef: origin/master
+  headRef: HEAD
+  failOn: WARN
+  callChain:
+    enabled: true
+    maxDepth: 2
+  ioTypes:
+    - mysql
+    - mongodb
+    - redis
+    - gaussdb
+    - http
+    - rpc
+    - sdk
+
+agent:
+  enabled: true
+  serverUrl: http://127.0.0.1:9090
+  configPath: .codeperf/agent.yml
+  jarPath: /opt/codeperf/codeperf-agent.jar
+  targetPackages:
+    - com.codeperf.demo

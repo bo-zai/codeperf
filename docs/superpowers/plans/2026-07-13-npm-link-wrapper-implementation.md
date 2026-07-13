@@ -361,7 +361,9 @@ wrapper tests passed
 Run:
 
 ```bash
-npm --prefix codeperf-npm link
+cd codeperf-npm
+npm link
+cd ..
 ```
 
 Expected:

@@ -1,0 +1,20 @@
+{
+  "name": "codeperf",
+  "version": "1.0.0-local",
+  "private": true,
+  "description": "Local npm wrapper for CodePerf Java CLI",
+  "license": "UNLICENSED",
+  "bin": {
+    "codeperf": "bin/codeperf.js"
+  },
+  "files": [
+    "bin/",
+    "package.json"
+  ],
+  "scripts": {
+    "test": "node test/wrapper.test.js"
+  },
+  "engines": {
+    "node": ">=14"
+  }
+}

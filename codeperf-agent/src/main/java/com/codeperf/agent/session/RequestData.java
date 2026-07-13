@@ -1,5 +1,8 @@
 package com.codeperf.agent.session;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -10,6 +13,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * 采集期间被单个请求线程独占写入（按 threadId 归并），故内部用普通集合即可；
  * 栈采样由独立线程写入 samples，故 samples 用线程安全集合。
  */
+@Getter
+@Setter
 public class RequestData {
 
     private String httpMethod;
@@ -37,77 +42,7 @@ public class RequestData {
         return sqls.computeIfAbsent(fingerprint, fp -> new SqlRecord(fp, sampleSql));
     }
 
-    // ===== getters / setters（含序列化用）=====
-
-    public String getHttpMethod() {
-        return httpMethod;
-    }
-
-    public void setHttpMethod(String httpMethod) {
-        this.httpMethod = httpMethod;
-    }
-
-    public String getPath() {
-        return path;
-    }
-
-    public void setPath(String path) {
-        this.path = path;
-    }
-
-    public int getStatus() {
-        return status;
-    }
-
-    public void setStatus(int status) {
-        this.status = status;
-    }
-
-    public long getWallTimeMs() {
-        return wallTimeMs;
-    }
-
-    public void setWallTimeMs(long wallTimeMs) {
-        this.wallTimeMs = wallTimeMs;
-    }
-
-    public String getThreadName() {
-        return threadName;
-    }
-
-    public void setThreadName(String threadName) {
-        this.threadName = threadName;
-    }
-
-    public long getThreadId() {
-        return threadId;
-    }
-
-    public void setThreadId(long threadId) {
-        this.threadId = threadId;
-    }
-
-    public long getAllocBytes() {
-        return allocBytes;
-    }
-
-    public void setAllocBytes(long allocBytes) {
-        this.allocBytes = allocBytes;
-    }
-
-    public CallNode getCallTree() {
-        return callTree;
-    }
-
-    public void setCallTree(CallNode callTree) {
-        this.callTree = callTree;
-    }
-
     public List<SqlRecord> getSqls() {
         return new ArrayList<>(sqls.values());
-    }
-
-    public List<StackSample> getSamples() {
-        return samples;
     }
 }

@@ -72,8 +72,7 @@ public class AnalysisFacade {
             return 0;
 
         } catch (IOException e) {
-            System.err.println("[codeperf] 分析失败: " + e.getMessage());
-            e.printStackTrace();
+            System.err.println("[codeperf] 分析失败: " + e.getClass().getSimpleName() + ": " + e.getMessage());
             return -1;
         }
     }

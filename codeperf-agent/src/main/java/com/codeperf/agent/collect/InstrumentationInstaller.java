@@ -29,8 +29,8 @@ import static net.bytebuddy.matcher.ElementMatchers.takesArgument;
 import static net.bytebuddy.matcher.ElementMatchers.takesArguments;
 
 /**
- * 用 ByteBuddy 把各 Advice 织入目标类。支持 premain（加载时织入）与 agentmain（已加载类
- * 经 RETRANSFORMATION 重织入）。见 docs/02-agent-core.md 第 2、5 节。
+ * 用 ByteBuddy 把各 Advice 织入目标类。正式环境通过 premain 在类加载时织入。
+ * 见 docs/02-agent-core.md 第 2、5 节。
  *
  * 关键点：Advice 被内联到目标方法，目标类的 ClassLoader 只需能解析 {@link Recorder}
  * （位于 system ClassLoader，是 app/驱动 ClassLoader 的祖先），故无需把 Advice 类暴露给目标。

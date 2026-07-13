@@ -26,20 +26,22 @@ public class NSquaredSuspect implements BytecodeRule {
         List<StaticFinding> findings = new ArrayList<>();
         for (ClassAnalysis cls : classes) {
             for (MethodAnalysis m : cls.getMethods()) {
-                if (m.getLoopRanges().isEmpty()) continue;
+                if (m.getLoopRanges().isEmpty()) {
+                    continue;
+                }
                 String classMethod = cls.getClassName() + "." + m.getName();
 
                 // 信号 1：循环内 contains 调用（HIGH）
                 CallSite containsCall = findContainsInLoop(m);
                 if (containsCall != null) {
-                    String evidence = "循环内调用 " + containsCall.owner.replace('/', '.')
-                            + "#contains()（指令 #" + containsCall.insnIdx
+                    String evidence = "循环内调用 " + containsCall.getOwner().replace('/', '.')
+                            + "#contains()（指令 #" + containsCall.getInsnIdx()
                             + "），线性查找嵌套在循环中 → O(n²)。";
                     findings.add(new StaticFinding(
                             TYPE, Severity.WARN, Confidence.HIGH,
                             "循环体内对 List 做 contains 线性查找，整体复杂度退化为 O(n²)。建议改用 Set/Map。",
                             evidence, classMethod));
-                    continue; // 同方法已报最高置信度，跳过嵌套循环弱信号
+                    continue;
                 }
 
                 // 信号 2：嵌套循环（MEDIUM）
@@ -57,9 +59,15 @@ public class NSquaredSuspect implements BytecodeRule {
 
     private CallSite findContainsInLoop(MethodAnalysis m) {
         for (CallSite call : m.getCalls()) {
-            if (!"contains".equals(call.name)) continue;
-            if (!call.owner.contains("List")) continue; // java/util/List, java/util/ArrayList, ...
-            if (m.inLoop(call.insnIdx)) return call;
+            if (!"contains".equals(call.getName())) {
+                continue;
+            }
+            if (!call.getOwner().contains("List")) {
+                continue;
+            }
+            if (m.inLoop(call.getInsnIdx())) {
+                return call;
+            }
         }
         return null;
     }
@@ -69,12 +77,16 @@ public class NSquaredSuspect implements BytecodeRule {
         List<int[]> ranges = m.getLoopRanges();
         for (int i = 0; i < ranges.size(); i++) {
             for (int j = 0; j < ranges.size(); j++) {
-                if (i == j) continue;
+                if (i == j) {
+                    continue;
+                }
                 int[] outer = ranges.get(i);
                 int[] inner = ranges.get(j);
                 boolean contained = outer[0] <= inner[0] && inner[1] <= outer[1];
                 boolean strict = outer[0] != inner[0] || outer[1] != inner[1];
-                if (contained && strict) return true;
+                if (contained && strict) {
+                    return true;
+                }
             }
         }
         return false;

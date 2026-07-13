@@ -26,8 +26,8 @@ public final class BytecodeAnalyzer {
     public static ClassAnalysis analyze(byte[] classBytes) {
         ClassReader cr = new ClassReader(classBytes);
         Collector collector = new Collector();
-        // SKIP_FRAMES / SKIP_DEBUG 不影响我们关心的指令序列，但保留默认即可。
-        cr.accept(collector, ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
+        // Keep debug line numbers so findings can point back to source code.
+        cr.accept(collector, ClassReader.SKIP_FRAMES);
         return collector.build();
     }
 
@@ -44,6 +44,11 @@ public final class BytecodeAnalyzer {
         public void visit(int version, int access, String name, String signature,
                           String superName, String[] interfaces) {
             this.className = name;
+        }
+
+        @Override
+        public void visitSource(String source, String debug) {
+            // Source paths are resolved later from source roots; keep class-level bytecode parsing focused.
         }
 
         @Override
@@ -76,6 +81,7 @@ public final class BytecodeAnalyzer {
     private static final class InsnCollector extends MethodVisitor {
         private final ClassAnalysis.MethodAnalysis ma;
         private int insnIdx = 0;
+        private int currentLine = 0;
         // label -> 它所指向的指令索引（visitLabel 时的当前 insnIdx）
         private final Map<Label, Integer> labelPos = new HashMap<>();
         // 紧邻当前指令之前压栈的 int 常量；null 表示上一条不是常量压栈
@@ -97,6 +103,12 @@ public final class BytecodeAnalyzer {
             // 记录 label 指向的指令索引（即下一条将被访问的指令）。
             labelPos.put(label, insnIdx);
             // visitLabel 不是真实指令，不推进 insnIdx，也不清除 pendingConst。
+        }
+
+        @Override
+        public void visitLineNumber(int line, Label start) {
+            currentLine = line;
+            ma.noteInstructionLine(insnIdx, line);
         }
 
         @Override
@@ -125,7 +137,7 @@ public final class BytecodeAnalyzer {
                 int elemBytes = primitiveArrayElemBytes(operand);
                 int sizeBytes = (pendingConst != null && pendingConst >= 0)
                         ? pendingConst * elemBytes : -1;
-                ma.addAllocation(new ClassAnalysis.AllocSite(insnIdx, sizeBytes));
+                ma.addAllocation(new ClassAnalysis.AllocSite(insnIdx, sizeBytes, currentLine));
                 advance(null);
             } else if (opcode == Opcodes.BIPUSH || opcode == Opcodes.SIPUSH) {
                 ma.noteIntConst(operand);
@@ -141,7 +153,7 @@ public final class BytecodeAnalyzer {
                 // 引用数组，按 8 字节/元素估算。
                 int sizeBytes = (pendingConst != null && pendingConst >= 0)
                         ? pendingConst * 8 : -1;
-                ma.addAllocation(new ClassAnalysis.AllocSite(insnIdx, sizeBytes));
+                ma.addAllocation(new ClassAnalysis.AllocSite(insnIdx, sizeBytes, currentLine));
             }
             advance(null);
         }
@@ -149,7 +161,7 @@ public final class BytecodeAnalyzer {
         @Override
         public void visitMultiANewArrayInsn(String descriptor, int numDimensions) {
             // 多维数组：尺寸不易静态确定，记为变量尺寸。
-            ma.addAllocation(new ClassAnalysis.AllocSite(insnIdx, -1));
+            ma.addAllocation(new ClassAnalysis.AllocSite(insnIdx, -1, currentLine));
             advance(null);
         }
 
@@ -175,7 +187,7 @@ public final class BytecodeAnalyzer {
         @Override
         public void visitMethodInsn(int opcode, String owner, String name,
                                     String descriptor, boolean isInterface) {
-            ma.addCall(new ClassAnalysis.CallSite(insnIdx, owner, name, descriptor, isInterface));
+            ma.addCall(new ClassAnalysis.CallSite(insnIdx, owner, name, descriptor, isInterface, currentLine));
             if ("java/lang/Math".equals(owner)) {
                 ma.incMathCalls();
             }
@@ -187,7 +199,7 @@ public final class BytecodeAnalyzer {
             Integer target = labelPos.get(label);
             if (target != null && target <= insnIdx) {
                 // 回边：循环。区间 [循环起点, 回跳指令]。
-                ma.addLoopRange(target, insnIdx);
+                ma.addLoopRange(target, insnIdx, ma.lineForInstruction(target), currentLine);
             }
             advance(null);
         }
@@ -229,12 +241,13 @@ public final class BytecodeAnalyzer {
         private void recordIfBack(Label l) {
             Integer target = labelPos.get(l);
             if (target != null && target <= insnIdx) {
-                ma.addLoopRange(target, insnIdx);
+                ma.addLoopRange(target, insnIdx, ma.lineForInstruction(target), currentLine);
             }
         }
 
         /** 推进指令索引，并设置下一条指令可见的 pendingConst。 */
         private void advance(Integer newPending) {
+            ma.noteInstructionLine(insnIdx, currentLine);
             insnIdx++;
             pendingConst = newPending;
         }

@@ -13,7 +13,7 @@
 
     <artifactId>codeperf-cli</artifactId>
     <name>CodePerf CLI</name>
-    <description>命令行：attach 动态挂 agent / 控制会话 / 分析 / 生成报告 + 退出码门禁</description>
+    <description>命令行：Git/CI 静态扫描、结果上传与门禁查询</description>
 
     <dependencies>
         <dependency>
@@ -28,6 +28,16 @@
             <groupId>org.ow2.asm</groupId>
             <artifactId>asm</artifactId>
             <version>9.6</version>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 

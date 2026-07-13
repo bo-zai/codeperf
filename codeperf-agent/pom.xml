@@ -13,7 +13,7 @@
 
     <artifactId>codeperf-agent</artifactId>
     <name>CodePerf Agent</name>
-    <description>采集核心：双入口(premain/agentmain) + ByteBuddy 插桩 + JDBC 拦截 + 栈采样 + 会话化采集</description>
+    <description>采集核心：-javaagent 启动 + ByteBuddy 插桩 + JDBC 拦截 + 栈采样 + 动态证据上报</description>
 
     <dependencies>
         <dependency>
@@ -23,6 +23,20 @@
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.yaml</groupId>
+            <artifactId>snakeyaml</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
         </dependency>
         <!-- javax.servlet 仅编译期用于反射常量参考；目标应用运行时自带，故 provided -->
         <dependency>
@@ -57,6 +71,10 @@
                                     <pattern>com.fasterxml.jackson</pattern>
                                     <shadedPattern>com.codeperf.agent.shaded.jackson</shadedPattern>
                                 </relocation>
+                                <relocation>
+                                    <pattern>org.yaml.snakeyaml</pattern>
+                                    <shadedPattern>com.codeperf.agent.shaded.snakeyaml</shadedPattern>
+                                </relocation>
                             </relocations>
                             <filters>
                                 <filter>
@@ -74,7 +92,6 @@
                                         implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                                     <manifestEntries>
                                         <Premain-Class>com.codeperf.agent.AgentEntry</Premain-Class>
-                                        <Agent-Class>com.codeperf.agent.AgentEntry</Agent-Class>
                                         <Can-Redefine-Classes>true</Can-Redefine-Classes>
                                         <Can-Retransform-Classes>true</Can-Retransform-Classes>
                                     </manifestEntries>

@@ -1,0 +1,12 @@
+serverUrl: http://127.0.0.1:9090
+analysisTaskId: ${ANALYSIS_TASK_ID}
+uploadEnabled: true
+targetPackages:
+  - com.codeperf.demo
+entry:
+  method: POST
+  path: /api/orders/report
+slowSqlMs: 500
+sampleMs: 10
+mode: session
+output: build/codeperf/perf-data.raw

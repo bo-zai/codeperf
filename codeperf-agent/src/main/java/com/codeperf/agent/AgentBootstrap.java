@@ -6,12 +6,14 @@ import com.codeperf.agent.collect.Profiler;
 import com.codeperf.agent.collect.Recorder;
 import com.codeperf.agent.collect.SessionWriter;
 import com.codeperf.agent.config.AgentConfig;
+import com.codeperf.agent.upload.DynamicEvidenceReporter;
+import com.codeperf.agent.upload.DynamicEvidenceUploader;
 
 import java.lang.instrument.Instrumentation;
 
 /**
  * 装配采集核心：解析参数 → 建采样器/落盘器 → 初始化 Recorder → 启动采样 → 织入插桩。
- * premain 与 agentmain 都委托到此处，共用同一套核心（可移植性决策①）。
+ * 正式环境通过 -javaagent 在应用启动时加载，不支持运行时 attach。
  * 见 docs/02-agent-core.md 第 2 节。
  */
 public final class AgentBootstrap {
@@ -21,20 +23,35 @@ public final class AgentBootstrap {
 
     public static synchronized void start(String args, Instrumentation inst) {
         try {
-            AgentConfig cfg = AgentConfig.parse(args);
+            AgentConfig cfg = AgentConfig.load(args);
             System.out.println("[codeperf] agent starting, " + cfg);
 
             Profiler sampler = new JavaStackSampler(cfg.getSampleMs());
             SessionWriter writer = new SessionWriter(cfg.getOutput());
-            Recorder.init(cfg, sampler, writer);
+            DynamicEvidenceReporter reporter = createReporter(cfg);
+            Recorder.init(cfg, sampler, writer, reporter);
             sampler.start();
 
             new InstrumentationInstaller().install(cfg, inst);
             System.out.println("[codeperf] instrumentation installed; waiting for entry: "
                     + cfg.getEntryMethod() + " " + cfg.getEntryPath());
         } catch (Throwable t) {
-            System.err.println("[codeperf] agent failed to start: " + t);
-            t.printStackTrace();
+            System.err.println("[codeperf] agent failed to start: " + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
+    }
+
+    private static DynamicEvidenceReporter createReporter(AgentConfig cfg) {
+        if (!cfg.isUploadEnabled()) {
+            return null;
+        }
+        if (isBlank(cfg.getServerUrl()) || isBlank(cfg.getAnalysisTaskId())) {
+            throw new IllegalArgumentException("uploadEnabled=true requires serverUrl and analysisTaskId");
+        }
+        return new DynamicEvidenceReporter(new DynamicEvidenceUploader(
+                cfg.getServerUrl(), cfg.getAnalysisTaskId()));
+    }
+
+    private static boolean isBlank(String value) {
+        return value == null || value.trim().isEmpty();
     }
 }

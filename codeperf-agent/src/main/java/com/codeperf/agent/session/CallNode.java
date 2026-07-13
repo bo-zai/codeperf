@@ -1,5 +1,9 @@
 package com.codeperf.agent.session;
 
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -7,6 +11,9 @@ import java.util.List;
  * 方法调用树节点。selfTimeMs = totalTimeMs - 子节点 totalTimeMs 之和。
  * 见 docs/02-agent-core.md 第 4 节。
  */
+@Getter
+@Setter
+@NoArgsConstructor
 public class CallNode {
 
     private String method;
@@ -14,10 +21,6 @@ public class CallNode {
     private long totalTimeMs;
     private long selfTimeMs;
     private final List<CallNode> children = new ArrayList<>();
-
-    // 序列化用无参构造
-    public CallNode() {
-    }
 
     public CallNode(String method) {
         this.method = method;
@@ -39,41 +42,5 @@ public class CallNode {
         this.count++;
         this.totalTimeMs += totalMs;
         this.selfTimeMs += (totalMs - childMs);
-    }
-
-    public String getMethod() {
-        return method;
-    }
-
-    public void setMethod(String method) {
-        this.method = method;
-    }
-
-    public int getCount() {
-        return count;
-    }
-
-    public void setCount(int count) {
-        this.count = count;
-    }
-
-    public long getTotalTimeMs() {
-        return totalTimeMs;
-    }
-
-    public void setTotalTimeMs(long totalTimeMs) {
-        this.totalTimeMs = totalTimeMs;
-    }
-
-    public long getSelfTimeMs() {
-        return selfTimeMs;
-    }
-
-    public void setSelfTimeMs(long selfTimeMs) {
-        this.selfTimeMs = selfTimeMs;
-    }
-
-    public List<CallNode> getChildren() {
-        return children;
     }
 }

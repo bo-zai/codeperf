@@ -40,17 +40,23 @@ public class NPlusOneSuspect implements BytecodeRule {
         List<StaticFinding> findings = new ArrayList<>();
         for (ClassAnalysis cls : classes) {
             for (MethodAnalysis m : cls.getMethods()) {
-                if (m.getLoopRanges().isEmpty()) continue;
+                if (m.getLoopRanges().isEmpty()) {
+                    continue;
+                }
 
                 Confidence best = null;
                 CallSite bestCall = null;
                 String bestReason = null;
 
                 for (CallSite call : m.getCalls()) {
-                    if (!m.inLoop(call.insnIdx)) continue;
+                    if (!m.inLoop(call.getInsnIdx())) {
+                        continue;
+                    }
 
                     String[] hit = classify(call, pkgInternal, feignClasses);
-                    if (hit == null) continue;
+                    if (hit == null) {
+                        continue;
+                    }
                     Confidence c = Confidence.valueOf(hit[0]);
                     if (best == null || c.ordinal() > best.ordinal()) {
                         best = c;
@@ -62,8 +68,8 @@ public class NPlusOneSuspect implements BytecodeRule {
                 if (best != null) {
                     String classMethod = cls.getClassName() + "." + m.getName();
                     String evidence = bestReason + "：循环内调用 "
-                            + bestCall.owner.replace('/', '.') + "#" + bestCall.name
-                            + "()（指令 #" + bestCall.insnIdx + "）";
+                            + bestCall.getOwner().replace('/', '.') + "#" + bestCall.getName()
+                            + "()（指令 #" + bestCall.getInsnIdx() + "）";
                     findings.add(new StaticFinding(
                             TYPE, Severity.WARN, best,
                             "方法在循环体内执行远程/数据访问操作，可能是 N+1：1 次批量被拆成 N 次独立 I/O。",
@@ -76,7 +82,7 @@ public class NPlusOneSuspect implements BytecodeRule {
 
     /** 返回 [confidence, reason] 或 null（未命中）。 */
     private String[] classify(CallSite call, String pkgInternal, Set<String> feignClasses) {
-        String owner = call.owner;
+        String owner = call.getOwner();
 
         // 分支 A：数据访问层
         if (owner.contains("Repository") || owner.contains("DAO")
@@ -85,7 +91,7 @@ public class NPlusOneSuspect implements BytecodeRule {
         }
 
         // 分支 B：Feign 客户端
-        if (call.isInterface
+        if (call.isInterface()
                 && (owner.contains("FeignClient") || owner.endsWith("Client")
                     || feignClasses.contains(owner))) {
             return new String[]{"HIGH", "Feign/远程客户端接口"};
@@ -93,19 +99,19 @@ public class NPlusOneSuspect implements BytecodeRule {
 
         // 分支 B：RestTemplate
         if ("org/springframework/web/client/RestTemplate".equals(owner)
-                && REST_TEMPLATE_METHODS.contains(call.name)) {
+                && REST_TEMPLATE_METHODS.contains(call.getName())) {
             return new String[]{"HIGH", "RestTemplate HTTP 调用"};
         }
 
         // 分支 B：WebClient
         if ("org/springframework/web/reactive/function/client/WebClient".equals(owner)
-                && WEBCLIENT_METHODS.contains(call.name)) {
+                && WEBCLIENT_METHODS.contains(call.getName())) {
             return new String[]{"HIGH", "WebClient 响应式 HTTP 调用"};
         }
 
         // 分支 B：通用 HTTP 客户端
         if ((owner.contains("HttpClient") || owner.contains("OkHttpClient")
-                || owner.contains("RestClient")) && !"<init>".equals(call.name)) {
+                || owner.contains("RestClient")) && !"<init>".equals(call.getName())) {
             return new String[]{"MEDIUM", "通用 HTTP 客户端"};
         }
 

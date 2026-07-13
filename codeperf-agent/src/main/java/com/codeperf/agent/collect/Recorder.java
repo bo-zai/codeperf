@@ -4,6 +4,7 @@ import com.codeperf.agent.config.AgentConfig;
 import com.codeperf.agent.session.CallNode;
 import com.codeperf.agent.session.RequestData;
 import com.codeperf.agent.session.SessionData;
+import com.codeperf.agent.upload.DynamicEvidenceReporter;
 
 import java.lang.management.ManagementFactory;
 import java.util.ArrayDeque;
@@ -31,6 +32,7 @@ public final class Recorder {
     private static volatile SessionData session;
     private static volatile Profiler sampler;
     private static volatile SessionWriter writer;
+    private static volatile DynamicEvidenceReporter reporter;
     private static final AtomicBoolean completed = new AtomicBoolean(false);
 
     /** 当前线程正在测量的请求；为 null 表示本线程不在采集窗口内。 */
@@ -48,9 +50,14 @@ public final class Recorder {
     }
 
     public static void init(AgentConfig cfg, Profiler s, SessionWriter w) {
+        init(cfg, s, w, null);
+    }
+
+    public static void init(AgentConfig cfg, Profiler s, SessionWriter w, DynamicEvidenceReporter r) {
         config = cfg;
         sampler = s;
         writer = w;
+        reporter = r;
         SessionData sd = new SessionData();
         sd.setEntryMethod(cfg.getEntryMethod());
         sd.setEntryPath(cfg.getEntryPath());
@@ -172,6 +179,9 @@ public final class Recorder {
 
             if (firstComplete && writer != null) {
                 writer.write(session); // 写数据 + .done 标记
+            }
+            if (firstComplete && reporter != null) {
+                reporter.report(session);
             }
         } catch (Throwable ignore) {
             // 绝不影响业务

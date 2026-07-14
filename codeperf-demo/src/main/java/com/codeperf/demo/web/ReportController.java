@@ -14,11 +14,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api")
@@ -29,17 +27,20 @@ public class ReportController {
     private final OrderSettlementService settlementService;
     private final SafeBatchOrderService safeBatchOrderService;
     private final UserRepository repo;
+    private final UserIdRequestParser userIdRequestParser;
 
     public ReportController(OrderReportService reportService,
                             OrderExportService exportService,
                             OrderSettlementService settlementService,
                             SafeBatchOrderService safeBatchOrderService,
-                            UserRepository repo) {
+                            UserRepository repo,
+                            UserIdRequestParser userIdRequestParser) {
         this.reportService = reportService;
         this.exportService = exportService;
         this.settlementService = settlementService;
         this.safeBatchOrderService = safeBatchOrderService;
         this.repo = repo;
+        this.userIdRequestParser = userIdRequestParser;
     }
 
     /** 主坑接口：触发 N+1 / O(n^2) / CPU 热点 / 高分配。支持 POST 和 GET。 */
@@ -52,18 +53,18 @@ public class ReportController {
 
     @GetMapping("/orders/export")
     public List<Map<String, Object>> export(@RequestParam(value = "userIds", required = false) String userIds) {
-        return exportService.exportRows(resolveUserIds(userIds));
+        return exportService.exportRows(userIdRequestParser.parse(userIds));
     }
 
     @PostMapping("/orders/settlement")
     @GetMapping("/orders/settlement")
     public Map<String, Object> settlement(@RequestParam(value = "userIds", required = false) String userIds) {
-        return settlementService.settle(resolveUserIds(userIds));
+        return settlementService.settle(userIdRequestParser.parse(userIds));
     }
 
     @GetMapping("/orders/safe-batch")
     public List<Map<String, Object>> safeBatch(@RequestParam(value = "userIds", required = false) String userIds) {
-        return safeBatchOrderService.buildRows(resolveUserIds(userIds));
+        return safeBatchOrderService.buildRows(userIdRequestParser.parse(userIds));
     }
 
     /** 基线接口：轻量，干净，验证工具不误报。 */
@@ -77,14 +78,4 @@ public class ReportController {
         return result;
     }
 
-    private List<Long> resolveUserIds(String value) {
-        if (value == null || value.trim().isEmpty()) {
-            return Arrays.asList(1L, 2L, 3L, 4L, 5L);
-        }
-        return Arrays.stream(value.split(","))
-                .map(String::trim)
-                .filter(item -> !item.isEmpty())
-                .map(Long::valueOf)
-                .collect(Collectors.toList());
-    }
 }

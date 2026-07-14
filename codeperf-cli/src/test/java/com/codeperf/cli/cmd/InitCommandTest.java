@@ -30,6 +30,53 @@ public class InitCommandTest {
     }
 
     @Test
+    public void should_InferProjectNameFromGitOrigin_When_RemoteUrlExists() throws Exception {
+        Files.createDirectories(tempDir.resolve(".git"));
+        writeGitOrigin("git@gitee.com:dengquanbo/music-education-app.git");
+
+        InitCommand command = new InitCommand();
+        command.setWorkingDirectoryForTest(tempDir);
+
+        int exitCode = command.execute();
+
+        assertEquals(0, exitCode);
+        String config = new String(Files.readAllBytes(tempDir.resolve(".codeperf.yml")), StandardCharsets.UTF_8);
+        assertTrue(config.contains("project: music-education-app\n"));
+    }
+
+    @Test
+    public void should_FallbackToGitRootDirectoryName_When_RemoteUrlMissing() throws Exception {
+        Path projectRoot = tempDir.resolve("local-project");
+        Files.createDirectories(projectRoot.resolve(".git"));
+
+        InitCommand command = new InitCommand();
+        command.setWorkingDirectoryForTest(projectRoot);
+
+        int exitCode = command.execute();
+
+        assertEquals(0, exitCode);
+        String config = new String(Files.readAllBytes(projectRoot.resolve(".codeperf.yml")), StandardCharsets.UTF_8);
+        assertTrue(config.contains("project: local-project\n"));
+    }
+
+    @Test
+    public void should_WriteConfigToGitRoot_When_InitRunsFromSubDirectory() throws Exception {
+        Files.createDirectories(tempDir.resolve(".git"));
+        Files.createDirectories(tempDir.resolve("mall-admin/src/main/java"));
+        writeGitOrigin("https://github.com/macrozheng/mall.git");
+
+        InitCommand command = new InitCommand();
+        command.setWorkingDirectoryForTest(tempDir.resolve("mall-admin/src/main/java"));
+
+        int exitCode = command.execute();
+
+        assertEquals(0, exitCode);
+        assertTrue(Files.isRegularFile(tempDir.resolve(".codeperf.yml")));
+        assertTrue(Files.isRegularFile(tempDir.resolve(".codeperf/agent.yml")));
+        assertTrue(configText(tempDir).contains("project: mall\n"));
+    }
+
+    @Test
     public void should_NotOverwriteExistingConfig_When_InitRunsAgain() throws Exception {
         Files.createDirectories(tempDir.resolve(".git"));
         Files.createDirectories(tempDir.resolve(".codeperf"));
@@ -47,5 +94,15 @@ public class InitCommandTest {
                 new String(Files.readAllBytes(tempDir.resolve(".codeperf.yml")), StandardCharsets.UTF_8));
         assertEquals("serverUrl: http://existing\n",
                 new String(Files.readAllBytes(tempDir.resolve(".codeperf/agent.yml")), StandardCharsets.UTF_8));
+    }
+
+    private void writeGitOrigin(String remoteUrl) throws Exception {
+        Files.write(tempDir.resolve(".git/config"), ("[remote \"origin\"]\n"
+                + "    url = " + remoteUrl + "\n"
+                + "    fetch = +refs/heads/*:refs/remotes/origin/*\n").getBytes(StandardCharsets.UTF_8));
+    }
+
+    private String configText(Path root) throws Exception {
+        return new String(Files.readAllBytes(root.resolve(".codeperf.yml")), StandardCharsets.UTF_8);
     }
 }

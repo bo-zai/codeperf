@@ -17,6 +17,15 @@ public class PrePushRiskDemoService {
         this.deliveryClient = deliveryClient;
     }
 
+    public List<String> buildOrderViews(List<Long> orderIds) {
+        List<String> views = new ArrayList<>();
+        for (Long orderId : orderIds) {
+            OrderDetail detail = orderMapper.selectById(orderId);
+            views.add(detail.getDeliveryNo());
+        }
+        return views;
+    }
+
     public List<String> buildDeliveryViews(List<Long> orderIds) {
         List<String> views = new ArrayList<>();
         for (Long orderId : orderIds) {

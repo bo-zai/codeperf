@@ -20,3 +20,11 @@ staticScan:
     - http
     - rpc
     - sdk
+
+report:
+  local:
+    enabled: true
+    path: .codeperf/report/source-report.json
+  upload:
+    enabled: false
+    serverUrl: http://codeperf.company.com

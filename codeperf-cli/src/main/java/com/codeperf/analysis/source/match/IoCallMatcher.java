@@ -14,8 +14,9 @@ public class IoCallMatcher {
         String type = receiverType == null ? "" : receiverType.toLowerCase(Locale.ROOT);
         String method = call.getNameAsString().toLowerCase(Locale.ROOT);
 
-        if (containsAny(receiver, type, "redistemplate", "stringredistemplate", "redissonclient")
-                || callText.contains("redistemplate.") || callText.contains("opsforvalue().get")) {
+        if ((containsAny(receiver, type, "redistemplate", "stringredistemplate", "redissonclient", "redisservice")
+                || callText.contains("redistemplate.") || callText.contains("opsforvalue().get"))
+                && startsWithAny(method, "get", "set", "del", "delete", "increment", "decrement", "expire")) {
             return new IoMatch(true, "REDIS", SourceFinding.Confidence.HIGH,
                     "Redis 客户端调用: " + call);
         }
@@ -23,7 +24,9 @@ public class IoCallMatcher {
             return new IoMatch(true, "MONGO", SourceFinding.Confidence.HIGH,
                     "Mongo 客户端调用: " + call);
         }
-        if (containsAny(receiver, type, "resttemplate", "webclient", "okhttpclient", "httpclient", "feign")) {
+        if (containsAny(receiver, type, "resttemplate", "webclient", "okhttpclient", "httpclient", "feign",
+                "httputil", "httputils", "okhttputil")
+                && startsWithAny(method, "get", "post", "put", "delete", "execute", "download")) {
             return new IoMatch(true, "HTTP", SourceFinding.Confidence.HIGH,
                     "HTTP 客户端调用: " + call);
         }

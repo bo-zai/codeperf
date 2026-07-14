@@ -58,7 +58,7 @@ public class LoopIoAmplificationAstRule implements SourceRule {
                     : null;
             IoMatch match = matcher.match(call, receiverType);
             if (match.isMatched()) {
-                findings.add(toFinding(loop, call, context, match, Collections.<CallChainStep>emptyList()));
+                findings.add(toFinding(loop, call, call, context, match, Collections.<CallChainStep>emptyList()));
                 continue;
             }
             if (!call.getScope().isPresent() && context.getConfig().getCallChain().isEnabled()) {
@@ -67,7 +67,7 @@ public class LoopIoAmplificationAstRule implements SourceRule {
                     Optional<CallChainAnalyzer.Result> indirect = analyzer.findIo(
                             className, caller, call, context.getConfig().getCallChain().getMaxDepth());
                     if (indirect.isPresent()) {
-                        findings.add(toFinding(loop, indirect.get().getIoCall(), context,
+                        findings.add(toFinding(loop, call, indirect.get().getIoCall(), context,
                                 indirect.get().getMatch(), indirect.get().getCallChain()));
                     }
                 }
@@ -94,9 +94,10 @@ public class LoopIoAmplificationAstRule implements SourceRule {
                 || node instanceof DoStmt;
     }
 
-    private SourceFinding toFinding(Node loop, MethodCallExpr call, SourceRuleContext context,
+    private SourceFinding toFinding(Node loop, MethodCallExpr loopCall, MethodCallExpr ioCall, SourceRuleContext context,
                                     IoMatch match, List<CallChainStep> callChain) {
-        int callLine = call.getBegin().isPresent() ? call.getBegin().get().line : 0;
+        int loopCallLine = loopCall.getBegin().isPresent() ? loopCall.getBegin().get().line : 0;
+        int ioLine = ioCall.getBegin().isPresent() ? ioCall.getBegin().get().line : 0;
         int loopStart = loop.getBegin().isPresent() ? loop.getBegin().get().line : 0;
         int loopEnd = loop.getEnd().isPresent() ? loop.getEnd().get().line : 0;
         String sourceFile = context.getSourceFile().toString().replace('\\', '/');
@@ -107,15 +108,23 @@ public class LoopIoAmplificationAstRule implements SourceRule {
                 "循环体内存在外部 I/O 调用，生产数据量放大时可能导致接口响应变慢。",
                 match.getReason(),
                 sourceFile,
-                callLine,
+                ioLine,
                 loopStart,
                 loopEnd,
                 match.getIoType(),
-                callChain);
+                callChain,
+                findMethodName(loop),
+                loopCallLine,
+                ioLine);
     }
 
     private String findClassName(Node node) {
         Optional<ClassOrInterfaceDeclaration> clazz = node.findAncestor(ClassOrInterfaceDeclaration.class);
         return clazz.isPresent() ? clazz.get().getNameAsString() : "";
+    }
+
+    private String findMethodName(Node node) {
+        Optional<MethodDeclaration> method = node.findAncestor(MethodDeclaration.class);
+        return method.isPresent() ? method.get().getNameAsString() : "";
     }
 }

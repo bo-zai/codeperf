@@ -32,7 +32,10 @@ public class SourceScanJsonReportWriterTest {
                 4,
                 6,
                 "DB",
-                Collections.emptyList());
+                Collections.emptyList(),
+                "buildReport",
+                5,
+                9);
         SourceScanResult result = new SourceScanResult(1, Arrays.asList(finding), Collections.emptyList());
         Path output = tempDir.resolve("codeperf-source-report.json");
 
@@ -41,5 +44,8 @@ public class SourceScanJsonReportWriterTest {
         String json = new String(Files.readAllBytes(output), StandardCharsets.UTF_8);
         assertTrue(json.contains("Loop I/O Amplification"));
         assertTrue(json.contains("src/main/java/OrderService.java"));
+        assertTrue(json.contains("\"loopMethodName\""));
+        assertTrue(json.contains("\"loopCallLine\" : 5"));
+        assertTrue(json.contains("\"ioLine\" : 9"));
     }
 }

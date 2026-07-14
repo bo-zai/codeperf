@@ -74,6 +74,9 @@ public class LoopIoAmplificationAstRuleTest {
         assertEquals(2, findings.get(0).getCallChain().size());
         assertEquals("buildReport", findings.get(0).getCallChain().get(0).getMethodName());
         assertEquals("loadOrder", findings.get(0).getCallChain().get(1).getMethodName());
+        assertEquals("buildReport", findings.get(0).getLoopMethodName());
+        assertEquals(5, findings.get(0).getLoopCallLine());
+        assertEquals(9, findings.get(0).getIoLine());
     }
 
     @Test

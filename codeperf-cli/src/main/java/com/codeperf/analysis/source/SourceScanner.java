@@ -10,7 +10,10 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 public class SourceScanner {
 
@@ -48,7 +51,49 @@ public class SourceScanner {
                 findings.addAll(rule.analyze(context));
             }
         }
-        return new SourceScanResult(parsedSources.size(), findings, parseErrors);
+        return new SourceScanResult(parsedSources.size(), deduplicate(findings), parseErrors);
+    }
+
+    private List<SourceFinding> deduplicate(List<SourceFinding> findings) {
+        Map<String, SourceFinding> unique = new LinkedHashMap<>();
+        for (SourceFinding finding : findings) {
+            String key = deduplicationKey(finding);
+            SourceFinding existing = unique.get(key);
+            if (existing == null || isHigherQuality(finding, existing)) {
+                unique.put(key, finding);
+            }
+        }
+        return new ArrayList<>(unique.values());
+    }
+
+    private String deduplicationKey(SourceFinding finding) {
+        return finding.getType()
+                + "|" + finding.getSourceFile()
+                + "|" + finding.getLineNumber()
+                + "|" + finding.getLoopStartLine()
+                + "|" + finding.getLoopEndLine()
+                + "|" + finding.getIoType()
+                + "|" + finding.getEvidence()
+                + "|" + callChainKey(finding);
+    }
+
+    private String callChainKey(SourceFinding finding) {
+        if (finding.getCallChain() == null || finding.getCallChain().isEmpty()) {
+            return "";
+        }
+        return finding.getCallChain().stream()
+                .map(step -> step.getClassName()
+                        + "#" + step.getMethodName()
+                        + "@" + step.getFilePath()
+                        + ":" + step.getLineNumber())
+                .collect(Collectors.joining(">"));
+    }
+
+    private boolean isHigherQuality(SourceFinding candidate, SourceFinding existing) {
+        if (candidate.getSeverity().getLevel() != existing.getSeverity().getLevel()) {
+            return candidate.getSeverity().getLevel() > existing.getSeverity().getLevel();
+        }
+        return candidate.getConfidence().ordinal() > existing.getConfidence().ordinal();
     }
 
     private static class ParsedSource {

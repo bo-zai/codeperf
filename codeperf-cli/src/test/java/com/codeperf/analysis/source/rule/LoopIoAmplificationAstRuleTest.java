@@ -75,4 +75,36 @@ public class LoopIoAmplificationAstRuleTest {
         assertEquals("buildReport", findings.get(0).getCallChain().get(0).getMethodName());
         assertEquals("loadOrder", findings.get(0).getCallChain().get(1).getMethodName());
     }
+
+    @Test
+    public void should_ReportNestedLoopIoCallOnce_When_CallBelongsToInnerLoop() {
+        CompilationUnit unit = StaticJavaParser.parse(
+                "class ReconciliationService {\n"
+                        + "  private OrderMapper orderMapper;\n"
+                        + "  private PaymentLedgerClient paymentLedgerClient;\n"
+                        + "  void reconcile(java.util.List<Long> userIds) {\n"
+                        + "    for (Long userId : userIds) {\n"
+                        + "      java.util.List<Order> orders = orderMapper.selectByUserId(userId);\n"
+                        + "      for (Order order : orders) {\n"
+                        + "        paymentLedgerClient.queryPaidAmount(order.getId());\n"
+                        + "      }\n"
+                        + "    }\n"
+                        + "  }\n"
+                        + "}\n");
+        SourceClassIndex index = new SourceClassIndex();
+        index.add(Paths.get("src/main/java/ReconciliationService.java"), unit);
+        SourceRuleContext context = new SourceRuleContext(
+                Arrays.asList(unit),
+                Paths.get("src/main/java/ReconciliationService.java"),
+                index,
+                new StaticScanConfig());
+
+        List<SourceFinding> findings = new LoopIoAmplificationAstRule().analyze(context);
+
+        assertEquals(2, findings.size());
+        assertEquals(6, findings.get(0).getLineNumber());
+        assertEquals(5, findings.get(0).getLoopStartLine());
+        assertEquals(8, findings.get(1).getLineNumber());
+        assertEquals(7, findings.get(1).getLoopStartLine());
+    }
 }

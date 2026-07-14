@@ -50,6 +50,9 @@ public class LoopIoAmplificationAstRule implements SourceRule {
         String className = findClassName(loop);
         CallChainAnalyzer analyzer = new CallChainAnalyzer(context.getClassIndex(), matcher);
         for (MethodCallExpr call : body.findAll(MethodCallExpr.class)) {
+            if (!belongsToCurrentLoop(call, loop)) {
+                continue;
+            }
             String receiverType = call.getScope().isPresent()
                     ? context.getClassIndex().findFieldType(className, call.getScope().get().toString()).orElse(null)
                     : null;
@@ -70,6 +73,25 @@ public class LoopIoAmplificationAstRule implements SourceRule {
                 }
             }
         }
+    }
+
+    private boolean belongsToCurrentLoop(MethodCallExpr call, Node currentLoop) {
+        Optional<Node> current = call.getParentNode();
+        while (current.isPresent()) {
+            Node node = current.get();
+            if (isLoop(node)) {
+                return node == currentLoop;
+            }
+            current = node.getParentNode();
+        }
+        return false;
+    }
+
+    private boolean isLoop(Node node) {
+        return node instanceof ForStmt
+                || node instanceof ForEachStmt
+                || node instanceof WhileStmt
+                || node instanceof DoStmt;
     }
 
     private SourceFinding toFinding(Node loop, MethodCallExpr call, SourceRuleContext context,

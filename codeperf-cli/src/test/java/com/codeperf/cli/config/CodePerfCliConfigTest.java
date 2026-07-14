@@ -42,7 +42,14 @@ public class CodePerfCliConfigTest {
                         + "  configPath: .codeperf/agent.yml\n"
                         + "  jarPath: /opt/codeperf/codeperf-agent.jar\n"
                         + "  targetPackages:\n"
-                        + "    - com.company.order\n").getBytes(StandardCharsets.UTF_8));
+                        + "    - com.company.order\n"
+                        + "report:\n"
+                        + "  local:\n"
+                        + "    enabled: true\n"
+                        + "    path: .codeperf/report/custom-source-report.json\n"
+                        + "  upload:\n"
+                        + "    enabled: true\n"
+                        + "    serverUrl: http://codeperf-report.company.com\n").getBytes(StandardCharsets.UTF_8));
 
         CodePerfCliConfig loaded = CodePerfCliConfig.load(config);
 
@@ -64,6 +71,10 @@ public class CodePerfCliConfigTest {
         assertEquals(".codeperf/agent.yml", loaded.getAgent().getConfigPath());
         assertEquals("/opt/codeperf/codeperf-agent.jar", loaded.getAgent().getJarPath());
         assertEquals("com.company.order", loaded.getAgent().getTargetPackages().get(0));
+        assertTrue(loaded.getReport().getLocal().isEnabled());
+        assertEquals(".codeperf/report/custom-source-report.json", loaded.getReport().getLocal().getPath());
+        assertTrue(loaded.getReport().getUpload().isEnabled());
+        assertEquals("http://codeperf-report.company.com", loaded.getReport().getUpload().getServerUrl());
     }
 
     @Test
@@ -82,5 +93,8 @@ public class CodePerfCliConfigTest {
         assertEquals("WARN", loaded.getFailOn());
         assertTrue(loaded.getStaticScan().getCallChain().isEnabled());
         assertEquals(2, loaded.getStaticScan().getCallChain().getMaxDepth());
+        assertTrue(loaded.getReport().getLocal().isEnabled());
+        assertEquals(".codeperf/report/source-report.json", loaded.getReport().getLocal().getPath());
+        assertFalse(loaded.getReport().getUpload().isEnabled());
     }
 }

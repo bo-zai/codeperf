@@ -27,6 +27,10 @@ public class InitCommandTest {
         assertEquals(0, exitCode);
         assertTrue(Files.isRegularFile(tempDir.resolve(".codeperf.yml")));
         assertTrue(Files.isRegularFile(tempDir.resolve(".codeperf/agent.yml")));
+        String config = configText(tempDir);
+        assertTrue(config.contains("report:\n"));
+        assertTrue(config.contains("    path: .codeperf/report/source-report.json\n"));
+        assertTrue(config.contains("    enabled: false\n"));
     }
 
     @Test

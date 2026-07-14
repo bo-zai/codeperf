@@ -17,6 +17,7 @@ public class CodePerfCliConfig {
     private String project;
     private StaticScanConfig staticScan = new StaticScanConfig();
     private AgentOnboardingConfig agent = new AgentOnboardingConfig();
+    private ReportConfig report = new ReportConfig();
     private List<ModuleScanConfig> modules = new ArrayList<>();
     private String classesDir;
     private String env = "local";
@@ -44,6 +45,10 @@ public class CodePerfCliConfig {
         Object agent = yaml.get("agent");
         if (agent instanceof Map) {
             applyAgent(config.agent, (Map<String, Object>) agent);
+        }
+        Object report = yaml.get("report");
+        if (report instanceof Map) {
+            applyReport(config.report, (Map<String, Object>) report);
         }
         Object modules = yaml.get("modules");
         if (modules instanceof List) {
@@ -80,6 +85,28 @@ public class CodePerfCliConfig {
         config.setConfigPath(stringValue(yaml.get("configPath"), config.getConfigPath()));
         config.setJarPath(stringValue(yaml.get("jarPath"), config.getJarPath()));
         config.setTargetPackages(stringList(yaml.get("targetPackages"), config.getTargetPackages()));
+    }
+
+    @SuppressWarnings("unchecked")
+    private static void applyReport(ReportConfig config, Map<String, Object> yaml) {
+        Object local = yaml.get("local");
+        if (local instanceof Map) {
+            applyLocalReport(config.getLocal(), (Map<String, Object>) local);
+        }
+        Object upload = yaml.get("upload");
+        if (upload instanceof Map) {
+            applyUploadReport(config.getUpload(), (Map<String, Object>) upload);
+        }
+    }
+
+    private static void applyLocalReport(LocalReportConfig config, Map<String, Object> yaml) {
+        config.setEnabled(booleanValue(yaml.get("enabled"), config.isEnabled()));
+        config.setPath(stringValue(yaml.get("path"), config.getPath()));
+    }
+
+    private static void applyUploadReport(UploadReportConfig config, Map<String, Object> yaml) {
+        config.setEnabled(booleanValue(yaml.get("enabled"), config.isEnabled()));
+        config.setServerUrl(stringValue(yaml.get("serverUrl"), config.getServerUrl()));
     }
 
     @SuppressWarnings("unchecked")

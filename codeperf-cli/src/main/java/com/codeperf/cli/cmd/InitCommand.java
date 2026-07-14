@@ -121,7 +121,14 @@ public class InitCommand {
                 + "  enabled: true\n"
                 + "  serverUrl: http://codeperf.company.com\n"
                 + "  configPath: .codeperf/agent.yml\n"
-                + "  jarPath: /opt/codeperf/codeperf-agent.jar\n";
+                + "  jarPath: /opt/codeperf/codeperf-agent.jar\n"
+                + "report:\n"
+                + "  local:\n"
+                + "    enabled: true\n"
+                + "    path: .codeperf/report/source-report.json\n"
+                + "  upload:\n"
+                + "    enabled: false\n"
+                + "    serverUrl: http://codeperf.company.com\n";
     }
 
     private String defaultAgent() {

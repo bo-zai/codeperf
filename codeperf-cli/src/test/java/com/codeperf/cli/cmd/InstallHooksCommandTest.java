@@ -32,4 +32,21 @@ public class InstallHooksCommandTest {
         assertTrue(Files.isRegularFile(hook));
         assertTrue(new String(Files.readAllBytes(hook), StandardCharsets.UTF_8).contains("codeperf scan"));
     }
+
+    @Test
+    public void should_NotOverwriteExistingPrePushHook_When_HookAlreadyExists() throws Exception {
+        Files.createDirectories(tempDir.resolve(".git/hooks"));
+        Files.write(tempDir.resolve(".codeperf.yml"), "project: demo\n".getBytes(StandardCharsets.UTF_8));
+        Path hook = tempDir.resolve(".git/hooks/pre-push");
+        Files.write(hook, "#!/usr/bin/env sh\necho existing\n".getBytes(StandardCharsets.UTF_8));
+
+        InstallHooksCommand command = new InstallHooksCommand();
+        command.setWorkingDirectoryForTest(tempDir);
+
+        int exitCode = command.execute();
+
+        assertEquals(0, exitCode);
+        assertEquals("#!/usr/bin/env sh\necho existing\n",
+                new String(Files.readAllBytes(hook), StandardCharsets.UTF_8));
+    }
 }

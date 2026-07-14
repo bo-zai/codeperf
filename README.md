@@ -30,6 +30,8 @@ codeperf init
 codeperf scan
 ```
 
+`codeperf init` 是非破坏式初始化：如果 `.codeperf.yml` 或 `.codeperf/agent.yml` 已存在，会跳过并保留原内容。
+
 如果暂时不使用 npm link，也可以直接执行 jar：
 
 ```bash
@@ -48,6 +50,8 @@ codeperf scan --all
 ```bash
 codeperf install-hooks
 ```
+
+`install-hooks` 不会覆盖已有 `.git/hooks/pre-push`。如果项目已经有 hook，命令会输出需要手工合并的 `codeperf scan` 片段。
 
 ## 配置示例
 

@@ -20,6 +20,12 @@ public class InstallHooksCommand {
             ProjectContext context = new ProjectContextResolver().resolve(cwd);
             Path hook = context.getRootDirectory().resolve(".git/hooks/pre-push");
             Files.createDirectories(hook.getParent());
+            if (Files.exists(hook)) {
+                System.out.println("[codeperf] pre-push hook 已存在，未覆盖: " + hook);
+                System.out.println("[codeperf] 如需启用 CodePerf，请手工合并以下内容:");
+                System.out.print(hookContent());
+                return 0;
+            }
             Files.write(hook, hookContent().getBytes(StandardCharsets.UTF_8));
             hook.toFile().setExecutable(true);
             System.out.println("[codeperf] 已安装 pre-push hook");

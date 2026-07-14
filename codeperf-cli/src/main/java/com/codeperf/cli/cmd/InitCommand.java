@@ -16,9 +16,9 @@ public class InitCommand {
         try {
             Path root = workingDirectory == null ? Paths.get(".").toAbsolutePath().normalize() : workingDirectory;
             Files.createDirectories(root.resolve(".codeperf"));
-            Files.write(root.resolve(".codeperf.yml"), defaultConfig().getBytes(StandardCharsets.UTF_8));
-            Files.write(root.resolve(".codeperf/agent.yml"), defaultAgent().getBytes(StandardCharsets.UTF_8));
-            System.out.println("[codeperf] 已生成 .codeperf.yml 和 .codeperf/agent.yml");
+            writeIfAbsent(root.resolve(".codeperf.yml"), defaultConfig());
+            writeIfAbsent(root.resolve(".codeperf/agent.yml"), defaultAgent());
+            System.out.println("[codeperf] init 完成，已存在的配置文件不会被覆盖");
             System.out.println("[codeperf] 请手工配置 JVM 参数: -javaagent:/opt/codeperf/codeperf-agent.jar="
                     + root.resolve(".codeperf/agent.yml").toAbsolutePath().normalize());
             return 0;
@@ -30,6 +30,15 @@ public class InitCommand {
 
     void setWorkingDirectoryForTest(Path workingDirectory) {
         this.workingDirectory = workingDirectory;
+    }
+
+    private void writeIfAbsent(Path path, String content) throws Exception {
+        if (Files.exists(path)) {
+            System.out.println("[codeperf] 已存在，跳过: " + path);
+            return;
+        }
+        Files.write(path, content.getBytes(StandardCharsets.UTF_8));
+        System.out.println("[codeperf] 已生成: " + path);
     }
 
     private String defaultConfig() {

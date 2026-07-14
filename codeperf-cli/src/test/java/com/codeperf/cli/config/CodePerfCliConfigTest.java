@@ -36,13 +36,6 @@ public class CodePerfCliConfigTest {
                         + "  ioTypes:\n"
                         + "    - mysql\n"
                         + "    - redis\n"
-                        + "agent:\n"
-                        + "  enabled: true\n"
-                        + "  serverUrl: http://codeperf.company.com\n"
-                        + "  configPath: .codeperf/agent.yml\n"
-                        + "  jarPath: /opt/codeperf/codeperf-agent.jar\n"
-                        + "  targetPackages:\n"
-                        + "    - com.company.order\n"
                         + "report:\n"
                         + "  local:\n"
                         + "    enabled: true\n"
@@ -66,11 +59,6 @@ public class CodePerfCliConfigTest {
         assertEquals(2, loaded.getStaticScan().getCallChain().getMaxDepth());
         assertEquals("mysql", loaded.getStaticScan().getIoTypes().get(0));
         assertEquals("redis", loaded.getStaticScan().getIoTypes().get(1));
-        assertTrue(loaded.getAgent().isEnabled());
-        assertEquals("http://codeperf.company.com", loaded.getAgent().getServerUrl());
-        assertEquals(".codeperf/agent.yml", loaded.getAgent().getConfigPath());
-        assertEquals("/opt/codeperf/codeperf-agent.jar", loaded.getAgent().getJarPath());
-        assertEquals("com.company.order", loaded.getAgent().getTargetPackages().get(0));
         assertTrue(loaded.getReport().getLocal().isEnabled());
         assertEquals(".codeperf/report/custom-source-report.json", loaded.getReport().getLocal().getPath());
         assertTrue(loaded.getReport().getUpload().isEnabled());
@@ -96,5 +84,16 @@ public class CodePerfCliConfigTest {
         assertTrue(loaded.getReport().getLocal().isEnabled());
         assertEquals(".codeperf/report/source-report.json", loaded.getReport().getLocal().getPath());
         assertFalse(loaded.getReport().getUpload().isEnabled());
+    }
+
+    @Test
+    public void should_MapLegacyServerUrlToReportUpload_When_TopLevelServerUrlProvided() throws Exception {
+        Path config = tempDir.resolve(".codeperf.yml");
+        Files.write(config, ("project: demo\n"
+                + "serverUrl: http://legacy-codeperf.company.com\n").getBytes(StandardCharsets.UTF_8));
+
+        CodePerfCliConfig loaded = CodePerfCliConfig.load(config);
+
+        assertEquals("http://legacy-codeperf.company.com", loaded.getReport().getUpload().getServerUrl());
     }
 }

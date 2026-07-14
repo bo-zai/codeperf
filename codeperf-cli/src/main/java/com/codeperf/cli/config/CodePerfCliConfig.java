@@ -16,7 +16,6 @@ public class CodePerfCliConfig {
 
     private String project;
     private StaticScanConfig staticScan = new StaticScanConfig();
-    private AgentOnboardingConfig agent = new AgentOnboardingConfig();
     private ReportConfig report = new ReportConfig();
     private List<ModuleScanConfig> modules = new ArrayList<>();
     private String classesDir;
@@ -41,10 +40,6 @@ public class CodePerfCliConfig {
         Object staticScan = yaml.get("staticScan");
         if (staticScan instanceof Map) {
             applyStaticScan(config.staticScan, (Map<String, Object>) staticScan);
-        }
-        Object agent = yaml.get("agent");
-        if (agent instanceof Map) {
-            applyAgent(config.agent, (Map<String, Object>) agent);
         }
         Object report = yaml.get("report");
         if (report instanceof Map) {
@@ -77,14 +72,6 @@ public class CodePerfCliConfig {
     private static void applyCallChain(CallChainConfig config, Map<String, Object> yaml) {
         config.setEnabled(booleanValue(yaml.get("enabled"), config.isEnabled()));
         config.setMaxDepth(intValue(yaml.get("maxDepth"), config.getMaxDepth()));
-    }
-
-    private static void applyAgent(AgentOnboardingConfig config, Map<String, Object> yaml) {
-        config.setEnabled(booleanValue(yaml.get("enabled"), config.isEnabled()));
-        config.setServerUrl(stringValue(yaml.get("serverUrl"), config.getServerUrl()));
-        config.setConfigPath(stringValue(yaml.get("configPath"), config.getConfigPath()));
-        config.setJarPath(stringValue(yaml.get("jarPath"), config.getJarPath()));
-        config.setTargetPackages(stringList(yaml.get("targetPackages"), config.getTargetPackages()));
     }
 
     @SuppressWarnings("unchecked")
@@ -131,22 +118,10 @@ public class CodePerfCliConfig {
         config.staticScan.setHeadRef(stringValue(yaml.get("headRef"), config.staticScan.getHeadRef()));
         config.staticScan.setFailOn(stringValue(yaml.get("failOn"), config.staticScan.getFailOn()));
         config.staticScan.setSourceRoots(stringList(yaml.get("sourceRoots"), config.staticScan.getSourceRoots()));
-        String targetPackage = stringValue(yaml.get("targetPackage"), null);
-        if (targetPackage != null && config.agent.getTargetPackages().isEmpty()) {
-            config.agent.getTargetPackages().add(targetPackage);
+        String serverUrl = stringValue(yaml.get("serverUrl"), null);
+        if (serverUrl != null && isBlank(config.report.getUpload().getServerUrl())) {
+            config.report.getUpload().setServerUrl(serverUrl);
         }
-        config.agent.setServerUrl(stringValue(yaml.get("serverUrl"), config.agent.getServerUrl()));
-    }
-
-    public String getTargetPackage() {
-        if (agent.getTargetPackages() == null || agent.getTargetPackages().isEmpty()) {
-            return null;
-        }
-        return agent.getTargetPackages().get(0);
-    }
-
-    public String getServerUrl() {
-        return agent.getServerUrl();
     }
 
     public String getBaseRef() {
@@ -171,6 +146,10 @@ public class CodePerfCliConfig {
 
     private static String stringValue(Object value, String defaultValue) {
         return value == null ? defaultValue : value.toString();
+    }
+
+    private static boolean isBlank(String value) {
+        return value == null || value.trim().isEmpty();
     }
 
     private static boolean booleanValue(Object value, boolean defaultValue) {

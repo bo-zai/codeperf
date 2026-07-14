@@ -141,10 +141,7 @@ public class ScanCommand {
         UploadReportConfig uploadConfig = context.getConfig().getReport().getUpload();
         String serverUrl = uploadConfig.getServerUrl();
         if (serverUrl == null || serverUrl.trim().isEmpty()) {
-            serverUrl = context.getConfig().getAgent().getServerUrl();
-        }
-        if (serverUrl == null || serverUrl.trim().isEmpty()) {
-            throw new IllegalStateException("未配置 report.upload.serverUrl 或 agent.serverUrl");
+            throw new IllegalStateException("未配置 report.upload.serverUrl");
         }
         if (!Files.isRegularFile(reportPath)) {
             throw new IllegalStateException("未找到本地扫描报告: " + reportPath);

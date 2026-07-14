@@ -24,11 +24,6 @@ public class DoctorCommand {
                     return 2;
                 }
             }
-            Path agentConfig = context.resolvePath(context.getConfig().getAgent().getConfigPath());
-            if (!Files.isRegularFile(agentConfig)) {
-                System.err.println("[codeperf] agent 配置不存在: " + agentConfig);
-                return 2;
-            }
             System.out.println("[codeperf] doctor 检查通过");
             return 0;
         } catch (Exception e) {

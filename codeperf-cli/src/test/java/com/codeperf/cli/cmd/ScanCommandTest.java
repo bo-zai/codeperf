@@ -107,6 +107,36 @@ public class ScanCommandTest {
     }
 
     @Test
+    public void should_ReturnError_When_UploadRequestedWithoutReportServerUrl() throws Exception {
+        initGitRepo();
+        write(".codeperf.yml",
+                "project: demo\n"
+                        + "staticScan:\n"
+                        + "  sourceRoots:\n"
+                        + "    - src/main/java\n"
+                        + "  failOn: NONE\n"
+                        + "report:\n"
+                        + "  local:\n"
+                        + "    enabled: true\n"
+                        + "  upload:\n"
+                        + "    enabled: false\n");
+        write("src/main/java/com/acme/OrderService.java",
+                "package com.acme;\n"
+                        + "class OrderService {\n"
+                        + "  void buildReport() {\n"
+                        + "  }\n"
+                        + "}\n");
+
+        ScanCommand command = new ScanCommand();
+        JCommander.newBuilder().addObject(command).build().parse("--all", "--upload");
+        command.setWorkingDirectoryForTest(tempDir);
+
+        int exitCode = command.execute();
+
+        assertEquals(2, exitCode);
+    }
+
+    @Test
     public void should_AttributeFindingToCommitAuthor_When_RiskIntroducedInChangedLines() throws Exception {
         initGitRepo();
         String baseCommit = runGitOutput("rev-parse", "HEAD");

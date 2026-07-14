@@ -45,6 +45,7 @@ public class SourceScannerTest {
         assertEquals(1, result.getFilesScanned());
         assertEquals(1, result.getFindings().size());
         assertEquals("DB", result.getFindings().get(0).getIoType());
+        assertEquals("src/main/java/com/acme/OrderService.java", result.getFindings().get(0).getSourceFile());
         assertEquals(0, result.getParseErrors().size());
     }
 

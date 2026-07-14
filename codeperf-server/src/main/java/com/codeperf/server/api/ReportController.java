@@ -13,9 +13,12 @@ import org.springframework.web.bind.annotation.RestController;
 public class ReportController {
 
     private final AnalysisTaskService service;
+    private final com.codeperf.server.service.StaticReportSummarizer staticReportSummarizer;
 
-    public ReportController(AnalysisTaskService service) {
+    public ReportController(AnalysisTaskService service,
+                            com.codeperf.server.service.StaticReportSummarizer staticReportSummarizer) {
         this.service = service;
+        this.staticReportSummarizer = staticReportSummarizer;
     }
 
     @GetMapping
@@ -23,10 +26,15 @@ public class ReportController {
         AnalysisTask task = service.get(taskId);
         return new ReportResponse(
                 task.getAnalysisTaskId(),
+                task.getProject(),
+                task.getCommit(),
+                task.getBranch(),
+                task.getEnv(),
                 task.getStatus().name(),
                 task.getStaticRiskLevel().name(),
                 task.getStaticPayload() != null,
                 task.getDynamicPayload() != null,
-                task.getRiskLevel().name());
+                task.getRiskLevel().name(),
+                staticReportSummarizer.summarize(task.getStaticPayload()));
     }
 }

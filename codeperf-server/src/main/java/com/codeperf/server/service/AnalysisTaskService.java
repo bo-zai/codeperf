@@ -15,10 +15,12 @@ import java.util.UUID;
 public class AnalysisTaskService {
 
     private final AnalysisTaskRepository repository;
+    private final StaticReportSummarizer staticReportSummarizer;
     private final ObjectMapper mapper = new ObjectMapper();
 
-    public AnalysisTaskService(AnalysisTaskRepository repository) {
+    public AnalysisTaskService(AnalysisTaskRepository repository, StaticReportSummarizer staticReportSummarizer) {
         this.repository = repository;
+        this.staticReportSummarizer = staticReportSummarizer;
     }
 
     public AnalysisTask create(String project, String commit, String branch, String env) {
@@ -34,6 +36,7 @@ public class AnalysisTaskService {
 
     public AnalysisTask acceptStaticResult(String taskId, String payload) {
         AnalysisTask task = get(taskId);
+        staticReportSummarizer.validate(payload);
         RiskLevel staticRisk = deriveStaticRisk(payload);
         task.setStaticPayload(payload);
         task.setStaticRiskLevel(staticRisk);

@@ -13,9 +13,14 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class ReportResponse {
     private String analysisTaskId;
+    private String project;
+    private String commit;
+    private String branch;
+    private String env;
     private String status;
     private String staticRiskLevel;
     private boolean hasStaticResult;
     private boolean hasDynamicEvidence;
     private String riskLevel;
+    private StaticReportSummary staticSummary;
 }

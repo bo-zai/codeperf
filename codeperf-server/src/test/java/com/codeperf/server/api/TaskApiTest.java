@@ -66,4 +66,75 @@ public class TaskApiTest {
                 .andExpect(jsonPath("$.hasDynamicEvidence").value(true))
                 .andExpect(jsonPath("$.riskLevel").value("WARN"));
     }
+
+    @Test
+    public void should_ReturnStaticReportSummary_When_CliStaticReportUploaded() throws Exception {
+        MvcResult created = mvc.perform(post("/api/tasks")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"project\":\"demo\",\"commit\":\"abc\",\"branch\":\"main\",\"env\":\"local\"}"))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        String taskId = extractTaskId(created);
+        String cliReport = "{"
+                + "\"filesScanned\":35,"
+                + "\"findings\":[{"
+                + "\"type\":\"LOOP_IO_AMPLIFICATION\","
+                + "\"severity\":\"WARN\","
+                + "\"confidence\":\"HIGH\","
+                + "\"sourceFile\":\"src/main/java/com/acme/OrderService.java\","
+                + "\"lineNumber\":42,"
+                + "\"loopStartLine\":40,"
+                + "\"loopEndLine\":45,"
+                + "\"ioType\":\"DB\","
+                + "\"loopMethodName\":\"buildReport\","
+                + "\"loopCallLine\":43,"
+                + "\"ioLine\":44"
+                + "}],"
+                + "\"parseErrors\":[\"Broken.java: parse failed\"]"
+                + "}";
+
+        mvc.perform(post("/api/tasks/" + taskId + "/static-results")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(cliReport))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.staticRiskLevel").value("WARN"));
+
+        mvc.perform(get("/api/tasks/" + taskId + "/report"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.project").value("demo"))
+                .andExpect(jsonPath("$.commit").value("abc"))
+                .andExpect(jsonPath("$.branch").value("main"))
+                .andExpect(jsonPath("$.env").value("local"))
+                .andExpect(jsonPath("$.staticSummary.filesScanned").value(35))
+                .andExpect(jsonPath("$.staticSummary.findingCount").value(1))
+                .andExpect(jsonPath("$.staticSummary.parseErrorCount").value(1))
+                .andExpect(jsonPath("$.staticSummary.findings[0].sourceFile")
+                        .value("src/main/java/com/acme/OrderService.java"))
+                .andExpect(jsonPath("$.staticSummary.findings[0].lineNumber").value(42))
+                .andExpect(jsonPath("$.staticSummary.findings[0].ioType").value("DB"))
+                .andExpect(jsonPath("$.staticSummary.findings[0].loopMethodName").value("buildReport"));
+    }
+
+    @Test
+    public void should_RejectInvalidStaticReportJson_When_Uploaded() throws Exception {
+        MvcResult created = mvc.perform(post("/api/tasks")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"project\":\"demo\",\"commit\":\"abc\",\"branch\":\"main\",\"env\":\"local\"}"))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        String taskId = extractTaskId(created);
+
+        mvc.perform(post("/api/tasks/" + taskId + "/static-results")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{invalid-json"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("invalid static result json"));
+    }
+
+    private String extractTaskId(MvcResult created) throws Exception {
+        String body = created.getResponse().getContentAsString();
+        return body.replaceAll(".*\"analysisTaskId\"\\s*:\\s*\"([^\"]+)\".*", "$1");
+    }
 }

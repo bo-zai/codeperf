@@ -46,7 +46,11 @@ public class SourceScanner {
         List<SourceFinding> findings = new ArrayList<>();
         for (ParsedSource parsed : parsedSources) {
             SourceRuleContext context = new SourceRuleContext(
-                    Collections.singletonList(parsed.getUnit()), parsed.getFile(), index, request.getConfig());
+                    Collections.singletonList(parsed.getUnit()),
+                    parsed.getFile(),
+                    reportSourceFile(request.getRootDirectory(), parsed.getFile()),
+                    index,
+                    request.getConfig());
             for (SourceRule rule : registry.rules()) {
                 findings.addAll(rule.analyze(context));
             }
@@ -64,6 +68,19 @@ public class SourceScanner {
             }
         }
         return new ArrayList<>(unique.values());
+    }
+
+    private String reportSourceFile(Path rootDirectory, Path sourceFile) {
+        Path normalizedSource = sourceFile.toAbsolutePath().normalize();
+        if (rootDirectory != null) {
+            Path normalizedRoot = rootDirectory.toAbsolutePath().normalize();
+            if (normalizedSource.startsWith(normalizedRoot)) {
+                return normalizedRoot.relativize(normalizedSource).toString().replace('\\', '/');
+            }
+        }
+        return normalizedSource.getFileName() == null
+                ? normalizedSource.toString().replace('\\', '/')
+                : normalizedSource.getFileName().toString().replace('\\', '/');
     }
 
     private String deduplicationKey(SourceFinding finding) {

@@ -11,7 +11,8 @@ public class AnalysisTaskServiceTest {
 
     @Test
     public void should_PersistTaskState_When_StaticAndDynamicEvidenceAccepted() {
-        AnalysisTaskService service = new AnalysisTaskService(new InMemoryAnalysisTaskRepository());
+        AnalysisTaskService service = new AnalysisTaskService(
+                new InMemoryAnalysisTaskRepository(), new StaticReportSummarizer());
 
         AnalysisTask created = service.create("order-service", "abc", "main", "local");
         service.acceptStaticResult(created.getAnalysisTaskId(), "{\"findings\":[{\"severity\":\"WARN\"}]}");

@@ -100,7 +100,7 @@ public class LoopIoAmplificationAstRule implements SourceRule {
         int ioLine = ioCall.getBegin().isPresent() ? ioCall.getBegin().get().line : 0;
         int loopStart = loop.getBegin().isPresent() ? loop.getBegin().get().line : 0;
         int loopEnd = loop.getEnd().isPresent() ? loop.getEnd().get().line : 0;
-        String sourceFile = context.getSourceFile().toString().replace('\\', '/');
+        String sourceFile = context.getReportSourceFile();
         return new SourceFinding(
                 "Loop I/O Amplification",
                 Severity.WARN,

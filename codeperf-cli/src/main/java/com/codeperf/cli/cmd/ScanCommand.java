@@ -6,6 +6,7 @@ import com.codeperf.analysis.source.SourceFinding;
 import com.codeperf.analysis.source.SourceScanRequest;
 import com.codeperf.analysis.source.SourceScanResult;
 import com.codeperf.analysis.source.SourceScanner;
+import com.codeperf.cli.attribution.GitRiskAttributionEnricher;
 import com.codeperf.cli.config.StaticScanConfig;
 import com.codeperf.cli.config.UploadReportConfig;
 import com.codeperf.cli.git.GitDiffResolver;
@@ -48,9 +49,17 @@ public class ScanCommand {
             List<Path> files = scanAll
                     ? resolveAllSourceFiles(context, config)
                     : GitDiffResolver.changedJavaFilePaths(context.getRootDirectory(),
-                    config.getBaseRef(), config.getHeadRef(), "range");
+                    config.getBaseRef(), config.getHeadRef(), config.getMode());
             SourceScanResult result = new SourceScanner().scan(new SourceScanRequest(
                     context.getRootDirectory(), filterConfiguredSourceFiles(context, config, files), config));
+            if (!scanAll) {
+                result = new GitRiskAttributionEnricher().enrich(
+                        result,
+                        context.getRootDirectory(),
+                        config.getBaseRef(),
+                        config.getHeadRef(),
+                        config.getMode());
+            }
             Path reportPath = context.resolvePath(resolveOutputPath(context));
             boolean uploadRequested = shouldUpload(context);
             if (context.getConfig().getReport().getLocal().isEnabled() || uploadRequested) {

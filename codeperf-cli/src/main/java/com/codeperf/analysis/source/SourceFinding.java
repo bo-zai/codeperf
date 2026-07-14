@@ -23,13 +23,15 @@ public class SourceFinding {
     private final String loopMethodName;
     private final int loopCallLine;
     private final int ioLine;
+    private final RiskAttribution attribution;
 
     public SourceFinding(String type, Severity severity, Confidence confidence,
                          String description, String evidence, String sourceFile,
                          int lineNumber, int loopStartLine, int loopEndLine,
                          String ioType, List<CallChainStep> callChain) {
         this(type, severity, confidence, description, evidence, sourceFile,
-                lineNumber, loopStartLine, loopEndLine, ioType, callChain, "", lineNumber, lineNumber);
+                lineNumber, loopStartLine, loopEndLine, ioType, callChain,
+                "", lineNumber, lineNumber, RiskAttribution.unknown());
     }
 
     public SourceFinding(String type, Severity severity, Confidence confidence,
@@ -37,6 +39,17 @@ public class SourceFinding {
                          int lineNumber, int loopStartLine, int loopEndLine,
                          String ioType, List<CallChainStep> callChain,
                          String loopMethodName, int loopCallLine, int ioLine) {
+        this(type, severity, confidence, description, evidence, sourceFile, lineNumber,
+                loopStartLine, loopEndLine, ioType, callChain, loopMethodName, loopCallLine,
+                ioLine, RiskAttribution.unknown());
+    }
+
+    public SourceFinding(String type, Severity severity, Confidence confidence,
+                         String description, String evidence, String sourceFile,
+                         int lineNumber, int loopStartLine, int loopEndLine,
+                         String ioType, List<CallChainStep> callChain,
+                         String loopMethodName, int loopCallLine, int ioLine,
+                         RiskAttribution attribution) {
         this.type = type;
         this.severity = severity;
         this.confidence = confidence;
@@ -51,5 +64,25 @@ public class SourceFinding {
         this.loopMethodName = loopMethodName;
         this.loopCallLine = loopCallLine;
         this.ioLine = ioLine;
+        this.attribution = attribution == null ? RiskAttribution.unknown() : attribution;
+    }
+
+    public SourceFinding withAttribution(RiskAttribution attribution) {
+        return new SourceFinding(
+                type,
+                severity,
+                confidence,
+                description,
+                evidence,
+                sourceFile,
+                lineNumber,
+                loopStartLine,
+                loopEndLine,
+                ioType,
+                callChain,
+                loopMethodName,
+                loopCallLine,
+                ioLine,
+                attribution);
     }
 }

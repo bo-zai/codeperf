@@ -19,4 +19,5 @@ public class StaticFindingSummary {
     private String loopMethodName;
     private int loopCallLine;
     private int ioLine;
+    private RiskAttributionSummary attribution;
 }

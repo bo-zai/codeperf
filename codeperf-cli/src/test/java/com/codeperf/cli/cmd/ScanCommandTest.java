@@ -106,6 +106,49 @@ public class ScanCommandTest {
         }
     }
 
+    @Test
+    public void should_AttributeFindingToCommitAuthor_When_RiskIntroducedInChangedLines() throws Exception {
+        initGitRepo();
+        String baseCommit = runGitOutput("rev-parse", "HEAD");
+        write(".codeperf.yml",
+                "project: demo\n"
+                        + "staticScan:\n"
+                        + "  sourceRoots:\n"
+                        + "    - src/main/java\n"
+                        + "  baseRef: " + baseCommit + "\n"
+                        + "  headRef: HEAD\n"
+                        + "  failOn: WARN\n");
+        write("src/main/java/com/acme/OrderService.java",
+                "package com.acme;\n"
+                        + "class OrderService {\n"
+                        + "  private OrderMapper orderMapper;\n"
+                        + "  void buildReport(java.util.List<Long> ids) {\n"
+                        + "    for (Long id : ids) {\n"
+                        + "      orderMapper.selectById(id);\n"
+                        + "    }\n"
+                        + "  }\n"
+                        + "}\n");
+        runGit("add", "src/main/java/com/acme/OrderService.java");
+        runGit("-c", "user.name=Alice Dev", "-c", "user.email=alice@example.com",
+                "commit", "-m", "add risky report");
+
+        ScanCommand command = new ScanCommand();
+        command.setWorkingDirectoryForTest(tempDir);
+        command.setOutputForTest(".codeperf/report/source-report.json");
+
+        int exitCode = command.execute();
+
+        assertEquals(1, exitCode);
+        String report = new String(Files.readAllBytes(
+                tempDir.resolve(".codeperf/report/source-report.json")), StandardCharsets.UTF_8);
+        assertTrue(report.contains("\"riskScope\" : \"NEW\""));
+        assertTrue(report.contains("\"changedLine\" : true"));
+        assertTrue(report.contains("\"attributionConfidence\" : \"HIGH\""));
+        assertTrue(report.contains("\"introducedByName\" : \"Alice Dev\""));
+        assertTrue(report.contains("\"introducedByEmail\" : \"alice@example.com\""));
+        assertTrue(report.contains("\"introducedCommitMessage\" : \"add risky report\""));
+    }
+
     private void initGitRepo() throws Exception {
         runGit("init");
         runGit("config", "user.email", "codeperf@example.com");
@@ -124,6 +167,10 @@ public class ScanCommandTest {
     }
 
     private void runGit(String... args) throws Exception {
+        runGitOutput(args);
+    }
+
+    private String runGitOutput(String... args) throws Exception {
         String[] command = new String[args.length + 1];
         command[0] = "git";
         System.arraycopy(args, 0, command, 1, args.length);
@@ -131,10 +178,12 @@ public class ScanCommandTest {
                 .directory(tempDir.toFile())
                 .redirectErrorStream(true)
                 .start();
+        String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
         int exitCode = process.waitFor();
         if (exitCode != 0) {
-            throw new IllegalStateException("git command failed");
+            throw new IllegalStateException("git command failed: " + output);
         }
+        return output.trim();
     }
 
     private HttpServer startServer(List<CapturedRequest> requests) throws Exception {

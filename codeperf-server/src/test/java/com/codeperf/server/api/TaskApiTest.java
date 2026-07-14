@@ -89,7 +89,17 @@ public class TaskApiTest {
                 + "\"ioType\":\"DB\","
                 + "\"loopMethodName\":\"buildReport\","
                 + "\"loopCallLine\":43,"
-                + "\"ioLine\":44"
+                + "\"ioLine\":44,"
+                + "\"attribution\":{"
+                + "\"riskScope\":\"NEW\","
+                + "\"changedLine\":true,"
+                + "\"attributionConfidence\":\"HIGH\","
+                + "\"introducedByName\":\"Alice Dev\","
+                + "\"introducedByEmail\":\"alice@example.com\","
+                + "\"introducedCommit\":\"abc123\","
+                + "\"introducedCommitTime\":\"1700000000\","
+                + "\"introducedCommitMessage\":\"add risky report\""
+                + "}"
                 + "}],"
                 + "\"parseErrors\":[\"Broken.java: parse failed\"]"
                 + "}";
@@ -113,7 +123,11 @@ public class TaskApiTest {
                         .value("src/main/java/com/acme/OrderService.java"))
                 .andExpect(jsonPath("$.staticSummary.findings[0].lineNumber").value(42))
                 .andExpect(jsonPath("$.staticSummary.findings[0].ioType").value("DB"))
-                .andExpect(jsonPath("$.staticSummary.findings[0].loopMethodName").value("buildReport"));
+                .andExpect(jsonPath("$.staticSummary.findings[0].loopMethodName").value("buildReport"))
+                .andExpect(jsonPath("$.staticSummary.findings[0].attribution.riskScope").value("NEW"))
+                .andExpect(jsonPath("$.staticSummary.findings[0].attribution.changedLine").value(true))
+                .andExpect(jsonPath("$.staticSummary.findings[0].attribution.introducedByEmail")
+                        .value("alice@example.com"));
     }
 
     @Test

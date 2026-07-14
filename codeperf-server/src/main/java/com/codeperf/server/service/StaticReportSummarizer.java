@@ -1,5 +1,6 @@
 package com.codeperf.server.service;
 
+import com.codeperf.server.api.dto.RiskAttributionSummary;
 import com.codeperf.server.api.dto.StaticFindingSummary;
 import com.codeperf.server.api.dto.StaticReportSummary;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -50,9 +51,25 @@ public class StaticReportSummarizer {
                     text(finding, "ioType"),
                     text(finding, "loopMethodName"),
                     finding.path("loopCallLine").asInt(0),
-                    finding.path("ioLine").asInt(0)));
+                    finding.path("ioLine").asInt(0),
+                    summarizeAttribution(finding.path("attribution"))));
         }
         return summaries;
+    }
+
+    private RiskAttributionSummary summarizeAttribution(JsonNode attribution) {
+        if (attribution.isMissingNode() || attribution.isNull()) {
+            return null;
+        }
+        return new RiskAttributionSummary(
+                text(attribution, "riskScope"),
+                attribution.path("changedLine").asBoolean(false),
+                text(attribution, "attributionConfidence"),
+                text(attribution, "introducedByName"),
+                text(attribution, "introducedByEmail"),
+                text(attribution, "introducedCommit"),
+                text(attribution, "introducedCommitTime"),
+                text(attribution, "introducedCommitMessage"));
     }
 
     private JsonNode parse(String payload) {

@@ -1,61 +1,83 @@
 # CodePerf
 
-CodePerf 用于提前发现“循环内外部 I/O 被数据量放大”的代码结构风险。典型事故是开发在原有接口中新增循环，循环体内调用 DB、Redis、Mongo、HTTP/RPC 或 SDK，测试环境数据量小未暴露，测试/预发或生产规模放大后接口响应明显变慢。
+CodePerf 是一个面向上线前评审的 Java 性能风险检测工具，当前聚焦一类明确事故：开发在已有接口中引入循环，循环体内调用 DB、Redis、MongoDB、HTTP/RPC 或外部 SDK，测试环境数据量较小未暴露问题，生产规模放大后接口响应变慢。
 
-## 当前职责
+当前方案以本地源码 AST 静态扫描为主，测试/预发 `-javaagent` 动态证据为辅。CLI 不 attach 生产 JVM，不启动业务应用，不作为 CI gate 或任务编排工具。
 
-- `codeperf-cli`：开发者本地工具，基于 Java 源码 AST 扫描 Git 变更 Java 文件，并辅助生成 agent 接入配置模板。
-- `codeperf-agent`：由使用方手工通过 `-javaagent` 配置到测试/预发应用启动参数中，负责运行时打桩和证据上报。
-- `codeperf-server`：接收 agent 动态证据并归档报告数据。
+## 模块职责
 
-CLI 不在流水线阶段执行，不负责 CI gate，不 attach，不启动业务应用。
+| 模块 | 当前职责 |
+|---|---|
+| `codeperf-cli` | 本地命令行工具，读取 Git 根目录 `.codeperf.yml`，基于 Java 源码 AST 扫描变更文件或全部源码，输出本地 JSON 报告。 |
+| `codeperf-npm` | 本地 npm wrapper，通过 `npm link` 暴露 `codeperf` 命令，实际转发到 `codeperf-cli/target/codeperf-cli.jar`。 |
+| `codeperf-agent` | 测试/预发应用启动时通过 `-javaagent` 加载，读取 `.codeperf/agent.yml`，负责打桩、采集运行证据和可选上报。 |
+| `codeperf-server` | 接收任务、静态结果和动态证据，提供 gate/report 查询接口；当前支持 local/dev profile 与 MySQL/MyBatis-Plus 存储。 |
+| `codeperf-demo` | 演示项目，用于验证 CLI 能检测循环内 I/O 放大风险。 |
 
-## 本地 CLI 使用
+## 本地安装
 
-第一阶段推荐使用源码 AST 扫描，不要求业务项目先编译。当前本地验证先构建 Java CLI，再通过 `npm link` 暴露 `codeperf` 命令：
+当前阶段推荐在仓库内先构建 Java CLI，再通过 `npm link` 模拟真实 `codeperf` 命令。
 
 ```bash
 mvn -pl codeperf-cli package
 cd codeperf-npm
 npm link
 cd ..
-codeperf doctor
-codeperf scan --all
 ```
 
-真实业务项目接入时，开发者只需要在已完成本地 link 或后续内网 npm 安装后执行：
+验证命令是否可用：
 
 ```bash
-codeperf init
-codeperf scan
+codeperf doctor
 ```
-
-`codeperf init` 是非破坏式初始化：如果 `.codeperf.yml` 或 `.codeperf/agent.yml` 已存在，会跳过并保留原内容。
 
 如果暂时不使用 npm link，也可以直接执行 jar：
 
 ```bash
-java -jar codeperf-cli/target/codeperf-cli.jar scan --all
+java -jar codeperf-cli/target/codeperf-cli.jar doctor
 ```
 
-从 demo 子目录验证同一个根配置：
+## CLI 使用
+
+`codeperf` 当前只提供四个命令：
+
+| 命令 | 说明 |
+|---|---|
+| `codeperf init` | 在 Git 根目录生成 `.codeperf.yml` 和 `.codeperf/agent.yml`。已存在的文件不会被覆盖。 |
+| `codeperf doctor` | 检查 `.codeperf.yml`、配置的源码目录和 agent 配置文件是否存在。 |
+| `codeperf scan` | 扫描 Git 变更的 Java 源文件，默认输出 `.codeperf/report/source-report.json`。 |
+| `codeperf scan --all` | 扫描 `.codeperf.yml` 中配置的全部源码目录。 |
+| `codeperf install-hooks` | 安装本地 pre-push 提醒；如果 `.git/hooks/pre-push` 已存在，不会覆盖，只输出需要手工合并的片段。 |
+
+真实业务项目接入的最小流程：
 
 ```bash
+codeperf init
+codeperf doctor
+codeperf scan
+```
+
+本仓库 demo 验证：
+
+```bash
+codeperf scan --all
 cd codeperf-demo
 codeperf scan --all
 ```
 
-可选安装本地 pre-push 提醒：
+demo 中包含一个循环内 I/O 风险示例，因此 `scan --all` 会输出类似结果：
 
-```bash
-codeperf install-hooks
+```text
+[codeperf] sourceFiles=7, findings=1, parseErrors=0
 ```
 
-`install-hooks` 不会覆盖已有 `.git/hooks/pre-push`。如果项目已经有 hook，命令会输出需要手工合并的 `codeperf scan` 片段。
+在当前根配置 `failOn: WARN` 下，检测到 WARN 及以上风险时命令返回退出码 `1`；扫描执行异常返回 `2`。
 
-## 配置示例
+## 配置文件
 
-`.codeperf.yml` 位于 Git 根目录，所有路径都以 Git 根目录为基准解析。
+`.codeperf.yml` 必须位于 Git 根目录。CLI 可以从子目录执行，但配置路径和源码路径都按 Git 根目录解析。
+
+当前仓库根配置示例：
 
 ```yaml
 project: codeperf-demo
@@ -72,6 +94,14 @@ staticScan:
   callChain:
     enabled: true
     maxDepth: 2
+  ioTypes:
+    - mysql
+    - mongodb
+    - redis
+    - gaussdb
+    - http
+    - rpc
+    - sdk
 
 agent:
   enabled: true
@@ -82,9 +112,27 @@ agent:
     - com.codeperf.demo
 ```
 
+`mode: changed` 使用 Git diff 选择变更 Java 文件；`scan --all` 会忽略 changed 模式，直接扫描全部 `sourceRoots`。
+
+## 静态扫描能力
+
+当前 CLI 的主路径是源码 AST 扫描，不要求先编译业务项目。核心规则为 `LoopIoAmplificationAstRule`，识别循环体内的外部 I/O 调用。
+
+已覆盖的第一阶段 I/O 类型包括：
+
+| 类型 | 典型识别对象 |
+|---|---|
+| DB | `Mapper`、`Repository`、`DAO` 等接收者，且方法名类似 `select`、`query`、`find`、`get`、`list`、`insert`、`update`、`delete`。 |
+| Redis | `RedisTemplate`、`StringRedisTemplate`、`RedissonClient` 等。 |
+| MongoDB | `MongoTemplate`、`MongoRepository` 等。 |
+| HTTP | `RestTemplate`、`WebClient`、`OkHttpClient`、`HttpClient`、`Feign` 等。 |
+| SDK | `Client`、`Gateway`、`Facade` 等外部客户端风格调用。 |
+
+规则支持有限的同类方法调用链追踪，默认 `maxDepth: 2`。这不是全程序静态分析，也不承诺覆盖跨服务、反射、复杂依赖注入或动态代理下的所有调用。
+
 ## Agent 手工接入
 
-流水线或测试/预发启动脚本中只配置 agent，不执行 `codeperf`：
+动态检测只作为测试/预发运行证据增强，不代表生产实测。正式接入方式是业务应用启动时手工或由部署平台添加 `-javaagent` 参数：
 
 ```bash
 java -javaagent:/opt/codeperf/codeperf-agent.jar=/opt/app/.codeperf/agent.yml \
@@ -104,27 +152,76 @@ entry:
   path: /api/orders/report
 sampleMs: 10
 mode: session
+output: build/codeperf/perf-data.raw
 ```
 
-正式方案不使用运行时 attach；动态检测只作为测试/预发运行证据增强，不代表生产实测。
+Agent 支持 `config=/path/to/agent.yml` 或直接传入 yml/yaml 文件路径。没有配置文件时仍保留分号参数解析作为本地调试兼容，但推荐使用 YAML。
 
-## Server 数据库配置
+## Server
 
-`codeperf-server` 提供 `local` 和 `dev` 两个 profile，均使用 MySQL + MyBatis-Plus 存储。
+`codeperf-server` 默认端口为 `9090`，默认激活 `local` profile。`local` 与 `dev` profile 都使用 MySQL + MyBatis-Plus；测试中可通过属性覆盖为内存仓储。
+
+启动前先创建数据库表：
 
 ```bash
-java -jar codeperf-server/target/codeperf-server.jar --spring.profiles.active=local
-java -jar codeperf-server/target/codeperf-server.jar --spring.profiles.active=dev
+mysql -u <user> -p < codeperf-server/src/main/resources/schema.sql
 ```
 
-连接信息通过环境变量注入：
+启动 local：
 
 ```bash
-CODEPERF_LOCAL_DB_URL=jdbc:mysql://127.0.0.1:3306/codeperf?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai
-CODEPERF_LOCAL_DB_USERNAME=root
-CODEPERF_LOCAL_DB_PASSWORD=***
-
-CODEPERF_DEV_DB_URL=jdbc:mysql://dev-host:3306/codeperf?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai
-CODEPERF_DEV_DB_USERNAME=codeperf
-CODEPERF_DEV_DB_PASSWORD=***
+set SPRING_PROFILES_ACTIVE=local
+set CODEPERF_LOCAL_DB_URL=jdbc:mysql://127.0.0.1:3306/codeperf?useUnicode=true^&characterEncoding=utf8^&useSSL=false^&serverTimezone=Asia/Shanghai
+java -jar codeperf-server/target/codeperf-server.jar
 ```
+
+启动 dev：
+
+```bash
+set SPRING_PROFILES_ACTIVE=dev
+set CODEPERF_DEV_DB_URL=jdbc:mysql://127.0.0.1:3306/codeperf?useUnicode=true^&characterEncoding=utf8^&useSSL=false^&serverTimezone=Asia/Shanghai
+set CODEPERF_DEV_DB_USERNAME=codeperf
+set CODEPERF_DEV_DB_PASSWORD=***
+java -jar codeperf-server/target/codeperf-server.jar
+```
+
+当前 Server API：
+
+| API | 说明 |
+|---|---|
+| `POST /api/tasks` | 创建分析任务，返回 `analysisTaskId`。 |
+| `GET /api/tasks/{taskId}` | 查询任务详情。 |
+| `POST /api/tasks/{taskId}/static-results` | 上传静态扫描 JSON。 |
+| `POST /api/tasks/{taskId}/dynamic-evidence` | 上传动态证据 JSON。 |
+| `GET /api/tasks/{taskId}/gate` | 查询任务状态和风险级别。 |
+| `GET /api/tasks/{taskId}/report` | 查询静态/动态证据是否存在以及最终风险级别。 |
+
+当前 CLI 尚未提供 task/gate/upload 子命令；如需验证 Server API，可直接使用 HTTP 客户端或测试用例。
+
+## 构建与测试
+
+全量构建：
+
+```bash
+mvn package
+```
+
+CLI 单模块测试：
+
+```bash
+mvn -pl codeperf-cli test
+```
+
+npm wrapper 测试：
+
+```bash
+npm --prefix codeperf-npm test
+```
+
+## 当前边界
+
+- CLI 是本地开发工具，不负责 CI gate、任务创建、服务端上传或启动业务应用。
+- 官方动态检测不使用运行时 attach。
+- 静态扫描主路径是源码 AST；旧 bytecode 分析代码仍在模块内，但不是当前 README 推荐入口。
+- 生产规模画像、完整报告合并和企业 npm 私服发布仍需后续评审与实现。
+- 当前重点是提前发现“循环内外部 I/O 被数据量放大”的结构性风险，不把 CPU、内存、慢 SQL 作为第一阶段主目标。

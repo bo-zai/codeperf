@@ -1,4 +1,4 @@
-package com.codeperf.server.repository.mysql;
+package com.codeperf.server.infrastructure.persistence.mysql.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
@@ -16,13 +16,11 @@ public class AnalysisTaskEntity {
     @TableField("task_id")
     private String taskId;
 
-    private String project;
+    @TableField("repository_id")
+    private Long repositoryId;
 
-    @TableField("branch_name")
-    private String branchName;
-
-    @TableField("commit_sha")
-    private String commitSha;
+    @TableField("git_commit_id")
+    private Long gitCommitId;
 
     @TableField("env_name")
     private String envName;

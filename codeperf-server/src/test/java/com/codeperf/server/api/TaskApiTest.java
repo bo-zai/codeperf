@@ -33,7 +33,16 @@ public class TaskApiTest {
     public void should_AcceptStaticAndDynamicEvidence_When_TaskCreated() throws Exception {
         MvcResult created = mvc.perform(post("/api/tasks")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"project\":\"order-service\",\"commit\":\"abc\",\"branch\":\"main\",\"env\":\"preprod\"}"))
+                        .content("{"
+                                + "\"project\":\"order-service\","
+                                + "\"remoteUrl\":\"git@gitlab.company.com:mall/order-service.git\","
+                                + "\"commit\":\"abc\","
+                                + "\"branch\":\"main\","
+                                + "\"env\":\"preprod\","
+                                + "\"authorName\":\"Alice Dev\","
+                                + "\"authorEmail\":\"alice@example.com\","
+                                + "\"commitMessage\":\"add order report\""
+                                + "}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.analysisTaskId", not(emptyString())))
                 .andReturn();
@@ -61,6 +70,9 @@ public class TaskApiTest {
         mvc.perform(get("/api/tasks/" + taskId + "/report"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.analysisTaskId").value(taskId))
+                .andExpect(jsonPath("$.remoteUrl").value("git@gitlab.company.com:mall/order-service.git"))
+                .andExpect(jsonPath("$.authorEmail").value("alice@example.com"))
+                .andExpect(jsonPath("$.commitMessage").value("add order report"))
                 .andExpect(jsonPath("$.staticRiskLevel").value("WARN"))
                 .andExpect(jsonPath("$.hasStaticResult").value(true))
                 .andExpect(jsonPath("$.hasDynamicEvidence").value(true))

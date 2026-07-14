@@ -1,9 +1,9 @@
-package com.codeperf.server.api.dto;
+package com.codeperf.server.domain.model;
 
 import lombok.Data;
 
 @Data
-public class CreateTaskRequest {
+public class AnalysisTaskCreateCommand {
     private String project;
     private String remoteUrl;
     private String commit;

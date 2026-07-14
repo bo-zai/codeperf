@@ -27,9 +27,16 @@ public class StaticReportUploader {
     private String createTask(String serverUrl, StaticReportUploadRequest request) throws IOException {
         Map<String, String> payload = new LinkedHashMap<>();
         payload.put("project", request.getProject());
+        payload.put("remoteUrl", request.getRemoteUrl());
         payload.put("commit", request.getCommit());
         payload.put("branch", request.getBranch());
         payload.put("env", request.getEnv());
+        payload.put("authorName", request.getAuthorName());
+        payload.put("authorEmail", request.getAuthorEmail());
+        payload.put("authorTime", request.getAuthorTime());
+        payload.put("committerName", request.getCommitterName());
+        payload.put("committerEmail", request.getCommitterEmail());
+        payload.put("commitMessage", request.getCommitMessage());
         String response = post(serverUrl + "/api/tasks", objectMapper.writeValueAsString(payload));
         JsonNode node = objectMapper.readTree(response);
         JsonNode taskId = node.get("analysisTaskId");

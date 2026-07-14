@@ -1,4 +1,4 @@
-package com.codeperf.server.model;
+package com.codeperf.server.domain.model;
 
 public enum TaskStatus {
     CREATED,

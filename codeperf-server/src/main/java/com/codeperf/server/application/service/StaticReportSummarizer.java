@@ -1,4 +1,4 @@
-package com.codeperf.server.service;
+package com.codeperf.server.application.service;
 
 import com.codeperf.server.api.dto.RiskAttributionSummary;
 import com.codeperf.server.api.dto.StaticFindingSummary;

@@ -152,6 +152,13 @@ public class ScanCommand {
                 context.getConfig().getEnv(),
                 metadata.getCommit(),
                 metadata.getBranch(),
+                metadata.getRemoteUrl(),
+                metadata.getAuthorName(),
+                metadata.getAuthorEmail(),
+                metadata.getAuthorTime(),
+                metadata.getCommitterName(),
+                metadata.getCommitterEmail(),
+                metadata.getCommitMessage(),
                 new String(Files.readAllBytes(reportPath), StandardCharsets.UTF_8));
         String taskId = new StaticReportUploader().upload(trimTrailingSlash(serverUrl), request);
         System.out.println("[codeperf] static report uploaded, taskId=" + taskId);

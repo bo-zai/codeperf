@@ -1,7 +1,10 @@
-package com.codeperf.server.repository;
+package com.codeperf.server.domain.repository;
 
-import com.codeperf.server.model.AnalysisTask;
+import com.codeperf.server.domain.model.AnalysisTask;
+import com.codeperf.server.domain.model.DynamicEvidenceRecord;
+import com.codeperf.server.domain.model.StaticFindingRecord;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -25,4 +28,8 @@ public interface AnalysisTaskRepository {
      * @return 查询结果
      */
     Optional<AnalysisTask> findByTaskId(String taskId);
+
+    void replaceStaticFindings(String taskId, List<StaticFindingRecord> findings);
+
+    void appendDynamicEvidence(DynamicEvidenceRecord evidence);
 }

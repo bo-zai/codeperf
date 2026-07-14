@@ -13,7 +13,14 @@ public class GitMetadataResolver {
     public GitMetadata resolve(Path workingDirectory) {
         return new GitMetadata(
                 runGitOrDefault(workingDirectory, "UNKNOWN", Arrays.asList("rev-parse", "HEAD")),
-                runGitOrDefault(workingDirectory, "UNKNOWN", Arrays.asList("rev-parse", "--abbrev-ref", "HEAD")));
+                runGitOrDefault(workingDirectory, "UNKNOWN", Arrays.asList("rev-parse", "--abbrev-ref", "HEAD")),
+                runGitOrDefault(workingDirectory, "UNKNOWN", Arrays.asList("remote", "get-url", "origin")),
+                runGitOrDefault(workingDirectory, "UNKNOWN", Arrays.asList("log", "-1", "--format=%an")),
+                runGitOrDefault(workingDirectory, "UNKNOWN", Arrays.asList("log", "-1", "--format=%ae")),
+                runGitOrDefault(workingDirectory, "UNKNOWN", Arrays.asList("log", "-1", "--format=%aI")),
+                runGitOrDefault(workingDirectory, "UNKNOWN", Arrays.asList("log", "-1", "--format=%cn")),
+                runGitOrDefault(workingDirectory, "UNKNOWN", Arrays.asList("log", "-1", "--format=%ce")),
+                runGitOrDefault(workingDirectory, "UNKNOWN", Arrays.asList("log", "-1", "--format=%s")));
     }
 
     private String runGitOrDefault(Path workingDirectory, String defaultValue, List<String> args) {

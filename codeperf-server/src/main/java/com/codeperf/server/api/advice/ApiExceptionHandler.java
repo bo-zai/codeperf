@@ -1,4 +1,4 @@
-package com.codeperf.server.api;
+package com.codeperf.server.api.advice;
 
 import com.codeperf.server.api.dto.ErrorResponse;
 import org.springframework.http.HttpStatus;

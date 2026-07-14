@@ -1,8 +1,8 @@
-package com.codeperf.server.api;
+package com.codeperf.server.api.controller;
 
 import com.codeperf.server.api.dto.GateResponse;
-import com.codeperf.server.model.AnalysisTask;
-import com.codeperf.server.service.AnalysisTaskService;
+import com.codeperf.server.domain.model.AnalysisTask;
+import com.codeperf.server.application.service.AnalysisTaskService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;

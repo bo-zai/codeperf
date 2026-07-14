@@ -94,10 +94,13 @@ public class ScanCommandTest {
 
             assertEquals(1, exitCode);
             assertEquals(2, requests.size());
-            assertEquals("POST", requests.get(0).method);
-            assertEquals("/api/tasks", requests.get(0).path);
-            assertTrue(requests.get(0).body.contains("\"project\":\"demo\""));
-            assertEquals("POST", requests.get(1).method);
+        assertEquals("POST", requests.get(0).method);
+        assertEquals("/api/tasks", requests.get(0).path);
+        assertTrue(requests.get(0).body.contains("\"project\":\"demo\""));
+        assertTrue(requests.get(0).body.contains("\"remoteUrl\""));
+        assertTrue(requests.get(0).body.contains("\"authorEmail\""));
+        assertTrue(requests.get(0).body.contains("\"commitMessage\""));
+        assertEquals("POST", requests.get(1).method);
             assertEquals("/api/tasks/task-1/static-results", requests.get(1).path);
             assertTrue(requests.get(1).body.contains("\"filesScanned\""));
             assertTrue(requests.get(1).body.contains("\"findings\""));

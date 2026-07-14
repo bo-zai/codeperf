@@ -1,8 +1,8 @@
-package com.codeperf.server.service;
+package com.codeperf.server.application.service;
 
-import com.codeperf.server.model.AnalysisTask;
-import com.codeperf.server.model.RiskLevel;
-import com.codeperf.server.repository.InMemoryAnalysisTaskRepository;
+import com.codeperf.server.domain.model.AnalysisTask;
+import com.codeperf.server.domain.model.RiskLevel;
+import com.codeperf.server.infrastructure.persistence.memory.InMemoryAnalysisTaskRepository;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;

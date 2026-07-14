@@ -2,7 +2,6 @@ package com.codeperf.cli.cmd;
 
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
-import com.codeperf.analysis.source.SourceFinding;
 import com.codeperf.analysis.source.SourceScanRequest;
 import com.codeperf.analysis.source.SourceScanResult;
 import com.codeperf.analysis.source.SourceScanner;
@@ -68,10 +67,13 @@ public class ScanCommand {
             System.out.println("[codeperf] sourceFiles=" + result.getFilesScanned()
                     + ", findings=" + result.getFindings().size()
                     + ", parseErrors=" + result.getParseErrors().size());
+            StaticGateDecision gateDecision = new StaticGateEvaluator()
+                    .evaluate(result, config.getFailOn(), !scanAll);
+            System.out.println(gateDecision.summary());
             if (uploadRequested) {
                 uploadReport(context, reportPath);
             }
-            return hasFailure(result, config.getFailOn()) ? 1 : 0;
+            return gateDecision.isFailed() ? 1 : 0;
         } catch (Exception e) {
             System.err.println("[codeperf] scan 失败: " + e.getMessage());
             return 2;
@@ -122,15 +124,6 @@ public class ScanCommand {
             }
         }
         return filtered;
-    }
-
-    private boolean hasFailure(SourceScanResult result, String failOn) {
-        for (SourceFinding finding : result.getFindings()) {
-            if (CommandSupport.shouldFail(finding.getSeverity().name(), failOn)) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private String resolveOutputPath(ProjectContext context) {

@@ -149,6 +149,58 @@ public class ScanCommandTest {
         assertTrue(report.contains("\"introducedCommitMessage\" : \"add risky report\""));
     }
 
+    @Test
+    public void should_NotFailGate_When_ChangedFileOnlyContainsHistoricalRisk() throws Exception {
+        initGitRepo();
+        write("src/main/java/com/acme/OrderService.java",
+                "package com.acme;\n"
+                        + "class OrderService {\n"
+                        + "  private OrderMapper orderMapper;\n"
+                        + "  void buildReport(java.util.List<Long> ids) {\n"
+                        + "    int retry = 0;\n"
+                        + "    for (Long id : ids) {\n"
+                        + "      orderMapper.selectById(id);\n"
+                        + "    }\n"
+                        + "  }\n"
+                        + "}\n");
+        runGit("add", "src/main/java/com/acme/OrderService.java");
+        runGit("commit", "-m", "add existing risky report");
+        String baseCommit = runGitOutput("rev-parse", "HEAD");
+        write(".codeperf.yml",
+                "project: demo\n"
+                        + "staticScan:\n"
+                        + "  sourceRoots:\n"
+                        + "    - src/main/java\n"
+                        + "  baseRef: " + baseCommit + "\n"
+                        + "  headRef: HEAD\n"
+                        + "  failOn: WARN\n");
+        write("src/main/java/com/acme/OrderService.java",
+                "package com.acme;\n"
+                        + "class OrderService {\n"
+                        + "  private OrderMapper orderMapper;\n"
+                        + "  void buildReport(java.util.List<Long> ids) {\n"
+                        + "    int retry = 1;\n"
+                        + "    for (Long id : ids) {\n"
+                        + "      orderMapper.selectById(id);\n"
+                        + "    }\n"
+                        + "  }\n"
+                        + "}\n");
+        runGit("add", ".codeperf.yml", "src/main/java/com/acme/OrderService.java");
+        runGit("commit", "-m", "tune retry value");
+
+        ScanCommand command = new ScanCommand();
+        command.setWorkingDirectoryForTest(tempDir);
+        command.setOutputForTest(".codeperf/report/source-report.json");
+
+        int exitCode = command.execute();
+
+        assertEquals(0, exitCode);
+        String report = new String(Files.readAllBytes(
+                tempDir.resolve(".codeperf/report/source-report.json")), StandardCharsets.UTF_8);
+        assertTrue(report.contains("\"riskScope\" : \"HISTORICAL\""));
+        assertTrue(report.contains("\"changedLine\" : false"));
+    }
+
     private void initGitRepo() throws Exception {
         runGit("init");
         runGit("config", "user.email", "codeperf@example.com");

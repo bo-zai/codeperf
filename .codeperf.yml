@@ -26,5 +26,5 @@ report:
     enabled: true
     path: .codeperf/report/source-report.json
   upload:
-    enabled: false
-    serverUrl: http://codeperf.company.com
+    enabled: true
+    serverUrl: http://localhost:9090

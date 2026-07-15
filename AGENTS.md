@@ -88,6 +88,9 @@
   - `@Slf4j`：日志注入
 - 禁止公有字段，必须通过注解生成 getter/setter
 - 不使用 Lombok 的类需手动实现 equals/hashCode/toString
+- **实体类（Entity）每个字段必须添加 JavaDoc 注释**，说明字段用途
+  - 示例：`/** 用户邮箱 */`
+  - 复杂字段需补充取值说明：`/** 用户状态：ACTIVE-激活，INACTIVE-停用 */`
 
 #### 常量与枚举
 
@@ -100,6 +103,17 @@
 - 接口方法签名简洁，参数不超过 7 个
 - 公有 API 添加 `@deprecated` 标记而非直接删除
 - 方法单一职责，避免"上帝方法"
+
+### 数据库设计规范
+
+- **禁止定义外键约束**，表间关联关系通过注释声明
+  - 原因：外键会引入表级锁，高并发场景下严重影响性能；跨库场景无法使用外键；DDL 变更时外键增加复杂度
+- **所有字段必须添加 `COMMENT`**，说明字段用途或取值含义
+- **关联关系通过注释声明**，格式：`逻辑关联 表名.字段名`
+  - 示例：`repository_id BIGINT NOT NULL COMMENT '代码仓库ID，逻辑关联code_repository.id'`
+- **日期时间字段统一使用 `DATETIME` 类型**
+  - 原因：`TIMESTAMP` 存在 2038 年问题；时区转换可能导致数据不一致；`DATETIME` 范围更广（0001-9999 年）
+  - 示例：`created_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间'`
 
 ### Sonar 规范
 

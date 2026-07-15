@@ -20,6 +20,7 @@ public class InitCommand {
             String projectName = inferProjectName(root);
             writeIfAbsent(root.resolve(".codeperf.yml"), defaultConfig(projectName));
             System.out.println("[codeperf] init 完成，已存在的配置文件不会被覆盖");
+            System.out.println("[codeperf] 如需接入 Git pre-push，请执行: codeperf install-hooks");
             return 0;
         } catch (Exception e) {
             System.err.println("[codeperf] init 失败: " + e.getMessage());

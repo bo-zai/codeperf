@@ -3,6 +3,8 @@ package com.codeperf.cli.cmd;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -98,6 +100,19 @@ public class InitCommandTest {
         assertFalse(Files.exists(tempDir.resolve(".codeperf/agent.yml")));
     }
 
+    @Test
+    public void should_PrintInstallHooksHint_When_InitCompleted() throws Exception {
+        Files.createDirectories(tempDir.resolve(".git"));
+
+        String output = captureStdout(() -> {
+            InitCommand command = new InitCommand();
+            command.setWorkingDirectoryForTest(tempDir);
+            return command.execute();
+        });
+
+        assertTrue(output.contains("codeperf install-hooks"));
+    }
+
     private void writeGitOrigin(String remoteUrl) throws Exception {
         Files.write(tempDir.resolve(".git/config"), ("[remote \"origin\"]\n"
                 + "    url = " + remoteUrl + "\n"
@@ -106,5 +121,21 @@ public class InitCommandTest {
 
     private String configText(Path root) throws Exception {
         return new String(Files.readAllBytes(root.resolve(".codeperf.yml")), StandardCharsets.UTF_8);
+    }
+
+    private String captureStdout(CommandAction action) throws Exception {
+        PrintStream original = System.out;
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        try (PrintStream stream = new PrintStream(output, true, StandardCharsets.UTF_8.name())) {
+            System.setOut(stream);
+            action.execute();
+        } finally {
+            System.setOut(original);
+        }
+        return output.toString(StandardCharsets.UTF_8.name());
+    }
+
+    private interface CommandAction {
+        int execute() throws Exception;
     }
 }

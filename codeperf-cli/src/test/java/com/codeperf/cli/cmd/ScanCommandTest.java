@@ -268,7 +268,10 @@ public class ScanCommandTest {
                 .directory(tempDir.toFile())
                 .redirectErrorStream(true)
                 .start();
-        String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        String output;
+        try (InputStream input = process.getInputStream()) {
+            output = readStream(input);
+        }
         int exitCode = process.waitFor();
         if (exitCode != 0) {
             throw new IllegalStateException("git command failed: " + output);
@@ -296,14 +299,18 @@ public class ScanCommandTest {
 
     private String readBody(HttpExchange exchange) throws IOException {
         try (InputStream input = exchange.getRequestBody()) {
-            byte[] bytes = new byte[8192];
-            StringBuilder body = new StringBuilder();
-            int read;
-            while ((read = input.read(bytes)) >= 0) {
-                body.append(new String(bytes, 0, read, StandardCharsets.UTF_8));
-            }
-            return body.toString();
+            return readStream(input);
         }
+    }
+
+    private String readStream(InputStream input) throws IOException {
+        byte[] bytes = new byte[8192];
+        StringBuilder body = new StringBuilder();
+        int read;
+        while ((read = input.read(bytes)) >= 0) {
+            body.append(new String(bytes, 0, read, StandardCharsets.UTF_8));
+        }
+        return body.toString();
     }
 
     private void writeResponse(HttpExchange exchange, int status, String body) throws IOException {

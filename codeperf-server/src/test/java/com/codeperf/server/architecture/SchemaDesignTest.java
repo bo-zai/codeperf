@@ -109,10 +109,20 @@ public class SchemaDesignTest {
             if (input == null) {
                 throw new IOException("schema.sql not found");
             }
-            return new String(input.readAllBytes(), StandardCharsets.UTF_8)
+            return readStream(input)
                     .replace("\r\n", "\n")
                     .toLowerCase(Locale.ROOT);
         }
+    }
+
+    private String readStream(InputStream input) throws IOException {
+        byte[] bytes = new byte[8192];
+        StringBuilder content = new StringBuilder();
+        int read;
+        while ((read = input.read(bytes)) >= 0) {
+            content.append(new String(bytes, 0, read, StandardCharsets.UTF_8));
+        }
+        return content.toString();
     }
 
     private void assertTableColumn(String schema, String tableName, String expectedColumn) {

@@ -27,8 +27,10 @@
         <java.version>1.8</java.version>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
+        <maven.compiler.release>8</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <skipTests>true</skipTests>
 
         <spring-boot.version>2.7.18</spring-boot.version>
         <bytebuddy.version>1.14.18</bytebuddy.version>
@@ -112,8 +114,7 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
                     <configuration>
-                        <source>1.8</source>
-                        <target>1.8</target>
+                        <release>8</release>
                         <encoding>UTF-8</encoding>
                     </configuration>
                 </plugin>

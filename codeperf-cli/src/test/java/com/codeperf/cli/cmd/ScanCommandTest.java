@@ -197,7 +197,8 @@ public class ScanCommandTest {
                         + "  }\n"
                         + "}\n");
         runGit("add", "src/main/java/com/acme/OrderService.java");
-        runGit("commit", "-m", "add existing risky report");
+        runGit("-c", "user.name=Bob Legacy", "-c", "user.email=bob@example.com",
+                "commit", "-m", "add existing risky report");
         String baseCommit = runGitOutput("rev-parse", "HEAD");
         write(".codeperf.yml",
                 "project: demo\n"
@@ -232,6 +233,10 @@ public class ScanCommandTest {
                 tempDir.resolve(".codeperf/report/source-report.json")), StandardCharsets.UTF_8);
         assertTrue(report.contains("\"riskScope\" : \"HISTORICAL\""));
         assertTrue(report.contains("\"changedLine\" : false"));
+        assertTrue(report.contains("\"attributionConfidence\" : \"HIGH\""));
+        assertTrue(report.contains("\"introducedByName\" : \"Bob Legacy\""));
+        assertTrue(report.contains("\"introducedByEmail\" : \"bob@example.com\""));
+        assertTrue(report.contains("\"introducedCommitMessage\" : \"add existing risky report\""));
     }
 
     private void initGitRepo() throws Exception {

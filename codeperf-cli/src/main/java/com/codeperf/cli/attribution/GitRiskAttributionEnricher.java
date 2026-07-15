@@ -29,7 +29,7 @@ public class GitRiskAttributionEnricher {
                     finding.getLoopStartLine());
             RiskAttribution attribution = changed
                     ? blame(workingDirectory, finding)
-                    : historical();
+                    : historical(workingDirectory, finding);
             enriched.add(finding.withAttribution(attribution));
         }
         return new SourceScanResult(result.getFilesScanned(), enriched, result.getParseErrors());
@@ -69,16 +69,30 @@ public class GitRiskAttributionEnricher {
         }
     }
 
-    private RiskAttribution historical() {
-        return new RiskAttribution(
-                RiskAttribution.RiskScope.HISTORICAL,
-                false,
-                RiskAttribution.AttributionConfidence.LOW,
-                "",
-                "",
-                "",
-                "",
-                "");
+    private RiskAttribution historical(Path workingDirectory, SourceFinding finding) {
+        int line = finding.getIoLine() > 0 ? finding.getIoLine() : finding.getLineNumber();
+        try {
+            BlameInfo info = runBlame(workingDirectory, finding.getSourceFile(), line);
+            return new RiskAttribution(
+                    RiskAttribution.RiskScope.HISTORICAL,
+                    false,
+                    RiskAttribution.AttributionConfidence.HIGH,
+                    info.author,
+                    info.authorEmail,
+                    info.commit,
+                    info.authorTime,
+                    info.summary);
+        } catch (IOException e) {
+            return new RiskAttribution(
+                    RiskAttribution.RiskScope.HISTORICAL,
+                    false,
+                    RiskAttribution.AttributionConfidence.LOW,
+                    "",
+                    "",
+                    "",
+                    "",
+                    "");
+        }
     }
 
     private BlameInfo runBlame(Path workingDirectory, String file, int line) throws IOException {

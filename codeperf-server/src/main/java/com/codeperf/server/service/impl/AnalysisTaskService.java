@@ -71,8 +71,10 @@ public class AnalysisTaskService {
         task.setStaticRiskLevel(staticRisk);
         task.setRiskLevel(RiskLevel.max(task.getRiskLevel(), staticRisk));
         task.setStatus(TaskStatus.STATIC_RECEIVED);
+        List<StaticFindingBO> findings = extractStaticFindings(taskId, payload);
+        validateRuleDefinitions(findings);
         AnalysisTaskBO saved = repository.save(task);
-        repository.replaceStaticFindings(taskId, extractStaticFindings(taskId, payload));
+        repository.replaceStaticFindings(taskId, findings);
         return saved;
     }
 
@@ -127,7 +129,7 @@ public class AnalysisTaskService {
             for (JsonNode finding : findings) {
                 StaticFindingBO record = new StaticFindingBO();
                 record.setTaskId(taskId);
-                record.setRuleId(text(finding, "type"));
+                record.setRuleId(requiredText(finding, "ruleId"));
                 record.setSeverity(text(finding, "severity"));
                 record.setConfidence(text(finding, "confidence"));
                 record.setSourceFile(text(finding, "sourceFile"));
@@ -169,9 +171,25 @@ public class AnalysisTaskService {
         return record;
     }
 
+    private void validateRuleDefinitions(List<StaticFindingBO> findings) {
+        for (StaticFindingBO finding : findings) {
+            if (!repository.isRuleDefined(finding.getRuleId())) {
+                throw new IllegalArgumentException("undefined static ruleId: " + finding.getRuleId());
+            }
+        }
+    }
+
     private String text(JsonNode node, String field) {
         JsonNode value = node.path(field);
         return value.isMissingNode() || value.isNull() ? "" : value.asText("");
+    }
+
+    private String requiredText(JsonNode node, String field) {
+        String value = text(node, field);
+        if (value.trim().isEmpty()) {
+            throw new IllegalArgumentException("static finding missing required field: " + field);
+        }
+        return value;
     }
 
     private String sha256(String value) {

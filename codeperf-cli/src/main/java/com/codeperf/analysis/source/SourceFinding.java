@@ -9,7 +9,7 @@ import java.util.List;
 public class SourceFinding {
     public enum Confidence { LOW, MEDIUM, HIGH }
 
-    private final String type;
+    private final String ruleId;
     private final Severity severity;
     private final Confidence confidence;
     private final String description;
@@ -25,32 +25,32 @@ public class SourceFinding {
     private final int ioLine;
     private final RiskAttribution attribution;
 
-    public SourceFinding(String type, Severity severity, Confidence confidence,
+    public SourceFinding(String ruleId, Severity severity, Confidence confidence,
                          String description, String evidence, String sourceFile,
                          int lineNumber, int loopStartLine, int loopEndLine,
                          String ioType, List<CallChainStep> callChain) {
-        this(type, severity, confidence, description, evidence, sourceFile,
+        this(ruleId, severity, confidence, description, evidence, sourceFile,
                 lineNumber, loopStartLine, loopEndLine, ioType, callChain,
                 "", lineNumber, lineNumber, RiskAttribution.unknown());
     }
 
-    public SourceFinding(String type, Severity severity, Confidence confidence,
+    public SourceFinding(String ruleId, Severity severity, Confidence confidence,
                          String description, String evidence, String sourceFile,
                          int lineNumber, int loopStartLine, int loopEndLine,
                          String ioType, List<CallChainStep> callChain,
                          String loopMethodName, int loopCallLine, int ioLine) {
-        this(type, severity, confidence, description, evidence, sourceFile, lineNumber,
+        this(ruleId, severity, confidence, description, evidence, sourceFile, lineNumber,
                 loopStartLine, loopEndLine, ioType, callChain, loopMethodName, loopCallLine,
                 ioLine, RiskAttribution.unknown());
     }
 
-    public SourceFinding(String type, Severity severity, Confidence confidence,
+    public SourceFinding(String ruleId, Severity severity, Confidence confidence,
                          String description, String evidence, String sourceFile,
                          int lineNumber, int loopStartLine, int loopEndLine,
                          String ioType, List<CallChainStep> callChain,
                          String loopMethodName, int loopCallLine, int ioLine,
                          RiskAttribution attribution) {
-        this.type = type;
+        this.ruleId = ruleId;
         this.severity = severity;
         this.confidence = confidence;
         this.description = description;
@@ -69,7 +69,7 @@ public class SourceFinding {
 
     public SourceFinding withAttribution(RiskAttribution attribution) {
         return new SourceFinding(
-                type,
+                ruleId,
                 severity,
                 confidence,
                 description,

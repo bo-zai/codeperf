@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class StaticFindingSummary {
-    private String type;
+    private String ruleId;
     private String severity;
     private String confidence;
     private String sourceFile;

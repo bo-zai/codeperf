@@ -91,6 +91,7 @@ public class SchemaDesignTest {
         assertTableColumn(schema, "git_commit", "author_email varchar(256) comment");
         assertTableColumn(schema, "analysis_task", "task_id varchar(64) not null comment");
         assertTableColumn(schema, "notification_record", "match_source varchar(64) comment");
+        assertTrue(schema.contains("'loop_io_amplification'"), "schema must initialize loop I/O rule definition");
     }
 
     @Test

@@ -32,4 +32,6 @@ public interface AnalysisTaskRepository {
     void replaceStaticFindings(String taskId, List<StaticFindingBO> findings);
 
     void appendDynamicEvidence(DynamicEvidenceBO evidence);
+
+    boolean isRuleDefined(String ruleId);
 }

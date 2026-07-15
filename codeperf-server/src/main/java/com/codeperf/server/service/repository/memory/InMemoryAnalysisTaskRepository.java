@@ -8,9 +8,12 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Repository;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Repository
@@ -20,6 +23,7 @@ public class InMemoryAnalysisTaskRepository implements AnalysisTaskRepository {
     private final Map<String, AnalysisTaskBO> tasks = new ConcurrentHashMap<>();
     private final Map<String, List<StaticFindingBO>> staticFindings = new ConcurrentHashMap<>();
     private final Map<String, List<DynamicEvidenceBO>> dynamicEvidence = new ConcurrentHashMap<>();
+    private final Set<String> ruleIds = new HashSet<>(Arrays.asList("LOOP_IO_AMPLIFICATION"));
 
     @Override
     public AnalysisTaskBO save(AnalysisTaskBO task) {
@@ -40,5 +44,10 @@ public class InMemoryAnalysisTaskRepository implements AnalysisTaskRepository {
     @Override
     public void appendDynamicEvidence(DynamicEvidenceBO evidence) {
         dynamicEvidence.computeIfAbsent(evidence.getTaskId(), ignored -> new ArrayList<>()).add(evidence);
+    }
+
+    @Override
+    public boolean isRuleDefined(String ruleId) {
+        return ruleIds.contains(ruleId);
     }
 }

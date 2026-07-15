@@ -17,7 +17,8 @@ public class AnalysisTaskServiceTest {
                 new InMemoryAnalysisTaskRepository(), new StaticReportSummarizer());
 
         AnalysisTaskBO created = service.create("order-service", "abc", "main", "local");
-        service.acceptStaticResult(created.getAnalysisTaskId(), "{\"findings\":[{\"severity\":\"WARN\"}]}");
+        service.acceptStaticResult(created.getAnalysisTaskId(),
+                "{\"findings\":[{\"ruleId\":\"LOOP_IO_AMPLIFICATION\",\"severity\":\"WARN\"}]}");
         service.acceptDynamicEvidence(created.getAnalysisTaskId(), "{\"entry\":\"POST /api/orders/report\"}");
 
         AnalysisTaskBO loaded = service.get(created.getAnalysisTaskId());

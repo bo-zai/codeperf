@@ -11,11 +11,13 @@ import com.codeperf.server.model.entity.AnalysisTask;
 import com.codeperf.server.model.entity.CodeRepository;
 import com.codeperf.server.model.entity.DynamicEvidence;
 import com.codeperf.server.model.entity.GitCommit;
+import com.codeperf.server.model.entity.RuleDefinition;
 import com.codeperf.server.model.entity.StaticFinding;
 import com.codeperf.server.mapper.AnalysisTaskMapper;
 import com.codeperf.server.mapper.CodeRepositoryMapper;
 import com.codeperf.server.mapper.DynamicEvidenceMapper;
 import com.codeperf.server.mapper.GitCommitMapper;
+import com.codeperf.server.mapper.RuleDefinitionMapper;
 import com.codeperf.server.mapper.StaticFindingMapper;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Repository;
@@ -32,17 +34,20 @@ public class MybatisPlusAnalysisTaskRepository implements AnalysisTaskRepository
     private final GitCommitMapper gitCommitMapper;
     private final StaticFindingMapper staticFindingMapper;
     private final DynamicEvidenceMapper dynamicEvidenceMapper;
+    private final RuleDefinitionMapper ruleDefinitionMapper;
 
     public MybatisPlusAnalysisTaskRepository(AnalysisTaskMapper mapper,
                                              CodeRepositoryMapper repositoryMapper,
                                              GitCommitMapper gitCommitMapper,
                                              StaticFindingMapper staticFindingMapper,
-                                             DynamicEvidenceMapper dynamicEvidenceMapper) {
+                                             DynamicEvidenceMapper dynamicEvidenceMapper,
+                                             RuleDefinitionMapper ruleDefinitionMapper) {
         this.mapper = mapper;
         this.repositoryMapper = repositoryMapper;
         this.gitCommitMapper = gitCommitMapper;
         this.staticFindingMapper = staticFindingMapper;
         this.dynamicEvidenceMapper = dynamicEvidenceMapper;
+        this.ruleDefinitionMapper = ruleDefinitionMapper;
     }
 
     @Override
@@ -90,6 +95,15 @@ public class MybatisPlusAnalysisTaskRepository implements AnalysisTaskRepository
             entity.setGitCommitId(gitCommit.getId());
         });
         dynamicEvidenceMapper.insert(entity);
+    }
+
+    @Override
+    public boolean isRuleDefined(String ruleId) {
+        LambdaQueryWrapper<RuleDefinition> query = new LambdaQueryWrapper<>();
+        query.eq(RuleDefinition::getRuleId, ruleId);
+        query.eq(RuleDefinition::getEnabled, Boolean.TRUE);
+        query.last("LIMIT 1");
+        return ruleDefinitionMapper.selectOne(query) != null;
     }
 
     private Optional<AnalysisTask> findEntity(String taskId) {

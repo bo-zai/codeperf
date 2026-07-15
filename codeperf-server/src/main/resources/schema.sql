@@ -115,6 +115,28 @@ CREATE TABLE IF NOT EXISTS rule_definition (
   INDEX idx_rule_definition_enabled (enabled)
 ) COMMENT='规则定义表';
 
+INSERT IGNORE INTO rule_definition (
+  rule_id,
+  rule_name,
+  category,
+  detector_type,
+  default_severity,
+  enabled,
+  version,
+  description,
+  remediation
+) VALUES (
+  'LOOP_IO_AMPLIFICATION',
+  '循环内I/O放大风险',
+  'LOOP_IO',
+  'STATIC',
+  'WARN',
+  TRUE,
+  '1.0.0',
+  '检测循环体内直接或间接调用数据库、缓存、HTTP、RPC等外部I/O的风险。',
+  '将循环内I/O改为批量查询、批量调用、缓存预取或在循环外预加载，避免生产数据量放大请求耗时。'
+);
+
 CREATE TABLE IF NOT EXISTS static_finding (
   id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键ID',
   task_id VARCHAR(64) NOT NULL COMMENT '分析任务ID，逻辑关联analysis_task.task_id',

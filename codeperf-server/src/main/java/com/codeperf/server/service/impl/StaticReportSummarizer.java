@@ -41,7 +41,7 @@ public class StaticReportSummarizer {
         }
         for (JsonNode finding : findings) {
             summaries.add(new StaticFindingSummary(
-                    text(finding, "type"),
+                    text(finding, "ruleId"),
                     text(finding, "severity"),
                     text(finding, "confidence"),
                     text(finding, "sourceFile"),

@@ -22,7 +22,7 @@ public class SourceScanJsonReportWriterTest {
     @Test
     public void should_WriteJsonReport_When_SourceScanResultProvided() throws Exception {
         SourceFinding finding = new SourceFinding(
-                "Loop I/O Amplification",
+                "LOOP_IO_AMPLIFICATION",
                 Severity.WARN,
                 SourceFinding.Confidence.HIGH,
                 "desc",
@@ -42,7 +42,7 @@ public class SourceScanJsonReportWriterTest {
         new SourceScanJsonReportWriter().write(output, result);
 
         String json = new String(Files.readAllBytes(output), StandardCharsets.UTF_8);
-        assertTrue(json.contains("Loop I/O Amplification"));
+        assertTrue(json.contains("\"ruleId\" : \"LOOP_IO_AMPLIFICATION\""));
         assertTrue(json.contains("src/main/java/OrderService.java"));
         assertTrue(json.contains("\"loopMethodName\""));
         assertTrue(json.contains("\"loopCallLine\" : 5"));

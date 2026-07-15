@@ -24,6 +24,8 @@ import java.util.Optional;
 @SuppressWarnings("unchecked")
 public class LoopIoAmplificationAstRule implements SourceRule {
 
+    private static final String RULE_ID = "LOOP_IO_AMPLIFICATION";
+
     private final IoCallMatcher matcher = new IoCallMatcher();
 
     @Override
@@ -102,7 +104,7 @@ public class LoopIoAmplificationAstRule implements SourceRule {
         int loopEnd = loop.getEnd().isPresent() ? loop.getEnd().get().line : 0;
         String sourceFile = context.getReportSourceFile();
         return new SourceFinding(
-                "Loop I/O Amplification",
+                RULE_ID,
                 Severity.WARN,
                 match.getConfidence(),
                 "循环体内存在外部 I/O 调用，生产数据量放大时可能导致接口响应变慢。",

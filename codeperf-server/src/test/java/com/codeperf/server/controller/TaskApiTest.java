@@ -52,7 +52,7 @@ public class TaskApiTest {
 
         mvc.perform(post("/api/tasks/" + taskId + "/static-results")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"findings\":[{\"severity\":\"WARN\"}]}"))
+                        .content("{\"findings\":[{\"ruleId\":\"LOOP_IO_AMPLIFICATION\",\"severity\":\"WARN\"}]}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.riskLevel").value("WARN"));
 
@@ -91,7 +91,7 @@ public class TaskApiTest {
         String cliReport = "{"
                 + "\"filesScanned\":35,"
                 + "\"findings\":[{"
-                + "\"type\":\"LOOP_IO_AMPLIFICATION\","
+                + "\"ruleId\":\"LOOP_IO_AMPLIFICATION\","
                 + "\"severity\":\"WARN\","
                 + "\"confidence\":\"HIGH\","
                 + "\"sourceFile\":\"src/main/java/com/acme/OrderService.java\","
@@ -133,6 +133,7 @@ public class TaskApiTest {
                 .andExpect(jsonPath("$.staticSummary.parseErrorCount").value(1))
                 .andExpect(jsonPath("$.staticSummary.findings[0].sourceFile")
                         .value("src/main/java/com/acme/OrderService.java"))
+                .andExpect(jsonPath("$.staticSummary.findings[0].ruleId").value("LOOP_IO_AMPLIFICATION"))
                 .andExpect(jsonPath("$.staticSummary.findings[0].lineNumber").value(42))
                 .andExpect(jsonPath("$.staticSummary.findings[0].ioType").value("DB"))
                 .andExpect(jsonPath("$.staticSummary.findings[0].loopMethodName").value("buildReport"))
@@ -157,6 +158,23 @@ public class TaskApiTest {
                         .content("{invalid-json"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("invalid static result json"));
+    }
+
+    @Test
+    public void should_RejectStaticReport_When_RuleIdMissing() throws Exception {
+        MvcResult created = mvc.perform(post("/api/tasks")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"project\":\"demo\",\"commit\":\"abc\",\"branch\":\"main\",\"env\":\"local\"}"))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        String taskId = extractTaskId(created);
+
+        mvc.perform(post("/api/tasks/" + taskId + "/static-results")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"findings\":[{\"severity\":\"WARN\"}]}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("static finding missing required field: ruleId"));
     }
 
     private String extractTaskId(MvcResult created) throws Exception {

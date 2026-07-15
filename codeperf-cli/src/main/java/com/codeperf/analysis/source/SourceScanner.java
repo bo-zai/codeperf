@@ -84,7 +84,7 @@ public class SourceScanner {
     }
 
     private String deduplicationKey(SourceFinding finding) {
-        return finding.getType()
+        return finding.getRuleId()
                 + "|" + finding.getSourceFile()
                 + "|" + finding.getLineNumber()
                 + "|" + finding.getLoopStartLine()

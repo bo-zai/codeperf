@@ -44,6 +44,7 @@ public class SourceScannerTest {
 
         assertEquals(1, result.getFilesScanned());
         assertEquals(1, result.getFindings().size());
+        assertEquals("LOOP_IO_AMPLIFICATION", result.getFindings().get(0).getRuleId());
         assertEquals("DB", result.getFindings().get(0).getIoType());
         assertEquals("src/main/java/com/acme/OrderService.java", result.getFindings().get(0).getSourceFile());
         assertEquals(0, result.getParseErrors().size());
@@ -55,7 +56,7 @@ public class SourceScannerTest {
         Files.createDirectories(source.getParent());
         Files.write(source, "package com.acme; class OrderService {}\n".getBytes(StandardCharsets.UTF_8));
         SourceFinding finding = new SourceFinding(
-                "Loop I/O Amplification",
+                "LOOP_IO_AMPLIFICATION",
                 Severity.WARN,
                 SourceFinding.Confidence.HIGH,
                 "循环体内存在外部 I/O 调用，生产数据量放大时可能导致接口响应变慢。",

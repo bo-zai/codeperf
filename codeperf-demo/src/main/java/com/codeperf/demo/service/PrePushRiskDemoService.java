@@ -13,7 +13,7 @@ public class PrePushRiskDemoService {
 
     public PrePushRiskDemoService(OrderMapper orderMapper, DeliveryClient deliveryClient) {
         this.orderMapper = orderMapper;
-        int i = 4;
+        int i = 5;
         this.deliveryClient = deliveryClient;
     }
 

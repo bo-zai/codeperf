@@ -20,6 +20,7 @@ public class PrePushRiskDemoService {
     public List<String> buildOrderViews(List<Long> orderIds) {
         List<String> views = new ArrayList<>();
         for (Long orderId : orderIds) {
+            int i = 5;
             OrderDetail detail = orderMapper.selectById(orderId);
             views.add(detail.getDeliveryNo());
         }

@@ -64,6 +64,12 @@ public class IoCallMatcher {
             return new IoMatch(true, "SDK", SourceFinding.Confidence.MEDIUM,
                     "外部客户端调用: " + call);
         }
+        // Service 匹配：跨包 Service 调用（可能是远程服务）
+        if (containsAny(receiver, type, "service")
+                && startsWithAny(method, "get", "find", "query", "list", "create", "update", "delete", "save", "load")) {
+            return new IoMatch(true, "SERVICE", SourceFinding.Confidence.LOW,
+                    "跨包 Service 调用: " + call);
+        }
         return IoMatch.none();
     }
 

@@ -1,6 +1,8 @@
 serverUrl: http://127.0.0.1:9095
-analysisTaskId: ${ANALYSIS_TASK_ID}
 uploadEnabled: true
+appName: codeperf-demo-app
+env: dev
+buildInfoPath: /opt/codeperf/build-info.properties
 targetPackages:
   - com.codeperf.demo
 entry:
@@ -9,4 +11,4 @@ entry:
 slowSqlMs: 500
 sampleMs: 10
 mode: session
-output: build/codeperf/perf-data.raw
+output: /opt/codeperf/perf-data.raw

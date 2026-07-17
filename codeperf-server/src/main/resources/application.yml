@@ -8,6 +8,18 @@ spring:
 codeperf:
   storage:
     mode: ${CODEPERF_STORAGE_MODE:memory}
+  agent:
+    install:
+      enabled: ${CODEPERF_AGENT_INSTALL_ENABLED:true}
+      server-url: ${CODEPERF_AGENT_SERVER_URL:http://127.0.0.1:9095}
+      agent-url: ${CODEPERF_AGENT_URL:}
+      agent-sha256: ${CODEPERF_AGENT_SHA256:}
+      target-packages: ${CODEPERF_AGENT_TARGET_PACKAGES:}
+      entry-method: ${CODEPERF_AGENT_ENTRY_METHOD:POST}
+      entry-path: ${CODEPERF_AGENT_ENTRY_PATH:/}
+      slow-sql-ms: ${CODEPERF_AGENT_SLOW_SQL_MS:500}
+      sample-ms: ${CODEPERF_AGENT_SAMPLE_MS:10}
+      mode: ${CODEPERF_AGENT_MODE:session}
 
 mybatis-plus:
   configuration:

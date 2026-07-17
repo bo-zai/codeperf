@@ -75,6 +75,24 @@ public class MybatisPlusAnalysisTaskRepository implements AnalysisTaskRepository
     }
 
     @Override
+    public Optional<AnalysisTaskBO> findByCommitIdentity(String remoteUrl, String commit, String branch, String env) {
+        CodeRepository repository = findRepository(repoKey(remoteUrl)).orElse(null);
+        if (repository == null) {
+            return Optional.empty();
+        }
+        GitCommit gitCommit = findGitCommit(repository.getId(), commit, branch).orElse(null);
+        if (gitCommit == null) {
+            return Optional.empty();
+        }
+        LambdaQueryWrapper<AnalysisTask> query = new LambdaQueryWrapper<>();
+        query.eq(AnalysisTask::getRepositoryId, repository.getId());
+        query.eq(AnalysisTask::getGitCommitId, gitCommit.getId());
+        query.eq(AnalysisTask::getEnvName, env);
+        query.last("LIMIT 1");
+        return Optional.ofNullable(mapper.selectOne(query)).map(this::toDomain);
+    }
+
+    @Override
     public void replaceStaticFindings(String taskId, List<StaticFindingBO> findings) {
         LambdaQueryWrapper<StaticFinding> deleteQuery = new LambdaQueryWrapper<>();
         deleteQuery.eq(StaticFinding::getTaskId, taskId);
@@ -238,6 +256,13 @@ public class MybatisPlusAnalysisTaskRepository implements AnalysisTaskRepository
             return remoteUrl.trim().toLowerCase();
         }
         return ("project:" + task.getProject()).toLowerCase();
+    }
+
+    private String repoKey(String remoteUrl) {
+        if (remoteUrl == null || remoteUrl.trim().isEmpty() || "UNKNOWN".equals(remoteUrl)) {
+            return "";
+        }
+        return remoteUrl.trim().toLowerCase();
     }
 
     private String provider(String remoteUrl) {

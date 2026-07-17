@@ -87,6 +87,18 @@ public class AnalysisTaskService {
         return saved;
     }
 
+    /**
+     * 按构建身份接收动态证据。
+     * 这样 agent 配置不需要每次注入 taskId，适配企业自动化 CI/CD 的固定启动参数。
+     */
+    public AnalysisTaskBO acceptDynamicEvidenceByIdentity(String payload) {
+        DynamicEvidenceIdentity identity = parseDynamicEvidenceIdentity(payload);
+        AnalysisTaskBO task = repository.findByCommitIdentity(
+                        identity.remoteUrl, identity.commit, identity.branch, identity.env)
+                .orElseThrow(() -> new IllegalArgumentException("analysis task not found for dynamic evidence identity"));
+        return acceptDynamicEvidence(task.getAnalysisTaskId(), payload);
+    }
+
     private RiskLevel deriveStaticRisk(String payload) {
         try {
             JsonNode root = mapper.readTree(payload);
@@ -162,13 +174,41 @@ public class AnalysisTaskService {
         record.setRawPayload(payload);
         try {
             JsonNode root = mapper.readTree(payload);
-            record.setEntryKey(text(root, "entry"));
+            record.setEntryKey(extractEntryKey(root));
             record.setAppName(text(root, "appName"));
         } catch (IOException ignored) {
             record.setEntryKey("");
             record.setAppName("");
         }
         return record;
+    }
+
+    private DynamicEvidenceIdentity parseDynamicEvidenceIdentity(String payload) {
+        try {
+            JsonNode root = mapper.readTree(payload);
+            DynamicEvidenceIdentity identity = new DynamicEvidenceIdentity();
+            identity.remoteUrl = requiredText(root, "remoteUrl");
+            identity.commit = requiredText(root, "commit");
+            identity.branch = requiredText(root, "branch");
+            identity.env = requiredText(root, "env");
+            return identity;
+        } catch (IOException e) {
+            throw new IllegalArgumentException("invalid dynamic evidence json", e);
+        }
+    }
+
+    private String extractEntryKey(JsonNode root) {
+        String direct = text(root, "entry");
+        if (!direct.trim().isEmpty()) {
+            return direct;
+        }
+        JsonNode evidence = root.path("evidence");
+        String method = text(evidence, "entryMethod");
+        String path = text(evidence, "entryPath");
+        if (method.trim().isEmpty() && path.trim().isEmpty()) {
+            return "";
+        }
+        return (method + " " + path).trim();
     }
 
     private void validateRuleDefinitions(List<StaticFindingBO> findings) {
@@ -204,5 +244,12 @@ public class AnalysisTaskService {
         } catch (NoSuchAlgorithmException e) {
             throw new IllegalStateException("SHA-256 algorithm unavailable", e);
         }
+    }
+
+    private static final class DynamicEvidenceIdentity {
+        private String remoteUrl;
+        private String commit;
+        private String branch;
+        private String env;
     }
 }

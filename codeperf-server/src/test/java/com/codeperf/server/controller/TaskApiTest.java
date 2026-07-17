@@ -20,6 +20,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         classes = CodePerfServerApplication.class,
         properties = {
                 "codeperf.storage.mode=memory",
+                "codeperf.agent.install.agent-url=https://oss.example.com/codeperf-agent.jar",
+                "codeperf.agent.install.agent-sha256=abc123",
+                "codeperf.agent.install.target-packages=com.company.order,com.company.common",
+                "codeperf.agent.install.entry-method=POST",
+                "codeperf.agent.install.entry-path=/api/orders/report",
                 "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration,"
                         + "com.baomidou.mybatisplus.autoconfigure.MybatisPlusAutoConfiguration"
         })
@@ -77,6 +82,61 @@ public class TaskApiTest {
                 .andExpect(jsonPath("$.hasStaticResult").value(true))
                 .andExpect(jsonPath("$.hasDynamicEvidence").value(true))
                 .andExpect(jsonPath("$.riskLevel").value("WARN"));
+    }
+
+    @Test
+    public void should_AcceptDynamicEvidenceByIdentity_When_TaskMatchedByCommit() throws Exception {
+        MvcResult created = mvc.perform(post("/api/tasks")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{"
+                                + "\"project\":\"order-service\","
+                                + "\"remoteUrl\":\"git@gitlab.company.com:mall/order-service.git\","
+                                + "\"commit\":\"abc\","
+                                + "\"branch\":\"main\","
+                                + "\"env\":\"dev\""
+                                + "}"))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        String taskId = extractTaskId(created);
+
+        mvc.perform(post("/api/dynamic-evidence")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{"
+                                + "\"remoteUrl\":\"git@gitlab.company.com:mall/order-service.git\","
+                                + "\"commit\":\"abc\","
+                                + "\"branch\":\"main\","
+                                + "\"env\":\"dev\","
+                                + "\"appName\":\"order-service\","
+                                + "\"evidence\":{\"entryMethod\":\"POST\",\"entryPath\":\"/api/orders/report\"}"
+                                + "}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.analysisTaskId").value(taskId))
+                .andExpect(jsonPath("$.status").value("DYNAMIC_RECEIVED"));
+    }
+
+    @Test
+    public void should_ReturnAgentInstallConfig_When_BuildContextPosted() throws Exception {
+        mvc.perform(post("/api/agent/install-config")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{"
+                                + "\"project\":\"order-service\","
+                                + "\"remoteUrl\":\"git@gitlab.company.com:mall/order-service.git\","
+                                + "\"commit\":\"abc\","
+                                + "\"branch\":\"main\","
+                                + "\"env\":\"dev\""
+                                + "}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.enabled").value(true))
+                .andExpect(jsonPath("$.serverUrl").value("http://127.0.0.1:9095"))
+                .andExpect(jsonPath("$.agentUrl").value("https://oss.example.com/codeperf-agent.jar"))
+                .andExpect(jsonPath("$.agentSha256").value("abc123"))
+                .andExpect(jsonPath("$.appName").value("order-service"))
+                .andExpect(jsonPath("$.env").value("dev"))
+                .andExpect(jsonPath("$.targetPackages[0]").value("com.company.order"))
+                .andExpect(jsonPath("$.targetPackages[1]").value("com.company.common"))
+                .andExpect(jsonPath("$.entry.method").value("POST"))
+                .andExpect(jsonPath("$.entry.path").value("/api/orders/report"));
     }
 
     @Test

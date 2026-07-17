@@ -5,6 +5,9 @@ import org.yaml.snakeyaml.Yaml;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.Reader;
+import java.io.StringReader;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -12,6 +15,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 
 /**
  * Agent 运行参数。正式环境由 -javaagent 参数指向 agent.yml 配置文件。
@@ -28,6 +32,17 @@ public class AgentConfig {
     private long sampleMs = 10;
     private String mode = "session";
     private String serverUrl;
+    private String appName;
+    private String env = "dev";
+    private String buildInfoPath = "build-info.properties";
+    private String remoteUrl;
+    private String commit;
+    private String branch;
+    private String project;
+    private String authorName;
+    private String authorEmail;
+    private String commitTime;
+    private String commitMessage;
     private String analysisTaskId;
     private boolean uploadEnabled;
 
@@ -145,9 +160,38 @@ public class AgentConfig {
         cfg.mode = stringValue(yaml.get("mode"), cfg.mode);
         cfg.output = stringValue(yaml.get("output"), cfg.output);
         cfg.serverUrl = stringValue(yaml.get("serverUrl"), cfg.serverUrl);
+        cfg.appName = stringValue(yaml.get("appName"), cfg.appName);
+        cfg.env = stringValue(yaml.get("env"), cfg.env);
+        cfg.buildInfoPath = stringValue(yaml.get("buildInfoPath"), cfg.buildInfoPath);
         cfg.analysisTaskId = stringValue(yaml.get("analysisTaskId"), cfg.analysisTaskId);
         cfg.uploadEnabled = booleanValue(yaml.get("uploadEnabled"), cfg.uploadEnabled);
+        cfg.loadBuildInfo();
         return cfg;
+    }
+
+    private void loadBuildInfo() {
+        if (buildInfoPath == null || buildInfoPath.trim().isEmpty()) {
+            return;
+        }
+        try {
+            Properties properties = new Properties();
+            try (Reader reader = new StringReader(new String(
+                    Files.readAllBytes(Paths.get(buildInfoPath)), StandardCharsets.UTF_8))) {
+                properties.load(reader);
+            }
+            remoteUrl = trimToNull(properties.getProperty("remoteUrl"));
+            commit = trimToNull(properties.getProperty("commit"));
+            branch = trimToNull(properties.getProperty("branch"));
+            project = trimToNull(properties.getProperty("project"));
+            appName = firstNonBlank(appName, properties.getProperty("appName"));
+            env = firstNonBlank(env, properties.getProperty("env"));
+            authorName = trimToNull(properties.getProperty("authorName"));
+            authorEmail = trimToNull(properties.getProperty("authorEmail"));
+            commitTime = trimToNull(properties.getProperty("commitTime"));
+            commitMessage = trimToNull(properties.getProperty("commitMessage"));
+        } catch (IOException ignore) {
+            // build-info 只是动态上报增强信息；缺失时不影响 agent 启动和采集主链路。
+        }
     }
 
     private static String stringValue(Object value, String defaultValue) {
@@ -172,5 +216,20 @@ public class AgentConfig {
             return (Boolean) value;
         }
         return Boolean.parseBoolean(value.toString());
+    }
+
+    private static String trimToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private static String firstNonBlank(String primary, String secondary) {
+        if (primary != null && !primary.trim().isEmpty()) {
+            return primary;
+        }
+        return trimToNull(secondary);
     }
 }

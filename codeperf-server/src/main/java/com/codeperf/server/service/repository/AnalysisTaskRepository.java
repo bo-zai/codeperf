@@ -29,6 +29,8 @@ public interface AnalysisTaskRepository {
      */
     Optional<AnalysisTaskBO> findByTaskId(String taskId);
 
+    Optional<AnalysisTaskBO> findByCommitIdentity(String remoteUrl, String commit, String branch, String env);
+
     void replaceStaticFindings(String taskId, List<StaticFindingBO> findings);
 
     void appendDynamicEvidence(DynamicEvidenceBO evidence);

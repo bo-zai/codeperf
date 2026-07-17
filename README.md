@@ -214,8 +214,10 @@ java -javaagent:/opt/codeperf/codeperf-agent.jar=/etc/codeperf/agent.yml \
 
 ```yaml
 serverUrl: http://127.0.0.1:9095
-analysisTaskId: ${CODEPERF_ANALYSIS_TASK_ID}
 uploadEnabled: true
+appName: music-education-app
+env: dev
+buildInfoPath: /opt/codeperf/build-info.properties
 targetPackages:
   - com.codeperf.demo
 entry:
@@ -227,6 +229,36 @@ output: build/codeperf/perf-data.raw
 ```
 
 Agent 支持 `config=/path/to/agent.yml` 或直接传入 yml/yaml 文件路径。没有配置文件时仍保留分号参数解析作为本地调试兼容，但推荐使用 YAML。
+
+如果使用 `install.sh` 自动接入，脚本会在 `docker build` 之前完成以下动作：
+
+```text
+1. 从 Git 采集 remoteUrl、commit、branch、author 等构建身份
+2. 调用 CodePerf Server 安装配置接口获取 agentUrl、serverUrl、targetPackages 等参数
+3. 下载 codeperf-agent.jar 到 target/codeperf/
+4. 生成 target/codeperf/agent.yml
+5. 生成 target/codeperf/build-info.properties
+6. 自动向 Dockerfile 注入 COPY 和 JAVA_TOOL_OPTIONS
+```
+
+脚本最小环境变量：
+
+```bash
+CODEPERF_INSTALL_CONFIG_URL=http://codeperf-server:9095/api/agent/install-config
+CODEPERF_ENV=dev
+```
+
+如需鉴权，可额外提供 `CODEPERF_ACCESS_TOKEN`。如 Dockerfile 不在仓库根目录，可提供 `CODEPERF_DOCKERFILE=./deploy/Dockerfile`。
+
+安装配置由 Server 统一返回，Server 可通过环境变量调整：
+
+```bash
+CODEPERF_AGENT_URL=https://oss.example.com/codeperf-agent.jar
+CODEPERF_AGENT_SHA256=...
+CODEPERF_AGENT_TARGET_PACKAGES=com.company.order,com.company.common
+CODEPERF_AGENT_ENTRY_METHOD=POST
+CODEPERF_AGENT_ENTRY_PATH=/api/orders/report
+```
 
 ## Server
 

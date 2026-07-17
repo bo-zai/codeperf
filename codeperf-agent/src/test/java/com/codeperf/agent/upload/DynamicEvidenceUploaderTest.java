@@ -28,6 +28,7 @@ public class DynamicEvidenceUploaderTest {
         server = HttpServer.create(new InetSocketAddress(0), 0);
         server.setExecutor(Executors.newSingleThreadExecutor());
         server.createContext("/api/tasks/task-1/dynamic-evidence", this::handleUpload);
+        server.createContext("/api/dynamic-evidence", this::handleUpload);
         server.start();
         baseUrl = "http://127.0.0.1:" + server.getAddress().getPort();
     }
@@ -47,6 +48,22 @@ public class DynamicEvidenceUploaderTest {
 
         assertEquals("/api/tasks/task-1/dynamic-evidence", lastPath);
         assertTrue(lastBody.contains("\"entry\""));
+    }
+
+    @Test
+    public void should_PostDynamicEvidenceByCommitIdentity_When_TaskIdMissing() throws Exception {
+        DynamicEvidenceUploader uploader = new DynamicEvidenceUploader(baseUrl, "", "demo-app", "dev",
+                "git@gitlab.example.com:demo/demo-app.git", "abc123", "master");
+
+        uploader.upload("{\"entryMethod\":\"POST\",\"entryPath\":\"/api/orders/report\"}");
+
+        assertEquals("/api/dynamic-evidence", lastPath);
+        assertTrue(lastBody.contains("\"appName\":\"demo-app\""));
+        assertTrue(lastBody.contains("\"env\":\"dev\""));
+        assertTrue(lastBody.contains("\"remoteUrl\":\"git@gitlab.example.com:demo/demo-app.git\""));
+        assertTrue(lastBody.contains("\"commit\":\"abc123\""));
+        assertTrue(lastBody.contains("\"branch\":\"master\""));
+        assertTrue(lastBody.contains("\"evidence\""));
     }
 
     private void handleUpload(HttpExchange exchange) throws IOException {

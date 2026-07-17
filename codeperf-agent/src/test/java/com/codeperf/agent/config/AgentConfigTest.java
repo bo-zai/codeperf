@@ -45,4 +45,43 @@ public class AgentConfigTest {
         assertEquals("continuous", loaded.getMode());
         assertEquals("build/codeperf/perf-data.raw", loaded.getOutput());
     }
+
+    @Test
+    public void should_LoadBuildInfo_When_ConfigUsesStableCommitIdentity() throws Exception {
+        Path buildInfo = tempDir.resolve("build-info.properties");
+        Files.write(buildInfo, (
+                "remoteUrl=git@gitlab.example.com:demo/demo-app.git\n"
+                        + "commit=abc123\n"
+                        + "branch=master\n"
+                        + "env=dev\n"
+                        + "project=demo-app\n"
+                        + "appName=demo-app\n"
+                        + "authorName=Developer\n"
+                        + "authorEmail=developer@example.com\n"
+                        + "commitTime=2026-07-17T15:00:00+08:00\n"
+                        + "commitMessage=initial commit\n").getBytes(StandardCharsets.UTF_8));
+        Path config = tempDir.resolve("agent.yml");
+        Files.write(config, (
+                "serverUrl: http://127.0.0.1:9095\n"
+                        + "appName: demo-app\n"
+                        + "env: dev\n"
+                        + "uploadEnabled: true\n"
+                        + "buildInfoPath: " + buildInfo.toString().replace("\\", "/") + "\n"
+                        + "targetPackages:\n"
+                        + "  - com.demo\n"
+                        + "entry:\n"
+                        + "  method: POST\n"
+                        + "  path: /api/orders/report\n").getBytes(StandardCharsets.UTF_8));
+
+        AgentConfig loaded = AgentConfig.load(config.toString());
+
+        assertEquals("demo-app", loaded.getAppName());
+        assertEquals("dev", loaded.getEnv());
+        assertEquals(buildInfo.toString().replace("\\", "/"), loaded.getBuildInfoPath());
+        assertEquals("git@gitlab.example.com:demo/demo-app.git", loaded.getRemoteUrl());
+        assertEquals("abc123", loaded.getCommit());
+        assertEquals("master", loaded.getBranch());
+        assertEquals("developer@example.com", loaded.getAuthorEmail());
+        assertEquals("initial commit", loaded.getCommitMessage());
+    }
 }

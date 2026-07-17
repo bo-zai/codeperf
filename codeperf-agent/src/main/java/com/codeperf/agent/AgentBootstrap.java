@@ -44,11 +44,23 @@ public final class AgentBootstrap {
         if (!cfg.isUploadEnabled()) {
             return null;
         }
-        if (isBlank(cfg.getServerUrl()) || isBlank(cfg.getAnalysisTaskId())) {
-            throw new IllegalArgumentException("uploadEnabled=true requires serverUrl and analysisTaskId");
+        if (isBlank(cfg.getServerUrl())) {
+            throw new IllegalArgumentException("uploadEnabled=true requires serverUrl");
         }
+        validateUploadIdentity(cfg);
         return new DynamicEvidenceReporter(new DynamicEvidenceUploader(
-                cfg.getServerUrl(), cfg.getAnalysisTaskId()));
+                cfg.getServerUrl(), cfg.getAnalysisTaskId(), cfg.getAppName(), cfg.getEnv(),
+                cfg.getRemoteUrl(), cfg.getCommit(), cfg.getBranch()));
+    }
+
+    private static void validateUploadIdentity(AgentConfig cfg) {
+        if (!isBlank(cfg.getAnalysisTaskId())) {
+            return;
+        }
+        if (isBlank(cfg.getRemoteUrl()) || isBlank(cfg.getCommit()) || isBlank(cfg.getBranch()) || isBlank(cfg.getEnv())) {
+            throw new IllegalArgumentException(
+                    "uploadEnabled=true requires analysisTaskId or build-info remoteUrl/commit/branch/env");
+        }
     }
 
     private static boolean isBlank(String value) {

@@ -37,6 +37,19 @@ public class InMemoryAnalysisTaskRepository implements AnalysisTaskRepository {
     }
 
     @Override
+    public Optional<AnalysisTaskBO> findByCommitIdentity(String remoteUrl, String commit, String branch, String env) {
+        for (AnalysisTaskBO task : tasks.values()) {
+            if (same(task.getRemoteUrl(), remoteUrl)
+                    && same(task.getCommit(), commit)
+                    && same(task.getBranch(), branch)
+                    && same(task.getEnv(), env)) {
+                return Optional.of(task);
+            }
+        }
+        return Optional.empty();
+    }
+
+    @Override
     public void replaceStaticFindings(String taskId, List<StaticFindingBO> findings) {
         staticFindings.put(taskId, new ArrayList<>(findings));
     }
@@ -49,5 +62,13 @@ public class InMemoryAnalysisTaskRepository implements AnalysisTaskRepository {
     @Override
     public boolean isRuleDefined(String ruleId) {
         return ruleIds.contains(ruleId);
+    }
+
+    private boolean same(String left, String right) {
+        return value(left).equals(value(right));
+    }
+
+    private String value(String value) {
+        return value == null ? "" : value.trim();
     }
 }

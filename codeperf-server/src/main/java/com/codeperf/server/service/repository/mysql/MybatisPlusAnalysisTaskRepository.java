@@ -22,6 +22,10 @@ import com.codeperf.server.mapper.StaticFindingMapper;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Optional;
 
@@ -162,7 +166,7 @@ public class MybatisPlusAnalysisTaskRepository implements AnalysisTaskRepository
                 entity.getEnvName(),
                 gitCommit == null ? "" : gitCommit.getAuthorName(),
                 gitCommit == null ? "" : gitCommit.getAuthorEmail(),
-                gitCommit == null ? "" : gitCommit.getAuthorTime(),
+                gitCommit == null ? "" : formatDateTime(gitCommit.getAuthorTime()),
                 gitCommit == null ? "" : gitCommit.getCommitterName(),
                 gitCommit == null ? "" : gitCommit.getCommitterEmail(),
                 gitCommit == null ? "" : gitCommit.getCommitMessage());
@@ -210,7 +214,7 @@ public class MybatisPlusAnalysisTaskRepository implements AnalysisTaskRepository
         entity.setBranchName(task.getBranch());
         entity.setAuthorName(task.getAuthorName());
         entity.setAuthorEmail(task.getAuthorEmail());
-        entity.setAuthorTime(task.getAuthorTime());
+        entity.setAuthorTime(parseAuthorTime(task.getAuthorTime()));
         entity.setCommitterName(task.getCommitterName());
         entity.setCommitterEmail(task.getCommitterEmail());
         entity.setCommitMessage(task.getCommitMessage());
@@ -278,5 +282,24 @@ public class MybatisPlusAnalysisTaskRepository implements AnalysisTaskRepository
             return "";
         }
         return remoteUrl.trim().replace(':', '/').replace('\\', '/');
+    }
+
+    private LocalDateTime parseAuthorTime(String authorTime) {
+        if (authorTime == null || authorTime.trim().isEmpty()) {
+            return null;
+        }
+        String value = authorTime.trim();
+        if (value.matches("\\d+")) {
+            return LocalDateTime.ofInstant(Instant.ofEpochSecond(Long.parseLong(value)), ZoneId.systemDefault());
+        }
+        try {
+            return LocalDateTime.parse(value);
+        } catch (DateTimeParseException e) {
+            return null;
+        }
+    }
+
+    private String formatDateTime(LocalDateTime dateTime) {
+        return dateTime == null ? "" : dateTime.toString();
     }
 }

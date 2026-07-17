@@ -19,7 +19,7 @@ public class AgentConfigTest {
     public void should_LoadYamlConfig_When_AgentArgumentPointsToFile() throws Exception {
         Path config = tempDir.resolve("agent.yml");
         Files.write(config, (
-                "serverUrl: http://127.0.0.1:9090\n"
+                "serverUrl: http://127.0.0.1:9095\n"
                         + "analysisTaskId: task-1\n"
                         + "uploadEnabled: true\n"
                         + "targetPackages:\n"
@@ -34,7 +34,7 @@ public class AgentConfigTest {
 
         AgentConfig loaded = AgentConfig.load("config=" + config);
 
-        assertEquals("http://127.0.0.1:9090", loaded.getServerUrl());
+        assertEquals("http://127.0.0.1:9095", loaded.getServerUrl());
         assertEquals("task-1", loaded.getAnalysisTaskId());
         assertTrue(loaded.isUploadEnabled());
         assertEquals("com.acme.order", loaded.getTargetPackages().get(0));

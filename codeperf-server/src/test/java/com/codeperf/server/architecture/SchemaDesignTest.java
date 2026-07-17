@@ -68,6 +68,7 @@ public class SchemaDesignTest {
         assertTableColumn(schema, "codeperf_user", "user_name varchar(128)");
         assertTableColumn(schema, "codeperf_user", "sap_id varchar(128)");
         assertTableColumn(schema, "codeperf_user", "email varchar(256) not null");
+        assertTableColumn(schema, "git_commit", "author_time datetime");
         assertTableColumn(schema, "rule_definition", "rule_id varchar(128) not null");
         assertTableColumn(schema, "finding_issue", "issue_key varchar(128) not null");
         assertTableColumn(schema, "finding_occurrence", "issue_id bigint not null");

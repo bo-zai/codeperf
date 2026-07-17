@@ -1,10 +1,12 @@
-project: codeperf-demo
+project: codeperf-demo-multi-module
 
 staticScan:
   enabled: true
   mode: changed
   sourceRoots:
-    - codeperf-demo/src/main/java
+    - codeperf-demo-admin/src/main/java
+    - codeperf-demo-app/src/main/java
+    - codeperf-demo-common/src/main/java
   includeTests: false
   baseRef: origin/master
   headRef: HEAD
@@ -21,10 +23,21 @@ staticScan:
     - rpc
     - sdk
 
+modules:
+  - name: codeperf-demo-admin
+    sourceRoots:
+      - codeperf-demo-admin/src/main/java
+  - name: codeperf-demo-app
+    sourceRoots:
+      - codeperf-demo-app/src/main/java
+  - name: codeperf-demo-common
+    sourceRoots:
+      - codeperf-demo-common/src/main/java
+
 report:
   local:
     enabled: true
     path: .codeperf/report/source-report.json
   upload:
-    enabled: true
+    enabled: false
     serverUrl: http://localhost:9090

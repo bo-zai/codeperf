@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS git_commit (
   branch_name VARCHAR(256) COMMENT '分支名称',
   author_name VARCHAR(128) COMMENT '提交作者姓名',
   author_email VARCHAR(256) COMMENT '提交作者邮箱',
-  author_time VARCHAR(64) COMMENT '提交作者时间',
+  author_time DATETIME COMMENT '提交作者时间',
   committer_name VARCHAR(128) COMMENT '提交执行人姓名',
   committer_email VARCHAR(256) COMMENT '提交执行人邮箱',
   commit_message VARCHAR(1024) COMMENT '提交说明',

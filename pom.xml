@@ -13,11 +13,12 @@
 
     <!--
       模块按功能逐步加入：每个功能先在 docs/ 写设计文档再编码。
-      当前已纳入：codeperf-demo（靶子应用）。
-      后续将加入：codeperf-agent、codeperf-cli。
+      当前 demo 使用多模块结构，模拟企业项目的 admin/app/common 分层。
     -->
     <modules>
-        <module>codeperf-demo</module>
+        <module>codeperf-demo-common</module>
+        <module>codeperf-demo-admin</module>
+        <module>codeperf-demo-app</module>
         <module>codeperf-agent</module>
         <module>codeperf-cli</module>
         <module>codeperf-server</module>

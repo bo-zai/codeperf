@@ -6,6 +6,8 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
+import java.time.LocalDateTime;
+
 @Data
 @TableName("git_commit")
 public class GitCommit {
@@ -36,7 +38,7 @@ public class GitCommit {
 
     /** 提交作者时间 */
     @TableField("author_time")
-    private String authorTime;
+    private LocalDateTime authorTime;
 
     /** 提交执行人姓名 */
     @TableField("committer_name")

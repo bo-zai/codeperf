@@ -5,6 +5,21 @@ import lombok.Getter;
 
 import java.util.List;
 
+/**
+ * 源码发现：表示一个检测到的性能风险。
+ * <p>
+ * 核心字段：
+ * <ul>
+ *   <li>ruleId：规则标识，如 "loop-io-amplification"</li>
+ *   <li>severity：严重度（INFO/WARN/CRITICAL）</li>
+ *   <li>confidence：置信度（LOW/MEDIUM/HIGH）</li>
+ *   <li>sourceFile + lineNumber：风险位置</li>
+ *   <li>loopStartLine/loopEndLine：循环范围</li>
+ *   <li>ioType：I/O 类型（DB/Redis/HTTP/RPC/SDK）</li>
+ *   <li>callChain：从循环到 I/O 的调用链</li>
+ *   <li>attribution：风险归因（NEW/MODIFIED/HISTORICAL）</li>
+ * </ul>
+ */
 @Getter
 public class SourceFinding {
     public enum Confidence { LOW, MEDIUM, HIGH }

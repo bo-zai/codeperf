@@ -8,9 +8,25 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 
+/**
+ * Git 元数据解析器：通过 git 命令获取当前仓库元数据。
+ * <p>
+ * 解析项：
+ * <ul>
+ *   <li>commit：当前 HEAD 的提交哈希</li>
+ *   <li>branch：当前分支名</li>
+ *   <li>remoteUrl：origin 远程地址</li>
+ *   <li>author/committer：最近一次提交的作者和提交人</li>
+ *   <li>commitMessage：最近一次提交信息</li>
+ * </ul>
+ * <p>
+ * 容错策略：解析失败时返回 "UNKNOWN"，不阻断上传流程。
+ */
 public class GitMetadataResolver {
 
     public GitMetadata resolve(Path workingDirectory) {
+        // 批量获取 Git 元数据：commit、branch、remoteUrl、author/committer、message
+        // 失败时返回 "UNKNOWN"，不阻断上传流程（如非 Git 目录、无 origin 等）
         return new GitMetadata(
                 runGitOrDefault(workingDirectory, "UNKNOWN", Arrays.asList("rev-parse", "HEAD")),
                 runGitOrDefault(workingDirectory, "UNKNOWN", Arrays.asList("rev-parse", "--abbrev-ref", "HEAD")),

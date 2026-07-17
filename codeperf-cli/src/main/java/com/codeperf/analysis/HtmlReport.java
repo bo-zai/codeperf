@@ -10,7 +10,17 @@ import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 /**
- * 生成自包含 HTML 报告。
+ * HTML 报告生成器：根据动态分析或静态分析结果生成自包含 HTML 报告。
+ * <p>
+ * 特性：
+ * <ul>
+ *   <li>单文件输出：样式内嵌，离线可用</li>
+ *   <li>动态报告：包含调用树、SQL 汇总、CPU 热点等</li>
+ *   <li>静态报告：包含方法位置、置信度、证据等</li>
+ * </ul>
+ * <p>
+ * 注意：此报告主要用于动态分析场景，源码扫描使用 SourceScanHtmlReportWriter。
+ * <p>
  * 见 docs/04-analysis-report.md 第 5 节。
  */
 public class HtmlReport {

@@ -14,11 +14,27 @@ import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+/**
+ * 报告上传器：HTTP POST 扫描报告到 CodePerf 服务端。
+ * <p>
+ * 上传流程：
+ * <ol>
+ *   <li>POST /api/tasks 创建任务，获取 taskId</li>
+ *   <li>POST /api/tasks/{taskId}/static-results 上传报告 JSON</li>
+ * </ol>
+ * <p>
+ * 使用场景：
+ * <ul>
+ *   <li>CI 集成：每次构建上传报告，建立历史趋势</li>
+ *   <li>团队协作：在 Web 界面审查报告，分配问题负责人</li>
+ * </ul>
+ */
 public class StaticReportUploader {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public String upload(String serverUrl, StaticReportUploadRequest request) throws IOException {
+        // 两阶段上传：先创建任务获取 taskId，再上传报告内容
         String taskId = createTask(serverUrl, request);
         post(serverUrl + "/api/tasks/" + taskId + "/static-results", request.getReportJson());
         return taskId;

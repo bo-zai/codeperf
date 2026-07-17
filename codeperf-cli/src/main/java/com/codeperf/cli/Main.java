@@ -1,6 +1,7 @@
 package com.codeperf.cli;
 
 import com.beust.jcommander.JCommander;
+import com.beust.jcommander.ParameterException;
 import com.codeperf.cli.cmd.DoctorCommand;
 import com.codeperf.cli.cmd.InitCommand;
 import com.codeperf.cli.cmd.InstallHooksCommand;
@@ -13,13 +14,23 @@ import com.codeperf.cli.cmd.ScanCommand;
 public class Main {
 
     public static void main(String[] args) {
+        System.exit(run(args));
+    }
+
+    /**
+     * 执行 CLI 命令并返回退出码。
+     *
+     * @param args 命令行参数
+     * @return 进程退出码，0 表示成功
+     */
+    public static int run(String[] args) {
         InitCommand init = new InitCommand();
         ScanCommand scan = new ScanCommand();
         DoctorCommand doctor = new DoctorCommand();
         InstallHooksCommand installHooks = new InstallHooksCommand();
 
         JCommander jc = JCommander.newBuilder()
-                .programName("codeperf-cli")
+                .programName("codeperf")
                 .addCommand("init", init)
                 .addCommand("scan", scan)
                 .addCommand("doctor", doctor)
@@ -28,10 +39,27 @@ public class Main {
 
         if (args.length == 0) {
             jc.usage();
-            System.exit(1);
+            return 1;
         }
 
-        jc.parse(args);
+        if (isHelp(args[0])) {
+            jc.usage();
+            return 0;
+        }
+
+        if (args.length == 2 && isHelp(args[1]) && jc.getCommands().containsKey(args[0])) {
+            System.out.println("Usage: codeperf " + args[0]);
+            jc.getCommands().get(args[0]).usage();
+            return 0;
+        }
+
+        try {
+            jc.parse(args);
+        } catch (ParameterException e) {
+            System.err.println("[codeperf] 参数错误: " + e.getMessage());
+            jc.usage();
+            return 1;
+        }
         String parsed = jc.getParsedCommand();
 
         int exitCode;
@@ -63,6 +91,10 @@ public class Main {
                 exitCode = 2;
             }
         }
-        System.exit(exitCode);
+        return exitCode;
+    }
+
+    private static boolean isHelp(String arg) {
+        return "--help".equals(arg) || "-h".equals(arg);
     }
 }

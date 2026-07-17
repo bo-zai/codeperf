@@ -11,6 +11,30 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * CLI 顶层配置：加载 {@code .codeperf.yml} 并管理扫描、报告、模块等子配置。
+ * <p>
+ * 配置结构：
+ * <pre>
+ * project: my-app
+ * staticScan:
+ *   enabled: true
+ *   mode: changed
+ *   sourceRoots: [src/main/java]
+ * report:
+ *   local: {enabled: true, path: .codeperf/report.json}
+ *   upload: {enabled: false, serverUrl: http://codeperf.company.com}
+ * modules:
+ *   - name: user-service
+ *     sourceRoots: [user-service/src/main/java]
+ * </pre>
+ * <p>
+ * 设计决策：
+ * <ul>
+ *   <li>向后兼容：顶层字段（baseRef、failOn 等）仍支持，自动迁移到 staticScan 子配置</li>
+ *   <li>默认值：所有配置项均有合理默认值，确保最小配置即可运行</li>
+ * </ul>
+ */
 @Data
 public class CodePerfCliConfig {
 
@@ -49,6 +73,7 @@ public class CodePerfCliConfig {
         if (modules instanceof List) {
             config.modules = parseModules((List<Object>) modules);
         }
+        // 向后兼容：顶层字段迁移到 staticScan 子配置，支持旧版配置文件
         applyLegacyFields(config, yaml);
         return config;
     }

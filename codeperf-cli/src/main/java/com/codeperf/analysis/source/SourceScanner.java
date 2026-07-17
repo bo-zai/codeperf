@@ -15,6 +15,24 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * 源码扫描入口：解析 Java 文件 → 构建索引 → 执行规则 → 去重 → 返回扫描结果。
+ * <p>
+ * 扫描流程：
+ * <ol>
+ *   <li>使用 JavaParser 解析所有源码文件，构建类索引</li>
+ *   <li>遍历规则注册表中的所有规则，对每个文件执行分析</li>
+ *   <li>对发现去重（相同规则、文件、行号、I/O 类型、证据、调用链）</li>
+ *   <li>返回扫描结果，包含扫描文件数、发现列表、解析错误</li>
+ * </ol>
+ * <p>
+ * 设计决策：
+ * <ul>
+ *   <li>索引优先：先构建类索引，支持跨方法调用链追踪</li>
+ *   <li>去重策略：保留最高严重度和置信度的发现</li>
+ *   <li>容错处理：解析错误不阻断扫描，记录在结果中</li>
+ * </ul>
+ */
 public class SourceScanner {
 
     private final JavaAstParser parser;
@@ -33,6 +51,8 @@ public class SourceScanner {
         List<ParsedSource> parsedSources = new ArrayList<>();
         SourceClassIndex index = new SourceClassIndex();
         List<String> parseErrors = new ArrayList<>();
+
+        // 先构建类索引再执行规则：支持跨方法调用链追踪，避免规则执行时重复解析
         for (Path file : request.getSourceFiles()) {
             try {
                 CompilationUnit unit = parser.parse(file);
@@ -55,14 +75,18 @@ public class SourceScanner {
                 findings.addAll(rule.analyze(context));
             }
         }
+
+        // 去重策略：保留最高严重度和置信度的发现，避免同一风险多次报告
         return new SourceScanResult(parsedSources.size(), deduplicate(findings), parseErrors);
     }
 
     private List<SourceFinding> deduplicate(List<SourceFinding> findings) {
+        // 使用 LinkedHashMap 保持发现顺序
         Map<String, SourceFinding> unique = new LinkedHashMap<>();
         for (SourceFinding finding : findings) {
             String key = deduplicationKey(finding);
             SourceFinding existing = unique.get(key);
+            // 保留更高质量的发现（更高严重度或置信度）
             if (existing == null || isHigherQuality(finding, existing)) {
                 unique.put(key, finding);
             }
@@ -84,6 +108,8 @@ public class SourceScanner {
     }
 
     private String deduplicationKey(SourceFinding finding) {
+        // 去重键：规则 + 文件 + 行号 + 循环范围 + I/O 类型 + 证据 + 调用链
+        // 相同键的发现视为重复，仅保留质量最高的
         return finding.getRuleId()
                 + "|" + finding.getSourceFile()
                 + "|" + finding.getLineNumber()

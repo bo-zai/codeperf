@@ -9,6 +9,22 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Git diff 解析器：获取变更的 Java 文件路径列表。
+ * <p>
+ * 支持三种 diff 模式：
+ * <ul>
+ *   <li>range（默认）：比较 baseRef 到 headRef 之间的变更，用于 CI 和分支对比</li>
+ *   <li>staged：获取已暂存但未提交的变更，用于 pre-commit 钩子</li>
+ *   <li>worktree：获取工作区所有未提交变更（含暂存），用于本地检查</li>
+ * </ul>
+ * <p>
+ * 设计决策：
+ * <ul>
+ *   <li>仅返回 .java 文件：静态分析只处理 Java 源码</li>
+ *   <li>路径规范化：返回绝对路径且统一使用正斜杠，便于跨平台处理</li>
+ * </ul>
+ */
 public final class GitDiffResolver {
 
     public static final String MODE_RANGE = "range";
@@ -78,16 +94,19 @@ public final class GitDiffResolver {
         List<String> command = new ArrayList<>();
         command.add("git");
         command.add("diff");
-        if (MODE_STAGED.equalsIgnoreCase(diffMode)) {
+        // staged 模式：比较暂存区和 HEAD，用于 pre-commit 钩子
+        if (GitDiffResolver.MODE_STAGED.equalsIgnoreCase(diffMode)) {
             command.add("--cached");
             command.add("--name-only");
             return command;
         }
         command.add("--name-only");
-        if (MODE_WORKTREE.equalsIgnoreCase(diffMode)) {
+        // worktree 模式：比较工作区和 HEAD，用于本地检查
+        if (GitDiffResolver.MODE_WORKTREE.equalsIgnoreCase(diffMode)) {
             command.add("HEAD");
             return command;
         }
+        // range 模式（默认）：比较 base 和 head 两个引用，用于 CI 和分支对比
         command.add(base);
         command.add(head);
         return command;

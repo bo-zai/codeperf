@@ -4,7 +4,15 @@ import com.codeperf.analysis.Severity;
 import lombok.Getter;
 
 /**
- * 单条静态发现。比动态 Finding 多了 confidence 和 classMethod。
+ * 静态发现：表示字节码分析检测到的性能风险。
+ * <p>
+ * 与源码发现（SourceFinding）的区别：
+ * <ul>
+ *   <li>基于字节码而非源码 AST</li>
+ *   <li>包含 classMethod（来源方法）而非 sourceFile</li>
+ *   <li>额外包含 callOwner、callName 等字节码级别的调用信息</li>
+ * </ul>
+ * <p>
  * 见 docs/05-static-analysis.md 第 3 节。
  */
 @Getter

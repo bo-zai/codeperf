@@ -15,23 +15,45 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * 风险归因增强器：对发现执行 git blame，标记 NEW/MODIFIED/HISTORICAL 归因和提交人信息。
+ * <p>
+ * 归因逻辑：
+ * <ul>
+ *   <li>NEW/MODIFIED：发现的 I/O 行或循环起始行在变更范围内，通过 git blame 获取提交人</li>
+ *   <li>HISTORICAL：发现不在变更范围内，标记为历史遗留问题，仍记录原始提交人</li>
+ * </ul>
+ * <p>
+ * 设计意图：
+ * <ul>
+ *   <li>区分新增风险和历史风险：门禁仅阻断新增风险，历史风险仅报告不阻断</li>
+ *   <li>责任追溯：记录提交人和提交信息，便于问题分配和审查</li>
+ * </ul>
+ */
 public class GitRiskAttributionEnricher {
 
     public SourceScanResult enrich(SourceScanResult result, Path workingDirectory,
                                    String base, String head, String diffMode) {
+        // 解析变更行集合：git diff 输出解析失败时返回空集合，不阻断扫描流程
         ChangedLineSet changedLines = resolveChangedLines(workingDirectory, base, head, diffMode);
         List<SourceFinding> enriched = new ArrayList<>();
+
+        // 遍历所有发现，执行归因
         for (SourceFinding finding : result.getFindings()) {
+            // 检查发现的多个关键行是否在变更范围内：I/O 行、循环调用行、循环起始行都可能是引入风险的变更点
             boolean changed = changedLines.containsAny(
                     finding.getSourceFile(),
                     finding.getIoLine(),
                     finding.getLoopCallLine(),
                     finding.getLoopStartLine());
+
+            // 归因判定：变更范围内的风险标记为 NEW（阻断），否则标记为 HISTORICAL（不阻断）
             RiskAttribution attribution = changed
                     ? blame(workingDirectory, finding)
                     : historical(workingDirectory, finding);
             enriched.add(finding.withAttribution(attribution));
         }
+
         return new SourceScanResult(result.getFilesScanned(), enriched, result.getParseErrors());
     }
 

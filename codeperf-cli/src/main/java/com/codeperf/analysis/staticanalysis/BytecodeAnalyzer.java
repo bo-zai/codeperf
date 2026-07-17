@@ -11,12 +11,26 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * ASM ClassVisitor 骨架：把单个 .class 的字节码解析为 {@link ClassAnalysis}。
- *
- * <p>收集内容：类名、是否 @FeignClient、方法注解、循环区间（基于回边检测）、
- * 方法调用指令、数组分配指令、Math 调用次数、方法内最大 int 常量。
- *
- * <p>见 docs/05-static-analysis.md 第 5 节。
+ * 字节码分析器：ASM ClassVisitor 实现，解析 .class 文件为 ClassAnalysis。
+ * <p>
+ * 收集内容：
+ * <ul>
+ *   <li>类名、是否标注 @FeignClient</li>
+ *   <li>方法列表：方法名、描述符、注解</li>
+ *   <li>循环范围：基于回边检测（JumpInsn 跳转到之前位置）</li>
+ *   <li>调用点：方法调用指令，包含 owner、name、descriptor</li>
+ *   <li>分配点：数组创建指令，估算分配大小</li>
+ *   <li>Math 调用次数：用于重计算检测</li>
+ * </ul>
+ * <p>
+ * 设计要点：
+ * <ul>
+ *   <li>行号保留：使用 SKIP_FRAMES 而非 SKIP_DEBUG，保留行号信息</li>
+ *   <li>循环检测：通过回边（backward branch）识别循环范围</li>
+ *   <li>分配估算：追踪栈顶常量，估算数组分配大小</li>
+ * </ul>
+ * <p>
+ * 见 docs/05-static-analysis.md 第 5 节。
  */
 public final class BytecodeAnalyzer {
 
@@ -196,9 +210,10 @@ public final class BytecodeAnalyzer {
 
         @Override
         public void visitJumpInsn(int opcode, Label label) {
+            // 回边检测：跳转目标在当前指令之前，说明存在循环结构
+            // 循环区间 = [跳转目标指令索引, 当前指令索引]
             Integer target = labelPos.get(label);
             if (target != null && target <= insnIdx) {
-                // 回边：循环。区间 [循环起点, 回跳指令]。
                 ma.addLoopRange(target, insnIdx, ma.lineForInstruction(target), currentLine);
             }
             advance(null);

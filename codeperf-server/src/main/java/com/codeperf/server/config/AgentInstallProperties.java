@@ -13,11 +13,14 @@ import org.springframework.stereotype.Component;
 @Data
 public class AgentInstallProperties {
 
+    public static final String DEFAULT_LOCAL_ARTIFACT_PATH = "codeperf-agent/target/codeperf-agent.jar";
+
     private boolean enabled = true;
     private String serverUrl = "http://127.0.0.1:9095";
-    private String agentUrl = "";
+    private String agentUrl = "http://127.0.0.1:9095/api/agent/artifact";
     private String agentSha256 = "";
-    private String targetPackages = "";
+    private String localArtifactPath = DEFAULT_LOCAL_ARTIFACT_PATH;
+    private String targetPackages = "com.codeperf.demo";
     private String entryMethod = "POST";
     private String entryPath = "/";
     private long slowSqlMs = 500L;

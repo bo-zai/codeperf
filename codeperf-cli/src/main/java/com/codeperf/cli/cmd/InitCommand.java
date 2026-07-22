@@ -6,7 +6,11 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * 初始化命令：在 Git 仓库根目录生成 {@code .codeperf.yml} 配置文件模板。
@@ -34,7 +38,8 @@ public class InitCommand {
             Path start = workingDirectory == null ? Paths.get(".").toAbsolutePath().normalize() : workingDirectory;
             Path root = findGitRoot(start);
             String projectName = inferProjectName(root);
-            writeIfAbsent(root.resolve(".codeperf.yml"), defaultConfig(projectName));
+            List<String> sourceRoots = discoverSourceRoots(root);
+            writeIfAbsent(root.resolve(".codeperf.yml"), defaultConfig(projectName, sourceRoots));
             System.out.println("[codeperf] init 完成，已存在的配置文件不会被覆盖");
             System.out.println("[codeperf] 如需接入 Git pre-push，请执行: codeperf install-hooks");
             return 0;
@@ -119,26 +124,105 @@ public class InitCommand {
         return name.trim().isEmpty() ? null : name.trim();
     }
 
-    private String defaultConfig(String projectName) {
-        return "project: " + projectName + "\n"
-                + "staticScan:\n"
-                + "  enabled: true\n"
-                + "  mode: changed\n"
-                + "  sourceRoots:\n"
-                + "    - src/main/java\n"
-                + "  includeTests: false\n"
-                + "  baseRef: origin/master\n"
-                + "  headRef: HEAD\n"
-                + "  failOn: WARN\n"
-                + "  callChain:\n"
-                + "    enabled: true\n"
-                + "    maxDepth: 2\n"
-                + "report:\n"
-                + "  local:\n"
-                + "    enabled: true\n"
-                + "    path: .codeperf/report/source-report.json\n"
-                + "  upload:\n"
-                + "    enabled: false\n"
-                + "    serverUrl: http://codeperf.company.com\n";
+    private List<String> discoverSourceRoots(Path root) throws Exception {
+        List<String> sourceRoots = new ArrayList<>();
+        try (Stream<Path> paths = Files.walk(root)) {
+            sourceRoots = paths
+                    .filter(Files::isDirectory)
+                    .filter(path -> isMainJavaSourceRoot(root, path))
+                    .map(path -> toUnixRelativePath(root, path))
+                    .sorted()
+                    .collect(Collectors.toList());
+        }
+        if (sourceRoots.isEmpty()) {
+            // 没有发现源码目录时保留旧默认值，让新仓库或尚未拉取源码的项目仍可初始化。
+            sourceRoots.add("src/main/java");
+        }
+        return sourceRoots;
     }
+
+    private boolean isMainJavaSourceRoot(Path root, Path path) {
+        Path relative = root.relativize(path.toAbsolutePath().normalize());
+        if (hasExcludedSegment(relative)) {
+            return false;
+        }
+        int count = relative.getNameCount();
+        return count >= 3
+                && "src".equals(relative.getName(count - 3).toString())
+                && "main".equals(relative.getName(count - 2).toString())
+                && "java".equals(relative.getName(count - 1).toString());
+    }
+
+    private boolean hasExcludedSegment(Path relative) {
+        for (Path part : relative) {
+            String name = part.toString();
+            if (".git".equals(name)
+                    || "target".equals(name)
+                    || "build".equals(name)
+                    || ".idea".equals(name)
+                    || ".gradle".equals(name)
+                    || "node_modules".equals(name)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private String toUnixRelativePath(Path root, Path path) {
+        return root.relativize(path.toAbsolutePath().normalize()).toString().replace('\\', '/');
+    }
+
+    private String defaultConfig(String projectName, List<String> sourceRoots) {
+        List<String> roots = sourceRoots == null || sourceRoots.isEmpty()
+                ? Collections.singletonList("src/main/java")
+                : sourceRoots;
+        StringBuilder builder = new StringBuilder();
+        builder.append("project: ").append(projectName).append("\n")
+                .append("staticScan:\n")
+                .append("  enabled: true\n")
+                .append("  mode: changed\n")
+                .append("  sourceRoots:\n");
+        for (String sourceRoot : roots) {
+            builder.append("    - ").append(sourceRoot).append("\n");
+        }
+        builder.append("  includeTests: false\n")
+                .append("  baseRef: origin/master\n")
+                .append("  headRef: HEAD\n")
+                .append("  failOn: WARN\n")
+                .append("  callChain:\n")
+                .append("    enabled: true\n")
+                .append("    maxDepth: 2\n");
+        appendModules(builder, roots);
+        builder.append("report:\n")
+                .append("  local:\n")
+                .append("    enabled: true\n")
+                .append("    path: .codeperf/report/source-report.json\n")
+                .append("  upload:\n")
+                .append("    enabled: false\n")
+                .append("    serverUrl: http://codeperf.company.com\n");
+        return builder.toString();
+    }
+
+    private void appendModules(StringBuilder builder, List<String> sourceRoots) {
+        if (sourceRoots.size() <= 1 && "src/main/java".equals(sourceRoots.get(0))) {
+            return;
+        }
+        builder.append("modules:\n");
+        for (String sourceRoot : sourceRoots) {
+            builder.append("  - name: ").append(moduleName(sourceRoot)).append("\n")
+                    .append("    sourceRoots:\n")
+                    .append("      - ").append(sourceRoot).append("\n");
+        }
+    }
+
+    private String moduleName(String sourceRoot) {
+        String suffix = "/src/main/java";
+        if (sourceRoot.endsWith(suffix)) {
+            String modulePath = sourceRoot.substring(0, sourceRoot.length() - suffix.length());
+            int slash = modulePath.lastIndexOf('/');
+            return slash >= 0 ? modulePath.substring(slash + 1) : modulePath;
+        }
+        return sourceRoot;
+    }
+
 }

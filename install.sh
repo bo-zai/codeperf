@@ -144,7 +144,8 @@ payload = {
     "commitTime": sys.argv[8],
     "commitMessage": sys.argv[9]
 }
-print(json.dumps(payload, ensure_ascii=False, separators=(",", ":")))
+# Windows Git Bash 下 Python 标准输出可能使用 GBK；转义非 ASCII 字符可避免中文提交信息导致服务端按 UTF-8 解析失败。
+print(json.dumps(payload, ensure_ascii=True, separators=(",", ":")))
 PY
 )"
 

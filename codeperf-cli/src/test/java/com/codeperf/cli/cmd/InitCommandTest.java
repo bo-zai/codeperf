@@ -85,6 +85,83 @@ public class InitCommandTest {
     }
 
     @Test
+    public void should_InitSingleSourceRoot_When_SingleModuleProject() throws Exception {
+        Files.createDirectories(tempDir.resolve(".git"));
+        Files.createDirectories(tempDir.resolve("src/main/java/com/example"));
+        Files.createDirectories(tempDir.resolve("src/test/java/com/example"));
+
+        InitCommand command = new InitCommand();
+        command.setWorkingDirectoryForTest(tempDir);
+
+        int exitCode = command.execute();
+
+        assertEquals(0, exitCode);
+        String config = configText(tempDir);
+        assertTrue(config.contains("  sourceRoots:\n    - src/main/java\n"));
+        assertFalse(config.contains("src/test/java"));
+        assertFalse(config.contains("modules:\n"));
+    }
+
+    @Test
+    public void should_InitSourceRootsAndModules_When_MultiModuleProject() throws Exception {
+        Files.createDirectories(tempDir.resolve(".git"));
+        Files.createDirectories(tempDir.resolve("admin/src/main/java/com/example/admin"));
+        Files.createDirectories(tempDir.resolve("app/src/main/java/com/example/app"));
+        Files.createDirectories(tempDir.resolve("common/src/main/java/com/example/common"));
+
+        InitCommand command = new InitCommand();
+        command.setWorkingDirectoryForTest(tempDir);
+
+        int exitCode = command.execute();
+
+        assertEquals(0, exitCode);
+        String config = configText(tempDir);
+        assertTrue(config.contains("    - admin/src/main/java\n"));
+        assertTrue(config.contains("    - app/src/main/java\n"));
+        assertTrue(config.contains("    - common/src/main/java\n"));
+        assertTrue(config.contains("modules:\n"));
+        assertTrue(config.contains("  - name: admin\n"));
+        assertTrue(config.contains("  - name: app\n"));
+        assertTrue(config.contains("  - name: common\n"));
+    }
+
+    @Test
+    public void should_IgnoreGeneratedAndHiddenDirectories_When_DiscoveringSourceRoots() throws Exception {
+        Files.createDirectories(tempDir.resolve(".git"));
+        Files.createDirectories(tempDir.resolve("app/src/main/java"));
+        Files.createDirectories(tempDir.resolve("target/generated/src/main/java"));
+        Files.createDirectories(tempDir.resolve("build/generated/src/main/java"));
+        Files.createDirectories(tempDir.resolve(".gradle/cache/src/main/java"));
+        Files.createDirectories(tempDir.resolve("node_modules/demo/src/main/java"));
+
+        InitCommand command = new InitCommand();
+        command.setWorkingDirectoryForTest(tempDir);
+
+        int exitCode = command.execute();
+
+        assertEquals(0, exitCode);
+        String config = configText(tempDir);
+        assertTrue(config.contains("    - app/src/main/java\n"));
+        assertFalse(config.contains("target/generated"));
+        assertFalse(config.contains("build/generated"));
+        assertFalse(config.contains(".gradle"));
+        assertFalse(config.contains("node_modules"));
+    }
+
+    @Test
+    public void should_FallbackToDefaultSourceRoot_When_NoJavaSourceRootFound() throws Exception {
+        Files.createDirectories(tempDir.resolve(".git"));
+
+        InitCommand command = new InitCommand();
+        command.setWorkingDirectoryForTest(tempDir);
+
+        int exitCode = command.execute();
+
+        assertEquals(0, exitCode);
+        assertTrue(configText(tempDir).contains("  sourceRoots:\n    - src/main/java\n"));
+    }
+
+    @Test
     public void should_NotOverwriteExistingConfig_When_InitRunsAgain() throws Exception {
         Files.createDirectories(tempDir.resolve(".git"));
         Files.write(tempDir.resolve(".codeperf.yml"), "project: existing\n".getBytes(StandardCharsets.UTF_8));

@@ -12,9 +12,10 @@ codeperf:
     install:
       enabled: ${CODEPERF_AGENT_INSTALL_ENABLED:true}
       server-url: ${CODEPERF_AGENT_SERVER_URL:http://127.0.0.1:9095}
-      agent-url: ${CODEPERF_AGENT_URL:}
+      agent-url: ${CODEPERF_AGENT_URL:http://127.0.0.1:9095/api/agent/artifact}
       agent-sha256: ${CODEPERF_AGENT_SHA256:}
-      target-packages: ${CODEPERF_AGENT_TARGET_PACKAGES:}
+      local-artifact-path: ${CODEPERF_AGENT_LOCAL_ARTIFACT_PATH:codeperf-agent/target/codeperf-agent.jar}
+      target-packages: ${CODEPERF_AGENT_TARGET_PACKAGES:com.codeperf.demo}
       entry-method: ${CODEPERF_AGENT_ENTRY_METHOD:POST}
       entry-path: ${CODEPERF_AGENT_ENTRY_PATH:/}
       slow-sql-ms: ${CODEPERF_AGENT_SLOW_SQL_MS:500}

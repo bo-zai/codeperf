@@ -1,6 +1,7 @@
 package com.cmb.codeperf.server.controller;
 
 import com.cmb.codeperf.server.service.impl.AgentInstallScriptService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -14,6 +15,7 @@ import javax.servlet.http.HttpServletRequest;
  * Agent 安装脚本下载接口。
  * 企业流水线只需要下载并执行本脚本，配置接口地址由服务端按当前访问地址内置到脚本中。
  */
+@Slf4j
 @RestController
 @RequestMapping("/api/agent/install.sh")
 public class AgentInstallScriptController {
@@ -36,6 +38,9 @@ public class AgentInstallScriptController {
     @GetMapping
     public ResponseEntity<String> download(HttpServletRequest request) {
         String script = service.render(request);
+        log.info("event=codeperf.agent.install_script.download remoteAddr={} scheme={} serverName={} serverPort={} contextPath={}",
+                request.getRemoteAddr(), request.getScheme(), request.getServerName(), request.getServerPort(),
+                request.getContextPath());
         return ResponseEntity.ok()
                 .contentType(SHELL_SCRIPT_MEDIA_TYPE)
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + SCRIPT_FILE_NAME + "\"")

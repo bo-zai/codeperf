@@ -3,6 +3,7 @@ package com.cmb.codeperf.server.controller;
 import com.cmb.codeperf.server.config.AgentInstallProperties;
 import com.cmb.codeperf.server.model.dto.request.AgentInstallConfigRequest;
 import com.cmb.codeperf.server.model.dto.response.AgentInstallConfigResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -15,6 +16,7 @@ import java.util.List;
  * Agent 安装配置接口。
  * 安装脚本只调用这个稳定接口，具体 agent 版本、目标包名和采样参数由服务端统一下发。
  */
+@Slf4j
 @RestController
 @RequestMapping("/api/agent/install-config")
 public class AgentInstallConfigController {
@@ -27,6 +29,9 @@ public class AgentInstallConfigController {
 
     @PostMapping
     public AgentInstallConfigResponse config(@RequestBody AgentInstallConfigRequest request) {
+        log.info("event=codeperf.agent.install_config.request project={} remoteUrl={} commit={} branch={} env={} authorName={} authorEmail={} commitTime={} commitMessage={}",
+                request.getProject(), request.getRemoteUrl(), request.getCommit(), request.getBranch(), request.getEnv(),
+                request.getAuthorName(), request.getAuthorEmail(), request.getCommitTime(), request.getCommitMessage());
         AgentInstallConfigResponse response = new AgentInstallConfigResponse();
         response.setEnabled(properties.isEnabled());
         response.setServerUrl(properties.getServerUrl());
@@ -39,6 +44,9 @@ public class AgentInstallConfigController {
         response.setSlowSqlMs(properties.getSlowSqlMs());
         response.setSampleMs(properties.getSampleMs());
         response.setMode(properties.getMode());
+        log.info("event=codeperf.agent.install_config.response enabled={} appName={} env={} targetPackages={} entryMethod={} entryPath={} mode={}",
+                response.isEnabled(), response.getAppName(), response.getEnv(), response.getTargetPackages(),
+                response.getEntry().getMethod(), response.getEntry().getPath(), response.getMode());
         return response;
     }
 

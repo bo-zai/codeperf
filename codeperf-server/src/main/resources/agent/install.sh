@@ -123,14 +123,45 @@ post_json() {
   rm -f "$response_file"
 }
 
+json_get() {
+  local path="$1"
+  local default_value="$2"
+  local payload="$3"
+  python - "$path" "$default_value" "$payload" <<'PY'
+# -*- coding: utf-8 -*-
+import json
+import sys
+
+path = sys.argv[1].split(".")
+default_value = sys.argv[2]
+data = json.loads(sys.argv[3])
+current = data
+for key in path:
+    if isinstance(current, dict) and key in current:
+        current = current[key]
+    else:
+        current = default_value
+        break
+if current is None:
+    current = default_value
+if isinstance(current, bool):
+    print("true" if current else "false")
+elif isinstance(current, list):
+    print(",".join(str(item) for item in current))
+else:
+    print(current)
+PY
+}
+
 fetch_install_config() {
   CODEPERF_INSTALL_CONFIG_URL="${CODEPERF_INSTALL_CONFIG_URL:-__CODEPERF_INSTALL_CONFIG_URL__}"
   [ -n "${CODEPERF_ENV:-}" ] || ENV_NAME="dev"
   ENV_NAME="${CODEPERF_ENV:-dev}"
 
   local request
-  request="$(python3 - "$REMOTE_URL" "$COMMIT_SHA" "$BRANCH_NAME" "$PROJECT_NAME" "${CODEPERF_ENV:-dev}" \
+  request="$(python - "$REMOTE_URL" "$COMMIT_SHA" "$BRANCH_NAME" "$PROJECT_NAME" "${CODEPERF_ENV:-dev}" \
     "$AUTHOR_NAME" "$AUTHOR_EMAIL" "$COMMIT_TIME" "$COMMIT_MESSAGE" <<'PY'
+# -*- coding: utf-8 -*-
 import json
 import sys
 payload = {
@@ -144,105 +175,32 @@ payload = {
     "commitTime": sys.argv[8],
     "commitMessage": sys.argv[9]
 }
-# Windows Git Bash 下 Python 标准输出可能使用 GBK；转义非 ASCII 字符可避免中文提交信息导致服务端按 UTF-8 解析失败。
 print(json.dumps(payload, ensure_ascii=True, separators=(",", ":")))
 PY
 )"
 
+  log "event=codeperf.agent.install_config.request url=${CODEPERF_INSTALL_CONFIG_URL} project=${PROJECT_NAME} remoteUrl=${REMOTE_URL} commit=${COMMIT_SHA} branch=${BRANCH_NAME} env=${ENV_NAME} authorName=${AUTHOR_NAME} authorEmail=${AUTHOR_EMAIL} commitTime=${COMMIT_TIME} commitMessage=${COMMIT_MESSAGE}"
+
   local response
   response="$(post_json "$CODEPERF_INSTALL_CONFIG_URL" "$request")"
 
-  INSTALL_ENABLED="$(python3 - <<'PY' "$response"
-import json
-import sys
-data = json.loads(sys.argv[1])
-print("true" if data.get("enabled", True) else "false")
-PY
-)"
+  INSTALL_ENABLED="$(json_get "enabled" "true" "$response")"
   if [ "$INSTALL_ENABLED" = "false" ]; then
     log "服务端配置已禁用，跳过 CodePerf Agent 接入"
     exit 0
   fi
 
-  SERVER_URL="$(python3 - <<'PY' "$response"
-import json
-import sys
-data = json.loads(sys.argv[1])
-print(data.get("serverUrl", ""))
-PY
-)"
-  AGENT_URL="$(python3 - <<'PY' "$response"
-import json
-import sys
-data = json.loads(sys.argv[1])
-print(data.get("agentUrl", ""))
-PY
-)"
-  AGENT_SHA256="$(python3 - <<'PY' "$response"
-import json
-import sys
-data = json.loads(sys.argv[1])
-print(data.get("agentSha256", ""))
-PY
-)"
-  APP_NAME="$(python3 - <<'PY' "$response"
-import json
-import sys
-data = json.loads(sys.argv[1])
-print(data.get("appName", ""))
-PY
-)"
-  ENV_NAME="$(python3 - <<'PY' "$response"
-import json
-import sys
-data = json.loads(sys.argv[1])
-print(data.get("env", "dev"))
-PY
-)"
-  TARGET_PACKAGES="$(python3 - <<'PY' "$response"
-import json
-import sys
-data = json.loads(sys.argv[1])
-print(",".join(data.get("targetPackages", [])))
-PY
-)"
-  ENTRY_METHOD="$(python3 - <<'PY' "$response"
-import json
-import sys
-data = json.loads(sys.argv[1])
-entry = data.get("entry", {})
-print(entry.get("method", "POST"))
-PY
-)"
-  ENTRY_PATH="$(python3 - <<'PY' "$response"
-import json
-import sys
-data = json.loads(sys.argv[1])
-entry = data.get("entry", {})
-print(entry.get("path", "/"))
-PY
-)"
-  SLOW_SQL_MS="$(python3 - <<'PY' "$response"
-import json
-import sys
-data = json.loads(sys.argv[1])
-print(data.get("slowSqlMs", 500))
-PY
-)"
-  SAMPLE_MS="$(python3 - <<'PY' "$response"
-import json
-import sys
-data = json.loads(sys.argv[1])
-print(data.get("sampleMs", 10))
-PY
-)"
-  MODE="$(python3 - <<'PY' "$response"
-import json
-import sys
-data = json.loads(sys.argv[1])
-print(data.get("mode", "session"))
-PY
-)"
+  SERVER_URL="$(json_get "serverUrl" "" "$response")"
+  AGENT_URL="$(json_get "agentUrl" "" "$response")"
+  AGENT_SHA256="$(json_get "agentSha256" "" "$response")"
+  APP_NAME="$(json_get "appName" "" "$response")"
+  ENV_NAME="$(json_get "env" "dev" "$response")"
+  TARGET_PACKAGES="$(json_get "targetPackages" "" "$response")"
+  ENTRY_METHOD="$(json_get "entry.method" "POST" "$response")"
+  ENTRY_PATH="$(json_get "entry.path" "/" "$response")"
+  SLOW_SQL_MS="$(json_get "slowSqlMs" "500" "$response")"
+  SAMPLE_MS="$(json_get "sampleMs" "10" "$response")"
+  MODE="$(json_get "mode" "session" "$response")"
 
   [ -n "$SERVER_URL" ] || fail "配置接口缺少 serverUrl"
   [ -n "$AGENT_URL" ] || fail "配置接口缺少 agentUrl"
@@ -356,7 +314,7 @@ main() {
   require_command awk
   require_command sed
   require_command sha256sum
-  require_command python3
+  require_command python
 
   local dockerfile
   dockerfile="$(resolve_dockerfile)"

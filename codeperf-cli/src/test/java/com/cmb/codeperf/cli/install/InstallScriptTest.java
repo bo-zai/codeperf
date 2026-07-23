@@ -182,7 +182,9 @@ public class InstallScriptTest {
     }
 
     private ScriptResult runInstallScript(String configUrl) throws Exception {
-        Path script = Paths.get("..", "install.sh").toAbsolutePath().normalize();
+        Path script = Paths.get("..", "codeperf-server", "src", "main", "resources", "agent", "install.sh")
+                .toAbsolutePath()
+                .normalize();
         List<String> command = new ArrayList<>();
         command.add(findBash());
         command.add(script.toString());

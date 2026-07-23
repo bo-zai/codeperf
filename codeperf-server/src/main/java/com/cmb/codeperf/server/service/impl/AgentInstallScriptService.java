@@ -1,5 +1,6 @@
 package com.cmb.codeperf.server.service.impl;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
@@ -13,6 +14,7 @@ import java.nio.charset.StandardCharsets;
  * Agent 安装脚本渲染服务。
  * 脚本作为服务端资源随 jar 发布，避免企业流水线依赖仓库源码路径。
  */
+@Slf4j
 @Service
 public class AgentInstallScriptService {
 
@@ -26,7 +28,9 @@ public class AgentInstallScriptService {
      * @return 可执行 shell 脚本内容
      */
     public String render(HttpServletRequest request) {
-        return loadTemplate().replace(CONFIG_URL_PLACEHOLDER, installConfigUrl(request));
+        String installConfigUrl = installConfigUrl(request);
+        log.info("event=codeperf.agent.install_script.render installConfigUrl={}", installConfigUrl);
+        return loadTemplate().replace(CONFIG_URL_PLACEHOLDER, installConfigUrl);
     }
 
     private String loadTemplate() {

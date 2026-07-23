@@ -9,6 +9,7 @@ import com.codeperf.server.service.repository.memory.InMemoryAnalysisTaskReposit
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 public class AnalysisTaskServiceTest {
 
@@ -59,5 +60,44 @@ public class AnalysisTaskServiceTest {
 
         AnalysisTaskBO loaded = service.get(created.getAnalysisTaskId());
         assertEquals(payload, loaded.getDynamicPayload());
+    }
+
+    @Test
+    public void should_LinkDynamicEvidenceToLatestTask_When_SameCommitScannedMultipleTimes() {
+        AnalysisTaskService service = new AnalysisTaskService(
+                new InMemoryAnalysisTaskRepository(), new StaticReportSummarizer());
+
+        AnalysisTaskCreateBO firstCommand = sameCommitCommand();
+        AnalysisTaskBO first = service.create(firstCommand);
+        AnalysisTaskBO latest = service.create(sameCommitCommand());
+        String payload = "{"
+                + "\"remoteUrl\":\"git@gitlab.company.com:mall/order-service.git\","
+                + "\"commit\":\"abc\","
+                + "\"branch\":\"main\","
+                + "\"env\":\"dev\","
+                + "\"appName\":\"order-service\","
+                + "\"evidence\":{\"entryMethod\":\"POST\",\"entryPath\":\"/api/orders/report\"}"
+                + "}";
+
+        service.acceptDynamicEvidenceByIdentity(payload);
+
+        assertNull(service.get(first.getAnalysisTaskId()).getDynamicPayload());
+        assertEquals(payload, service.get(latest.getAnalysisTaskId()).getDynamicPayload());
+    }
+
+    private AnalysisTaskCreateBO sameCommitCommand() {
+        AnalysisTaskCreateBO command = new AnalysisTaskCreateBO();
+        command.setProject("order-service");
+        command.setRemoteUrl("git@gitlab.company.com:mall/order-service.git");
+        command.setCommit("abc");
+        command.setBranch("main");
+        command.setEnv("dev");
+        command.setAuthorName("Alice Dev");
+        command.setAuthorEmail("alice@example.com");
+        command.setAuthorTime("2026-07-17T15:00:00+08:00");
+        command.setCommitterName("Alice Dev");
+        command.setCommitterEmail("alice@example.com");
+        command.setCommitMessage("add order report");
+        return command;
     }
 }

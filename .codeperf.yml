@@ -40,4 +40,4 @@ report:
     path: .codeperf/report/source-report.json
   upload:
     enabled: false
-    serverUrl: http://localhost:9090
+    serverUrl: http://127.0.0.1:9095

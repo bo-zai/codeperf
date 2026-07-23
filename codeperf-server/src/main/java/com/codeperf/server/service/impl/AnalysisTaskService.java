@@ -93,7 +93,7 @@ public class AnalysisTaskService {
      */
     public AnalysisTaskBO acceptDynamicEvidenceByIdentity(String payload) {
         DynamicEvidenceIdentity identity = parseDynamicEvidenceIdentity(payload);
-        AnalysisTaskBO task = repository.findByCommitIdentity(
+        AnalysisTaskBO task = repository.findLatestByCommitIdentity(
                         identity.remoteUrl, identity.commit, identity.branch, identity.env)
                 .orElseThrow(() -> new IllegalArgumentException("analysis task not found for dynamic evidence identity"));
         return acceptDynamicEvidence(task.getAnalysisTaskId(), payload);

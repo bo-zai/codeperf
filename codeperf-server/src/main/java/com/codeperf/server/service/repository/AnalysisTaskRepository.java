@@ -29,7 +29,17 @@ public interface AnalysisTaskRepository {
      */
     Optional<AnalysisTaskBO> findByTaskId(String taskId);
 
-    Optional<AnalysisTaskBO> findByCommitIdentity(String remoteUrl, String commit, String branch, String env);
+    /**
+     * 按 Git 构建身份查询最新分析任务。
+     * 同一提交可能被开发者多次本地扫描或重复提测，动态证据必须挂到最新任务，避免污染历史报告。
+     *
+     * @param remoteUrl 远程仓库地址
+     * @param commit 提交 SHA
+     * @param branch 分支名称
+     * @param env 环境名称
+     * @return 最新匹配任务
+     */
+    Optional<AnalysisTaskBO> findLatestByCommitIdentity(String remoteUrl, String commit, String branch, String env);
 
     void replaceStaticFindings(String taskId, List<StaticFindingBO> findings);
 

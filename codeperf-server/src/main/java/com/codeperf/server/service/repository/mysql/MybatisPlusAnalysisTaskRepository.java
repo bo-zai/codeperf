@@ -24,6 +24,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
 import java.util.List;
@@ -75,7 +76,7 @@ public class MybatisPlusAnalysisTaskRepository implements AnalysisTaskRepository
     }
 
     @Override
-    public Optional<AnalysisTaskBO> findByCommitIdentity(String remoteUrl, String commit, String branch, String env) {
+    public Optional<AnalysisTaskBO> findLatestByCommitIdentity(String remoteUrl, String commit, String branch, String env) {
         CodeRepository repository = findRepository(repoKey(remoteUrl)).orElse(null);
         if (repository == null) {
             return Optional.empty();
@@ -88,6 +89,7 @@ public class MybatisPlusAnalysisTaskRepository implements AnalysisTaskRepository
         query.eq(AnalysisTask::getRepositoryId, repository.getId());
         query.eq(AnalysisTask::getGitCommitId, gitCommit.getId());
         query.eq(AnalysisTask::getEnvName, env);
+        query.orderByDesc(AnalysisTask::getId);
         query.last("LIMIT 1");
         return Optional.ofNullable(mapper.selectOne(query)).map(this::toDomain);
     }
@@ -224,6 +226,8 @@ public class MybatisPlusAnalysisTaskRepository implements AnalysisTaskRepository
     private GitCommit saveGitCommit(AnalysisTaskBO task, CodeRepository repository) {
         GitCommit existing = findGitCommit(repository.getId(), task.getCommit(), task.getBranch()).orElse(null);
         if (existing != null) {
+            mergeGitCommitMetadata(existing, task);
+            gitCommitMapper.updateById(existing);
             return existing;
         }
         GitCommit entity = new GitCommit();
@@ -239,6 +243,19 @@ public class MybatisPlusAnalysisTaskRepository implements AnalysisTaskRepository
         entity.setRemoteUrlSnapshot(task.getRemoteUrl());
         gitCommitMapper.insert(entity);
         return entity;
+    }
+
+    private void mergeGitCommitMetadata(GitCommit entity, AnalysisTaskBO task) {
+        entity.setAuthorName(firstNonBlank(task.getAuthorName(), entity.getAuthorName()));
+        entity.setAuthorEmail(firstNonBlank(task.getAuthorEmail(), entity.getAuthorEmail()));
+        LocalDateTime parsedAuthorTime = parseAuthorTime(task.getAuthorTime());
+        if (parsedAuthorTime != null) {
+            entity.setAuthorTime(parsedAuthorTime);
+        }
+        entity.setCommitterName(firstNonBlank(task.getCommitterName(), entity.getCommitterName()));
+        entity.setCommitterEmail(firstNonBlank(task.getCommitterEmail(), entity.getCommitterEmail()));
+        entity.setCommitMessage(firstNonBlank(task.getCommitMessage(), entity.getCommitMessage()));
+        entity.setRemoteUrlSnapshot(firstNonBlank(task.getRemoteUrl(), entity.getRemoteUrlSnapshot()));
     }
 
     private Optional<GitCommit> findGitCommit(Long repositoryId, String commit, String branch) {
@@ -318,6 +335,10 @@ public class MybatisPlusAnalysisTaskRepository implements AnalysisTaskRepository
             return LocalDateTime.ofInstant(Instant.ofEpochSecond(Long.parseLong(value)), ZoneId.systemDefault());
         }
         try {
+            return OffsetDateTime.parse(value).toLocalDateTime();
+        } catch (DateTimeParseException ignored) {
+        }
+        try {
             return LocalDateTime.parse(value);
         } catch (DateTimeParseException e) {
             return null;
@@ -326,5 +347,12 @@ public class MybatisPlusAnalysisTaskRepository implements AnalysisTaskRepository
 
     private String formatDateTime(LocalDateTime dateTime) {
         return dateTime == null ? "" : dateTime.toString();
+    }
+
+    private String firstNonBlank(String primary, String fallback) {
+        if (primary != null && !primary.trim().isEmpty()) {
+            return primary;
+        }
+        return fallback;
     }
 }

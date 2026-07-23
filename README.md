@@ -274,7 +274,7 @@ appName: music-education-app
 env: dev
 buildInfoPath: /opt/codeperf/build-info.properties
 targetPackages:
-  - com.codeperf.demo
+  - com.cmb.codeperf.demo
 entry:
   method: POST
   path: /api/orders/report
@@ -363,3 +363,4 @@ npm --prefix codeperf-npm test
 - 静态扫描主路径是源码 AST；旧 bytecode 分析代码仍在模块内，但不是当前 README 推荐入口。
 - 生产规模画像、完整报告合并、gate 查询命令和企业 npm 私服发布仍需后续评审与实现。
 - 当前重点是提前发现“循环内外部 I/O 被数据量放大”的结构性风险，不把 CPU、内存、慢 SQL 作为第一阶段主目标。
+

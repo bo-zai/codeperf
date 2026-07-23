@@ -4,3 +4,4 @@ node_modules/
 .codecortex/
 .codeperf/
 /.codex/
+*.gitkeep

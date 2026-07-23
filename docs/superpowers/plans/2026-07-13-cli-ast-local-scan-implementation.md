@@ -127,7 +127,7 @@
 Create `codeperf-cli/src/test/java/com/codeperf/analysis/source/JavaParserDependencyTest.java`:
 
 ```java
-package com.codeperf.analysis.source;
+package com.cmb.codeperf.analysis.source;
 
 import com.github.javaparser.StaticJavaParser;
 import com.github.javaparser.ast.CompilationUnit;
@@ -227,7 +227,7 @@ Tests run: 1, Failures: 0, Errors: 0
 Replace or extend `CodePerfCliConfigTest` with:
 
 ```java
-package com.codeperf.cli.config;
+package com.cmb.codeperf.cli.config;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -333,7 +333,7 @@ cannot find symbol: method getStaticScan()
 Create `StaticScanConfig.java`:
 
 ```java
-package com.codeperf.cli.config;
+package com.cmb.codeperf.cli.config;
 
 import lombok.Data;
 
@@ -368,7 +368,7 @@ public class StaticScanConfig {
 Create `CallChainConfig.java`:
 
 ```java
-package com.codeperf.cli.config;
+package com.cmb.codeperf.cli.config;
 
 import lombok.Data;
 
@@ -382,7 +382,7 @@ public class CallChainConfig {
 Create `AgentOnboardingConfig.java`:
 
 ```java
-package com.codeperf.cli.config;
+package com.cmb.codeperf.cli.config;
 
 import lombok.Data;
 
@@ -402,7 +402,7 @@ public class AgentOnboardingConfig {
 Create `ModuleScanConfig.java`:
 
 ```java
-package com.codeperf.cli.config;
+package com.cmb.codeperf.cli.config;
 
 import lombok.Data;
 
@@ -492,7 +492,7 @@ Tests run: 2, Failures: 0, Errors: 0
 Create `ProjectContextResolverTest.java`:
 
 ```java
-package com.codeperf.cli.project;
+package com.cmb.codeperf.cli.project;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -556,9 +556,9 @@ cannot find symbol: class ProjectContextResolver
 Create `ProjectContext.java`:
 
 ```java
-package com.codeperf.cli.project;
+package com.cmb.codeperf.cli.project;
 
-import com.codeperf.cli.config.CodePerfCliConfig;
+import com.cmb.codeperf.cli.config.CodePerfCliConfig;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
@@ -582,9 +582,9 @@ public class ProjectContext {
 Create `ProjectContextResolver.java`:
 
 ```java
-package com.codeperf.cli.project;
+package com.cmb.codeperf.cli.project;
 
-import com.codeperf.cli.config.CodePerfCliConfig;
+import com.cmb.codeperf.cli.config.CodePerfCliConfig;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -645,7 +645,7 @@ Tests run: 2, Failures: 0, Errors: 0
 Create `JavaAstParserTest.java`:
 
 ```java
-package com.codeperf.analysis.source;
+package com.cmb.codeperf.analysis.source;
 
 import com.github.javaparser.ast.CompilationUnit;
 import org.junit.jupiter.api.Test;
@@ -704,7 +704,7 @@ cannot find symbol: class JavaAstParser
 Create `CallChainStep.java`:
 
 ```java
-package com.codeperf.analysis.source;
+package com.cmb.codeperf.analysis.source;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -722,9 +722,9 @@ public class CallChainStep {
 Create `SourceFinding.java`:
 
 ```java
-package com.codeperf.analysis.source;
+package com.cmb.codeperf.analysis.source;
 
-import com.codeperf.analysis.Severity;
+import com.cmb.codeperf.analysis.Severity;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
@@ -752,9 +752,9 @@ public class SourceFinding {
 Create `SourceScanRequest.java`:
 
 ```java
-package com.codeperf.analysis.source;
+package com.cmb.codeperf.analysis.source;
 
-import com.codeperf.cli.config.StaticScanConfig;
+import com.cmb.codeperf.cli.config.StaticScanConfig;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
@@ -773,7 +773,7 @@ public class SourceScanRequest {
 Create `SourceScanResult.java`:
 
 ```java
-package com.codeperf.analysis.source;
+package com.cmb.codeperf.analysis.source;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -794,7 +794,7 @@ public class SourceScanResult {
 Create `JavaAstParser.java`:
 
 ```java
-package com.codeperf.analysis.source;
+package com.cmb.codeperf.analysis.source;
 
 import com.github.javaparser.ParseProblemException;
 import com.github.javaparser.StaticJavaParser;
@@ -843,9 +843,9 @@ Tests run: 1, Failures: 0, Errors: 0
 Create `IoCallMatcherTest.java`:
 
 ```java
-package com.codeperf.analysis.source.match;
+package com.cmb.codeperf.analysis.source.match;
 
-import com.codeperf.analysis.source.SourceFinding;
+import com.cmb.codeperf.analysis.source.SourceFinding;
 import com.github.javaparser.StaticJavaParser;
 import com.github.javaparser.ast.expr.MethodCallExpr;
 import org.junit.jupiter.api.Test;
@@ -910,9 +910,9 @@ cannot find symbol: class IoCallMatcher
 Create `IoMatch.java`:
 
 ```java
-package com.codeperf.analysis.source.match;
+package com.cmb.codeperf.analysis.source.match;
 
-import com.codeperf.analysis.source.SourceFinding;
+import com.cmb.codeperf.analysis.source.SourceFinding;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
@@ -935,9 +935,9 @@ public class IoMatch {
 Create `IoCallMatcher.java`:
 
 ```java
-package com.codeperf.analysis.source.match;
+package com.cmb.codeperf.analysis.source.match;
 
-import com.codeperf.analysis.source.SourceFinding;
+import com.cmb.codeperf.analysis.source.SourceFinding;
 import com.github.javaparser.ast.expr.Expression;
 import com.github.javaparser.ast.expr.MethodCallExpr;
 
@@ -1037,7 +1037,7 @@ Tests run: 3, Failures: 0, Errors: 0
 Create `SourceClassIndexTest.java`:
 
 ```java
-package com.codeperf.analysis.source.index;
+package com.cmb.codeperf.analysis.source.index;
 
 import com.github.javaparser.StaticJavaParser;
 import com.github.javaparser.ast.CompilationUnit;
@@ -1088,7 +1088,7 @@ cannot find symbol: class SourceClassIndex
 Create `IndexedMethod.java`:
 
 ```java
-package com.codeperf.analysis.source.index;
+package com.cmb.codeperf.analysis.source.index;
 
 import com.github.javaparser.ast.body.MethodDeclaration;
 import lombok.AllArgsConstructor;
@@ -1109,7 +1109,7 @@ public class IndexedMethod {
 Create `IndexedField.java`:
 
 ```java
-package com.codeperf.analysis.source.index;
+package com.cmb.codeperf.analysis.source.index;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -1131,7 +1131,7 @@ public class IndexedField {
 Create `SourceClassIndex.java`:
 
 ```java
-package com.codeperf.analysis.source.index;
+package com.cmb.codeperf.analysis.source.index;
 
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
@@ -1211,11 +1211,11 @@ Tests run: 1, Failures: 0, Errors: 0
 Create `LoopIoAmplificationAstRuleTest.java`:
 
 ```java
-package com.codeperf.analysis.source.rule;
+package com.cmb.codeperf.analysis.source.rule;
 
-import com.codeperf.analysis.source.SourceFinding;
-import com.codeperf.analysis.source.index.SourceClassIndex;
-import com.codeperf.cli.config.StaticScanConfig;
+import com.cmb.codeperf.analysis.source.SourceFinding;
+import com.cmb.codeperf.analysis.source.index.SourceClassIndex;
+import com.cmb.codeperf.cli.config.StaticScanConfig;
 import com.github.javaparser.StaticJavaParser;
 import com.github.javaparser.ast.CompilationUnit;
 import org.junit.jupiter.api.Test;
@@ -1276,9 +1276,9 @@ cannot find symbol: class LoopIoAmplificationAstRule
 Create `SourceRule.java`:
 
 ```java
-package com.codeperf.analysis.source.rule;
+package com.cmb.codeperf.analysis.source.rule;
 
-import com.codeperf.analysis.source.SourceFinding;
+import com.cmb.codeperf.analysis.source.SourceFinding;
 
 import java.util.List;
 
@@ -1290,10 +1290,10 @@ public interface SourceRule {
 Create `SourceRuleContext.java`:
 
 ```java
-package com.codeperf.analysis.source.rule;
+package com.cmb.codeperf.analysis.source.rule;
 
-import com.codeperf.analysis.source.index.SourceClassIndex;
-import com.codeperf.cli.config.StaticScanConfig;
+import com.cmb.codeperf.analysis.source.index.SourceClassIndex;
+import com.cmb.codeperf.cli.config.StaticScanConfig;
 import com.github.javaparser.ast.CompilationUnit;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -1314,7 +1314,7 @@ public class SourceRuleContext {
 Create `SourceRuleRegistry.java`:
 
 ```java
-package com.codeperf.analysis.source.rule;
+package com.cmb.codeperf.analysis.source.rule;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -1345,13 +1345,13 @@ public class SourceRuleRegistry {
 Create `LoopIoAmplificationAstRule.java` with this behavior:
 
 ```java
-package com.codeperf.analysis.source.rule;
+package com.cmb.codeperf.analysis.source.rule;
 
-import com.codeperf.analysis.Severity;
-import com.codeperf.analysis.source.CallChainStep;
-import com.codeperf.analysis.source.SourceFinding;
-import com.codeperf.analysis.source.match.IoCallMatcher;
-import com.codeperf.analysis.source.match.IoMatch;
+import com.cmb.codeperf.analysis.Severity;
+import com.cmb.codeperf.analysis.source.CallChainStep;
+import com.cmb.codeperf.analysis.source.SourceFinding;
+import com.cmb.codeperf.analysis.source.match.IoCallMatcher;
+import com.cmb.codeperf.analysis.source.match.IoMatch;
 import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.expr.MethodCallExpr;
@@ -1511,13 +1511,13 @@ expected: <1> but was: <0>
 Create `CallChainAnalyzer.java`:
 
 ```java
-package com.codeperf.analysis.source.callchain;
+package com.cmb.codeperf.analysis.source.callchain;
 
-import com.codeperf.analysis.source.CallChainStep;
-import com.codeperf.analysis.source.index.IndexedMethod;
-import com.codeperf.analysis.source.index.SourceClassIndex;
-import com.codeperf.analysis.source.match.IoCallMatcher;
-import com.codeperf.analysis.source.match.IoMatch;
+import com.cmb.codeperf.analysis.source.CallChainStep;
+import com.cmb.codeperf.analysis.source.index.IndexedMethod;
+import com.cmb.codeperf.analysis.source.index.SourceClassIndex;
+import com.cmb.codeperf.analysis.source.match.IoCallMatcher;
+import com.cmb.codeperf.analysis.source.match.IoMatch;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.expr.MethodCallExpr;
@@ -1666,9 +1666,9 @@ Tests run: 2, Failures: 0, Errors: 0
 Create `SourceScannerTest.java`:
 
 ```java
-package com.codeperf.analysis.source;
+package com.cmb.codeperf.analysis.source;
 
-import com.codeperf.cli.config.StaticScanConfig;
+import com.cmb.codeperf.cli.config.StaticScanConfig;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -1733,12 +1733,12 @@ cannot find symbol: class SourceScanner
 Create `SourceScanner.java`:
 
 ```java
-package com.codeperf.analysis.source;
+package com.cmb.codeperf.analysis.source;
 
-import com.codeperf.analysis.source.index.SourceClassIndex;
-import com.codeperf.analysis.source.rule.SourceRule;
-import com.codeperf.analysis.source.rule.SourceRuleContext;
-import com.codeperf.analysis.source.rule.SourceRuleRegistry;
+import com.cmb.codeperf.analysis.source.index.SourceClassIndex;
+import com.cmb.codeperf.analysis.source.rule.SourceRule;
+import com.cmb.codeperf.analysis.source.rule.SourceRuleContext;
+import com.cmb.codeperf.analysis.source.rule.SourceRuleRegistry;
 import com.github.javaparser.ast.CompilationUnit;
 
 import java.io.IOException;
@@ -1816,11 +1816,11 @@ Tests run: 1, Failures: 0, Errors: 0
 Create `SourceScanJsonReportWriterTest.java`:
 
 ```java
-package com.codeperf.cli.report;
+package com.cmb.codeperf.cli.report;
 
-import com.codeperf.analysis.Severity;
-import com.codeperf.analysis.source.SourceFinding;
-import com.codeperf.analysis.source.SourceScanResult;
+import com.cmb.codeperf.analysis.Severity;
+import com.cmb.codeperf.analysis.source.SourceFinding;
+import com.cmb.codeperf.analysis.source.SourceScanResult;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -1881,9 +1881,9 @@ cannot find symbol: class SourceScanJsonReportWriter
 Create `SourceScanJsonReportWriter.java`:
 
 ```java
-package com.codeperf.cli.report;
+package com.cmb.codeperf.cli.report;
 
-import com.codeperf.analysis.source.SourceScanResult;
+import com.cmb.codeperf.analysis.source.SourceScanResult;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 
@@ -1935,7 +1935,7 @@ Tests run: 1, Failures: 0, Errors: 0
 Create `ScanCommandTest.java`:
 
 ```java
-package com.codeperf.cli.cmd;
+package com.cmb.codeperf.cli.cmd;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -2123,7 +2123,7 @@ Tests run: 1, Failures: 0, Errors: 0
 Create `InitCommandTest.java`:
 
 ```java
-package com.codeperf.cli.cmd;
+package com.cmb.codeperf.cli.cmd;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -2159,7 +2159,7 @@ public class InitCommandTest {
 Create `DoctorCommandTest.java`:
 
 ```java
-package com.codeperf.cli.cmd;
+package com.cmb.codeperf.cli.cmd;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -2217,7 +2217,7 @@ cannot find symbol: class InitCommand
 Create `InitCommand.java`:
 
 ```java
-package com.codeperf.cli.cmd;
+package com.cmb.codeperf.cli.cmd;
 
 import com.beust.jcommander.Parameters;
 
@@ -2288,11 +2288,11 @@ public class InitCommand {
 Create `DoctorCommand.java`:
 
 ```java
-package com.codeperf.cli.cmd;
+package com.cmb.codeperf.cli.cmd;
 
 import com.beust.jcommander.Parameters;
-import com.codeperf.cli.project.ProjectContext;
-import com.codeperf.cli.project.ProjectContextResolver;
+import com.cmb.codeperf.cli.project.ProjectContext;
+import com.cmb.codeperf.cli.project.ProjectContextResolver;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -2338,7 +2338,7 @@ public class DoctorCommand {
 Create `InstallHooksCommand.java`:
 
 ```java
-package com.codeperf.cli.cmd;
+package com.cmb.codeperf.cli.cmd;
 
 import com.beust.jcommander.Parameters;
 
@@ -2461,7 +2461,7 @@ agent:
   configPath: .codeperf/agent.yml
   jarPath: /opt/codeperf/codeperf-agent.jar
   targetPackages:
-    - com.codeperf.demo
+    - com.cmb.codeperf.demo
 ```
 
 - [ ] **Step 2: Update demo `.codeperf.yml`**
@@ -2490,7 +2490,7 @@ agent:
   configPath: .codeperf/agent.yml
   jarPath: /opt/codeperf/codeperf-agent.jar
   targetPackages:
-    - com.codeperf.demo
+    - com.cmb.codeperf.demo
 ```
 
 - [ ] **Step 3: Update README recommended flow**
@@ -2696,3 +2696,4 @@ Type consistency:
 Execution note:
 
 - If any code snippets need small compile fixes during implementation, preserve the public behavior described by the tests instead of expanding scope.
+

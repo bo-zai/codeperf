@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>com.codeperf</groupId>
+        <groupId>com.cmb.codeperf</groupId>
         <artifactId>codeperf-parent</artifactId>
         <version>1.0.0-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
@@ -65,15 +65,15 @@
                             <relocations>
                                 <relocation>
                                     <pattern>net.bytebuddy</pattern>
-                                    <shadedPattern>com.codeperf.agent.shaded.bytebuddy</shadedPattern>
+                                    <shadedPattern>com.cmb.codeperf.agent.shaded.bytebuddy</shadedPattern>
                                 </relocation>
                                 <relocation>
                                     <pattern>com.fasterxml.jackson</pattern>
-                                    <shadedPattern>com.codeperf.agent.shaded.jackson</shadedPattern>
+                                    <shadedPattern>com.cmb.codeperf.agent.shaded.jackson</shadedPattern>
                                 </relocation>
                                 <relocation>
                                     <pattern>org.yaml.snakeyaml</pattern>
-                                    <shadedPattern>com.codeperf.agent.shaded.snakeyaml</shadedPattern>
+                                    <shadedPattern>com.cmb.codeperf.agent.shaded.snakeyaml</shadedPattern>
                                 </relocation>
                             </relocations>
                             <filters>
@@ -91,7 +91,7 @@
                                 <transformer
                                         implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                                     <manifestEntries>
-                                        <Premain-Class>com.codeperf.agent.AgentEntry</Premain-Class>
+                                        <Premain-Class>com.cmb.codeperf.agent.AgentEntry</Premain-Class>
                                         <Can-Redefine-Classes>true</Can-Redefine-Classes>
                                         <Can-Retransform-Classes>true</Can-Retransform-Classes>
                                     </manifestEntries>
@@ -104,3 +104,4 @@
         </plugins>
     </build>
 </project>
+

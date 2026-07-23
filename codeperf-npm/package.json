@@ -13,7 +13,7 @@
     "package.json"
   ],
   "codeperf": {
-    "cliArtifact": "com.codeperf:codeperf-cli:1.0.0-SNAPSHOT:jar"
+    "cliArtifact": "com.cmb.codeperf:codeperf-cli:1.0.0-SNAPSHOT:jar"
   },
   "scripts": {
     "test": "node test/wrapper.test.js"
@@ -22,3 +22,4 @@
     "node": ">=14"
   }
 }
+

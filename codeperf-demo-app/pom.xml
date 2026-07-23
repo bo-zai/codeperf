@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>com.codeperf</groupId>
+        <groupId>com.cmb.codeperf</groupId>
         <artifactId>codeperf-parent</artifactId>
         <version>1.0.0-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
@@ -21,7 +21,7 @@
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.codeperf</groupId>
+            <groupId>com.cmb.codeperf</groupId>
             <artifactId>codeperf-demo-common</artifactId>
             <version>${project.version}</version>
         </dependency>
@@ -47,3 +47,4 @@
         </plugins>
     </build>
 </project>
+

@@ -35,7 +35,7 @@ function cacheDirectory() {
 function artifactCoordinate() {
   return process.env.CODEPERF_CLI_ARTIFACT
     || (packageJson().codeperf && packageJson().codeperf.cliArtifact)
-    || "com.codeperf:codeperf-cli:1.0.0-SNAPSHOT:jar";
+    || "com.cmb.codeperf:codeperf-cli:1.0.0-SNAPSHOT:jar";
 }
 
 function artifactJarName(artifact) {
@@ -123,3 +123,4 @@ function main() {
 }
 
 process.exit(main());
+

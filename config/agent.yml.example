@@ -4,7 +4,7 @@ appName: codeperf-demo-app
 env: dev
 buildInfoPath: /opt/codeperf/build-info.properties
 targetPackages:
-  - com.codeperf.demo
+  - com.cmb.codeperf.demo
 entry:
   method: POST
   path: /api/orders/report

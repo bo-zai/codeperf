@@ -1,7 +1,7 @@
 ### 代码风格
 
 - Java 使用 4 空格缩进、`PascalCase` 类名、`camelCase` 方法名与变量名
-- 包名全小写，多级包名用点分隔（如 `com.codeperf.agent`）
+- 包名全小写，多级包名用点分隔（如 `com.cmb.codeperf.agent`）
 - 目录与文件命名遵循现有模式：类名与文件名一致（如 `AgentBootstrap.java`）
 - 常量使用 `UPPER_SNAKE_CASE`，定义在类顶部
 

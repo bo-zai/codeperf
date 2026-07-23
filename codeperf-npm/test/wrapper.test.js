@@ -20,7 +20,7 @@ function testPackageBinMapping() {
     "dist/",
     "package.json",
   ]);
-  assert.strictEqual(pkg.codeperf.cliArtifact, "com.codeperf:codeperf-cli:1.0.0-SNAPSHOT:jar");
+  assert.strictEqual(pkg.codeperf.cliArtifact, "com.cmb.codeperf:codeperf-cli:1.0.0-SNAPSHOT:jar");
 }
 
 function testMissingJarMessage() {
@@ -180,3 +180,4 @@ testArgumentForwardingAndExitCode();
 testMavenArtifactIsDownloadedBeforeBundledJar();
 testBundledJarIsUsedWhenMavenDownloadFails();
 console.log("wrapper tests passed");
+

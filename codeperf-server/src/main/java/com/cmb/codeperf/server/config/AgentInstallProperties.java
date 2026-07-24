@@ -21,6 +21,7 @@ public class AgentInstallProperties {
     private String agentSha256 = "";
     private String localArtifactPath = DEFAULT_LOCAL_ARTIFACT_PATH;
     private String targetPackages = "com.cmb.codeperf.demo";
+    private String excludedPackages = "com.cmb.cjtz,com.cmb.checkerframework,com.cmb.bee,com.cmbchina.ugw";
     private String entryMethod = "POST";
     private String entryPath = "/";
     private long slowSqlMs = 500L;

@@ -24,6 +24,8 @@ public class AgentConfigTest {
                         + "uploadEnabled: true\n"
                         + "targetPackages:\n"
                         + "  - com.acme.order\n"
+                        + "excludedPackages:\n"
+                        + "  - com.acme.order.infrastructure\n"
                         + "entry:\n"
                         + "  method: POST\n"
                         + "  path: /api/orders/report\n"
@@ -38,6 +40,11 @@ public class AgentConfigTest {
         assertEquals("task-1", loaded.getAnalysisTaskId());
         assertTrue(loaded.isUploadEnabled());
         assertEquals("com.acme.order", loaded.getTargetPackages().get(0));
+        assertTrue(loaded.getExcludedPackages().contains("com.cmb.cjtz"));
+        assertTrue(loaded.getExcludedPackages().contains("com.cmb.checkerframework"));
+        assertTrue(loaded.getExcludedPackages().contains("com.cmb.bee"));
+        assertTrue(loaded.getExcludedPackages().contains("com.cmbchina.ugw"));
+        assertTrue(loaded.getExcludedPackages().contains("com.acme.order.infrastructure"));
         assertEquals("POST", loaded.getEntryMethod());
         assertEquals("/api/orders/report", loaded.getEntryPath());
         assertEquals(250, loaded.getSlowSqlMs());

@@ -6,6 +6,7 @@ import com.cmb.codeperf.agent.collect.Profiler;
 import com.cmb.codeperf.agent.collect.Recorder;
 import com.cmb.codeperf.agent.collect.SessionWriter;
 import com.cmb.codeperf.agent.config.AgentConfig;
+import com.cmb.codeperf.agent.logging.AgentLogger;
 import com.cmb.codeperf.agent.upload.DynamicEvidenceReporter;
 import com.cmb.codeperf.agent.upload.DynamicEvidenceUploader;
 
@@ -24,7 +25,7 @@ public final class AgentBootstrap {
     public static synchronized void start(String args, Instrumentation inst) {
         try {
             AgentConfig cfg = AgentConfig.load(args);
-            System.out.println("[codeperf] agent starting, " + cfg);
+            AgentLogger.info("agent starting, " + cfg);
 
             Profiler sampler = new JavaStackSampler(cfg.getSampleMs());
             SessionWriter writer = new SessionWriter(cfg.getOutput());
@@ -33,10 +34,10 @@ public final class AgentBootstrap {
             sampler.start();
 
             new InstrumentationInstaller().install(cfg, inst);
-            System.out.println("[codeperf] instrumentation installed; waiting for entry: "
-                    + cfg.getEntryMethod() + " " + cfg.getEntryPath());
+            AgentLogger.info("agent injection succeeded, entry=" + cfg.getEntryMethod() + " " + cfg.getEntryPath()
+                    + ", output=" + cfg.getOutput());
         } catch (Throwable t) {
-            System.err.println("[codeperf] agent failed to start: " + t.getClass().getSimpleName() + ": " + t.getMessage());
+            AgentLogger.error("agent failed to start: " + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
     }
 

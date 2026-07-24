@@ -44,7 +44,11 @@ public class AgentInstallConfigDefaultTest {
                                 + "}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.agentUrl", not(emptyString())))
-                .andExpect(jsonPath("$.targetPackages[0]", not(emptyString())));
+                .andExpect(jsonPath("$.targetPackages[0]", not(emptyString())))
+                .andExpect(jsonPath("$.excludedPackages[0]").value("com.cmb.cjtz"))
+                .andExpect(jsonPath("$.excludedPackages[1]").value("com.cmb.checkerframework"))
+                .andExpect(jsonPath("$.excludedPackages[2]").value("com.cmb.bee"))
+                .andExpect(jsonPath("$.excludedPackages[3]").value("com.cmbchina.ugw"));
     }
 }
 

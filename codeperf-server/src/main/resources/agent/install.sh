@@ -25,6 +25,7 @@ AGENT_SHA256=""
 APP_NAME=""
 ENV_NAME=""
 TARGET_PACKAGES=""
+EXCLUDED_PACKAGES=""
 ENTRY_METHOD=""
 ENTRY_PATH=""
 SLOW_SQL_MS=""
@@ -85,12 +86,81 @@ collect_git_identity() {
   git rev-parse --is-inside-work-tree >/dev/null 2>&1 || fail "当前目录不是 Git 仓库，无法生成构建身份信息"
   REMOTE_URL="${CODEPERF_REMOTE_URL:-$(required_git_value "remoteUrl" config --get remote.origin.url)}"
   COMMIT_SHA="${CODEPERF_COMMIT_SHA:-$(required_git_value "commit" rev-parse HEAD)}"
-  BRANCH_NAME="${CODEPERF_BRANCH:-$(required_git_value "branch" rev-parse --abbrev-ref HEAD)}"
+  BRANCH_NAME="$(resolve_branch_name)"
   AUTHOR_NAME="${CODEPERF_AUTHOR_NAME:-$(required_git_value "authorName" log -1 --format=%an)}"
   AUTHOR_EMAIL="${CODEPERF_AUTHOR_EMAIL:-$(required_git_value "authorEmail" log -1 --format=%ae)}"
   COMMIT_TIME="${CODEPERF_COMMIT_TIME:-$(required_git_value "commitTime" log -1 --format=%aI)}"
   COMMIT_MESSAGE="${CODEPERF_COMMIT_MESSAGE:-$(required_git_value "commitMessage" log -1 --format=%s)}"
   PROJECT_NAME="${CODEPERF_PROJECT:-$(derive_project_name "$REMOTE_URL")}"
+}
+
+resolve_branch_name() {
+  local branch
+  branch="$(first_non_empty "${CODEPERF_BRANCH:-}" "${CI_COMMIT_REF_NAME:-}" "${GIT_BRANCH:-}" "${BRANCH_NAME:-}")"
+  if is_usable_branch_name "$branch"; then
+    normalize_branch_name "$branch"
+    return
+  fi
+
+  branch="$(git symbolic-ref --short -q HEAD 2>/dev/null || true)"
+  if is_usable_branch_name "$branch"; then
+    normalize_branch_name "$branch"
+    return
+  fi
+
+  # CI 常按 commit checkout 成 detached HEAD，但 fetch 后会保留 refs/remotes/origin/<branch>。
+  # 优先使用已解析出的 COMMIT_SHA 匹配远端引用，避免 detached HEAD 或 origin/HEAD 被误写入构建身份。
+  branch="$(remote_branch_by_commit --points-at "$COMMIT_SHA")"
+  if is_usable_branch_name "$branch"; then
+    normalize_branch_name "$branch"
+    return
+  fi
+
+  branch="$(remote_branch_by_commit --contains "$COMMIT_SHA")"
+  if is_usable_branch_name "$branch"; then
+    normalize_branch_name "$branch"
+    return
+  fi
+
+  printf '%s\n' "HEAD"
+}
+
+first_non_empty() {
+  local value
+  for value in "$@"; do
+    if is_usable_branch_name "$value"; then
+      printf '%s\n' "$value"
+      return
+    fi
+  done
+}
+
+remote_branch_by_commit() {
+  local match_mode="$1"
+  local commit="$2"
+  git for-each-ref "$match_mode" "$commit" --format='%(refname:short)' refs/remotes/origin 2>/dev/null \
+    | while IFS= read -r branch; do
+        branch="$(printf '%s' "$branch" | tr -d '\r')"
+        if is_usable_branch_name "$branch"; then
+          printf '%s\n' "$branch"
+          break
+        fi
+      done
+}
+
+is_usable_branch_name() {
+  local branch="$1"
+  branch="$(normalize_branch_name "$branch")"
+  [ -n "$branch" ] && [ "$branch" != "HEAD" ] && [ "$branch" != "origin" ]
+}
+
+normalize_branch_name() {
+  local branch="$1"
+  branch="${branch#refs/heads/}"
+  branch="${branch#refs/remotes/}"
+  branch="${branch#origin/}"
+  branch="${branch#remotes/origin/}"
+  printf '%s\n' "$branch"
 }
 
 derive_project_name() {
@@ -196,6 +266,7 @@ PY
   APP_NAME="$(json_get "appName" "" "$response")"
   ENV_NAME="$(json_get "env" "dev" "$response")"
   TARGET_PACKAGES="$(json_get "targetPackages" "" "$response")"
+  EXCLUDED_PACKAGES="$(json_get "excludedPackages" "" "$response")"
   ENTRY_METHOD="$(json_get "entry.method" "POST" "$response")"
   ENTRY_PATH="$(json_get "entry.path" "/" "$response")"
   SLOW_SQL_MS="$(json_get "slowSqlMs" "500" "$response")"
@@ -237,12 +308,20 @@ download_agent() {
 
 write_agent_config() {
   local target_packages_yaml=""
+  local excluded_packages_yaml=""
   local old_ifs="$IFS"
   IFS=','
   for pkg in $TARGET_PACKAGES; do
     pkg="$(printf '%s' "$pkg" | xargs)"
     if [ -n "$pkg" ]; then
       target_packages_yaml="${target_packages_yaml}  - ${pkg}
+"
+    fi
+  done
+  for pkg in $EXCLUDED_PACKAGES; do
+    pkg="$(printf '%s' "$pkg" | xargs)"
+    if [ -n "$pkg" ]; then
+      excluded_packages_yaml="${excluded_packages_yaml}  - ${pkg}
 "
     fi
   done
@@ -256,7 +335,8 @@ env: $(yaml_scalar "$ENV_NAME")
 uploadEnabled: true
 buildInfoPath: ${IMAGE_AGENT_DIR}/build-info.properties
 targetPackages:
-${target_packages_yaml}entry:
+${target_packages_yaml}excludedPackages:
+${excluded_packages_yaml}entry:
   method: $(yaml_scalar "$ENTRY_METHOD")
   path: $(yaml_scalar "$ENTRY_PATH")
 slowSqlMs: ${SLOW_SQL_MS}

@@ -74,6 +74,11 @@ public class InstallScriptTest {
         assertTrue(agentConfig.contains("env: dev"));
         assertTrue(agentConfig.contains("  - com.demo.app"));
         assertTrue(agentConfig.contains("  - com.demo.common"));
+        assertTrue(agentConfig.contains("excludedPackages:"));
+        assertTrue(agentConfig.contains("  - com.cmb.cjtz"));
+        assertTrue(agentConfig.contains("  - com.cmb.checkerframework"));
+        assertTrue(agentConfig.contains("  - com.cmb.bee"));
+        assertTrue(agentConfig.contains("  - com.cmbchina.ugw"));
 
         String buildInfo = readUtf8(codeperfDir.resolve("build-info.properties"));
         assertTrue(buildInfo.contains("remoteUrl=git@gitlab.example.com:demo/demo-app.git"));
@@ -89,6 +94,27 @@ public class InstallScriptTest {
         String dockerfileAfterSecondRun = readUtf8(tempDir.resolve("Dockerfile"));
         assertEquals(1, count(dockerfileAfterSecondRun, "CODEPERF_AGENT_START"));
         assertEquals(1, count(dockerfileAfterSecondRun, "COPY target/codeperf/ /opt/codeperf/"));
+    }
+
+    @Test
+    public void should_ResolveRemoteBranch_When_CiCheckoutDetachedHead() throws Exception {
+        initGitRepository();
+        run(tempDir, "git", "branch", "v1");
+        run(tempDir, "git", "update-ref", "refs/remotes/origin/v1", "HEAD");
+        run(tempDir, "git", "symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/v1");
+        String commit = commandOutput(tempDir, "git", "rev-parse", "origin/v1^{commit}").trim();
+        run(tempDir, "git", "checkout", "--detach", commit);
+        Files.write(tempDir.resolve("Dockerfile"), Arrays.asList(
+                "FROM eclipse-temurin:8-jre",
+                "ENTRYPOINT [\"java\", \"-jar\", \"/app/app.jar\"]"), StandardCharsets.UTF_8);
+        String configUrl = startInstallConfigServer(sha256(AGENT_BYTES), true);
+
+        ScriptResult result = runInstallScript(configUrl);
+
+        assertEquals(0, result.exitCode, result.output);
+        assertTrue(result.output.contains("branch=v1"), result.output);
+        assertTrue(lastConfigRequestBody.contains("\"branch\":\"v1\""));
+        assertTrue(readUtf8(tempDir.resolve("target/codeperf/build-info.properties")).contains("branch=v1"));
     }
 
     @Test
@@ -159,6 +185,7 @@ public class InstallScriptTest {
                 + "\"appName\":\"demo-app\","
                 + "\"env\":\"dev\","
                 + "\"targetPackages\":[\"com.demo.app\",\"com.demo.common\"],"
+                + "\"excludedPackages\":[\"com.cmb.cjtz\",\"com.cmb.checkerframework\",\"com.cmb.bee\",\"com.cmbchina.ugw\"],"
                 + "\"entry\":{\"method\":\"POST\",\"path\":\"/api/orders/report\"},"
                 + "\"slowSqlMs\":500,"
                 + "\"sampleMs\":10,"
@@ -199,13 +226,21 @@ public class InstallScriptTest {
     }
 
     private void run(Path directory, String... command) throws Exception {
+        ScriptResult result = commandResult(directory, command);
+        assertEquals(0, result.exitCode, result.output);
+    }
+
+    private String commandOutput(Path directory, String... command) throws Exception {
+        return commandResult(directory, command).output;
+    }
+
+    private ScriptResult commandResult(Path directory, String... command) throws Exception {
         ProcessBuilder builder = new ProcessBuilder(command);
         builder.directory(directory.toFile());
         builder.redirectErrorStream(true);
         Process process = builder.start();
         String output = readProcessOutput(process.getInputStream());
-        int exitCode = process.waitFor();
-        assertEquals(0, exitCode, output);
+        return new ScriptResult(process.waitFor(), output);
     }
 
     private String findBash() {

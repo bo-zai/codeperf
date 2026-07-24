@@ -23,6 +23,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
                 "codeperf.agent.install.agent-url=https://oss.example.com/codeperf-agent.jar",
                 "codeperf.agent.install.agent-sha256=abc123",
                 "codeperf.agent.install.target-packages=com.company.order,com.company.common",
+                "codeperf.agent.install.excluded-packages=com.company.framework,com.company.starter",
                 "codeperf.agent.install.entry-method=POST",
                 "codeperf.agent.install.entry-path=/api/orders/report",
                 "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration,"
@@ -135,6 +136,8 @@ public class TaskApiTest {
                 .andExpect(jsonPath("$.env").value("dev"))
                 .andExpect(jsonPath("$.targetPackages[0]").value("com.company.order"))
                 .andExpect(jsonPath("$.targetPackages[1]").value("com.company.common"))
+                .andExpect(jsonPath("$.excludedPackages[0]").value("com.company.framework"))
+                .andExpect(jsonPath("$.excludedPackages[1]").value("com.company.starter"))
                 .andExpect(jsonPath("$.entry.method").value("POST"))
                 .andExpect(jsonPath("$.entry.path").value("/api/orders/report"));
     }

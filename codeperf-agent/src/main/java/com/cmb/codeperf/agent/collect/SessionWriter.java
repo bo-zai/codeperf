@@ -1,6 +1,7 @@
 package com.cmb.codeperf.agent.collect;
 
 import com.cmb.codeperf.agent.session.SessionData;
+import com.cmb.codeperf.agent.logging.AgentLogger;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 
@@ -35,9 +36,9 @@ public class SessionWriter {
             Files.write(output, json);
             Path done = Paths.get(output.toString() + ".done");
             Files.write(done, Long.toString(System.currentTimeMillis()).getBytes("UTF-8"));
-            System.out.println("[codeperf] session data written to " + output);
+            AgentLogger.info("session data written to " + output);
         } catch (Throwable t) {
-            System.err.println("[codeperf] failed to write session data: " + t);
+            AgentLogger.error("failed to write session data: " + t);
         }
     }
 

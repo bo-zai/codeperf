@@ -1,5 +1,7 @@
 package com.cmb.codeperf.agent.upload;
 
+import com.cmb.codeperf.agent.logging.AgentLogger;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -50,6 +52,7 @@ public class DynamicEvidenceUploader {
         byte[] bytes = requestPayload(payload).getBytes(StandardCharsets.UTF_8);
         connection.setDoOutput(true);
         connection.setRequestProperty("Content-Type", "application/json");
+        AgentLogger.info("dynamic evidence uploading, url=" + uploadUrl() + ", bytes=" + bytes.length);
         try (OutputStream output = connection.getOutputStream()) {
             output.write(bytes);
         }
@@ -58,6 +61,7 @@ public class DynamicEvidenceUploader {
         if (status < 200 || status >= 300) {
             throw new IOException("CodePerf Server 响应异常，status=" + status + ", body=" + body);
         }
+        AgentLogger.info("dynamic evidence uploaded, status=" + status);
     }
 
     private HttpURLConnection open() throws IOException {

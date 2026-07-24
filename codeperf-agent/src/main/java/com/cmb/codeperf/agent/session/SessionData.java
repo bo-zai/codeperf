@@ -17,6 +17,7 @@ public class SessionData {
     private String entryMethod;
     private String entryPath;
     private List<String> targetPackages;
+    private List<String> excludedPackages;
     private long startTimeEpochMs;
     private String javaVersion;
     private final List<RequestData> requests = new ArrayList<>();

@@ -13,6 +13,7 @@ public class AgentInstallConfigResponse {
     private String appName;
     private String env;
     private List<String> targetPackages;
+    private List<String> excludedPackages;
     private AgentEntryConfig entry;
     private long slowSqlMs;
     private long sampleMs;

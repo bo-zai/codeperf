@@ -1,6 +1,7 @@
 package com.cmb.codeperf.agent.collect;
 
 import com.cmb.codeperf.agent.config.AgentConfig;
+import com.cmb.codeperf.agent.logging.AgentLogger;
 import com.cmb.codeperf.agent.session.CallNode;
 import com.cmb.codeperf.agent.session.RequestData;
 import com.cmb.codeperf.agent.session.SessionData;
@@ -62,6 +63,7 @@ public final class Recorder {
         sd.setEntryMethod(cfg.getEntryMethod());
         sd.setEntryPath(cfg.getEntryPath());
         sd.setTargetPackages(cfg.getTargetPackages());
+        sd.setExcludedPackages(cfg.getExcludedPackages());
         sd.setStartTimeEpochMs(System.currentTimeMillis());
         sd.setJavaVersion(System.getProperty("java.version"));
         session = sd;
@@ -177,11 +179,8 @@ public final class Recorder {
             // 清理本请求登记的 prepared 绑定
             PREPARED_SQL.clear();
 
-            if (firstComplete && writer != null) {
-                writer.write(session); // 写数据 + .done 标记
-            }
-            if (firstComplete && reporter != null) {
-                reporter.report(session);
+            if (firstComplete) {
+                writeAndReport(session);
             }
         } catch (Throwable ignore) {
             // 绝不影响业务
@@ -283,6 +282,23 @@ public final class Recorder {
         } catch (Throwable ignore) {
         }
         return 0L;
+    }
+
+    private static void writeAndReport(SessionData currentSession) {
+        if (writer != null) {
+            writer.write(currentSession); // 写数据 + .done 标记
+        }
+        if (reporter == null) {
+            AgentLogger.info("dynamic evidence upload skipped, uploadEnabled=false");
+            return;
+        }
+        try {
+            reporter.report(currentSession);
+            AgentLogger.info("dynamic evidence upload succeeded");
+        } catch (Throwable t) {
+            AgentLogger.error("dynamic evidence upload failed: "
+                    + t.getClass().getSimpleName() + ": " + t.getMessage());
+        }
     }
 
     /** 调用栈帧。 */

@@ -259,6 +259,7 @@ curl -fsSL http://codeperf-server:9095/api/agent/install.sh | bash
 | `appName` | 应用名。 |
 | `env` | 环境名。 |
 | `targetPackages` | 业务包前缀列表。 |
+| `excludedPackages` | 不做业务方法调用链打桩的包前缀列表，默认包含公司内部基础框架包，也可由服务端配置动态调整。 |
 | `entry` | 入口方法与路径。 |
 | `slowSqlMs` | 慢 SQL 阈值。 |
 | `sampleMs` | 采样间隔。 |
@@ -274,6 +275,11 @@ env: dev
 buildInfoPath: /opt/codeperf/build-info.properties
 targetPackages:
   - com.cmb.codeperf.demo
+excludedPackages:
+  - com.cmb.cjtz
+  - com.cmb.checkerframework
+  - com.cmb.bee
+  - com.cmbchina.ugw
 entry:
   method: POST
   path: /api/orders/report

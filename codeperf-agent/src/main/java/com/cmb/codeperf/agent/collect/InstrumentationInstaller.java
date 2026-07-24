@@ -11,7 +11,6 @@ import net.bytebuddy.asm.Advice;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.matcher.ElementMatcher;
 
-import java.io.PrintStream;
 import java.lang.instrument.Instrumentation;
 import java.util.List;
 
@@ -38,16 +37,15 @@ import static net.bytebuddy.matcher.ElementMatchers.takesArguments;
 public class InstrumentationInstaller {
 
     public void install(AgentConfig cfg, Instrumentation inst) {
-        ElementMatcher.Junction<TypeDescription> targetPkg = buildPackageMatcher(cfg.getTargetPackages());
+        ElementMatcher.Junction<TypeDescription> ignoredPackages = buildPackageMatcher(cfg.getExcludedPackages());
+        ElementMatcher.Junction<TypeDescription> targetPkg =
+                buildApplicationMatcher(cfg.getTargetPackages(), cfg.getExcludedPackages());
 
         AgentBuilder builder = new AgentBuilder.Default()
                 .disableClassFormatChanges()
                 .with(AgentBuilder.RedefinitionStrategy.RETRANSFORMATION)
-                .ignore(nameStartsWith("net.bytebuddy.")
-                        .or(nameStartsWith("com.cmb.codeperf.agent."))
-                        .or(isSynthetic()))
-                .with(AgentBuilder.Listener.StreamWriting.toSystemOut()
-                        .withTransformationsOnly());
+                .ignore(buildIgnoreMatcher(ignoredPackages))
+                .with(new CodePerfAgentListener());
 
         // 1) 应用包方法级插桩
         if (targetPkg != null) {
@@ -87,17 +85,51 @@ public class InstrumentationInstaller {
         builder.installOn(inst);
     }
 
-    private ElementMatcher.Junction<TypeDescription> buildPackageMatcher(List<String> packages) {
+    ElementMatcher.Junction<TypeDescription> buildPackageMatcher(List<String> packages) {
         ElementMatcher.Junction<TypeDescription> matcher = null;
         for (String pkg : packages) {
-            String p = pkg.trim();
+            String p = normalizePackagePrefix(pkg);
             if (p.isEmpty()) {
                 continue;
             }
-            ElementMatcher.Junction<TypeDescription> one = nameStartsWith(p);
+            // ByteBuddy 的 nameStartsWith 是纯字符串匹配，必须补包名边界，避免 com.cmb 误匹配 com.cmbchina。
+            ElementMatcher.Junction<TypeDescription> one = nameStartsWith(p + ".");
             matcher = (matcher == null) ? one : matcher.or(one);
         }
         return matcher;
+    }
+
+    ElementMatcher.Junction<TypeDescription> buildApplicationMatcher(List<String> targetPackages,
+                                                                     List<String> excludedPackages) {
+        ElementMatcher.Junction<TypeDescription> targetMatcher = buildPackageMatcher(targetPackages);
+        ElementMatcher.Junction<TypeDescription> excludedMatcher = buildPackageMatcher(excludedPackages);
+        if (targetMatcher == null || excludedMatcher == null) {
+            return targetMatcher;
+        }
+        // 排除包只作用于业务方法追踪，避免误关闭 DispatcherServlet/JDBC 等核心 I/O 证据采集。
+        return targetMatcher.and(not(excludedMatcher));
+    }
+
+    ElementMatcher.Junction<TypeDescription> buildIgnoreMatcher(ElementMatcher.Junction<TypeDescription> ignoredPackages) {
+        ElementMatcher.Junction<TypeDescription> matcher = nameStartsWith("net.bytebuddy.")
+                .or(nameStartsWith("com.cmb.codeperf.agent."))
+                .or(isSynthetic());
+        if (ignoredPackages == null) {
+            return matcher;
+        }
+        // 公司基础框架类优先全局忽略，避免 matcher 解析其 optional/provided 依赖时影响应用启动。
+        return matcher.or(ignoredPackages);
+    }
+
+    private String normalizePackagePrefix(String value) {
+        if (value == null) {
+            return "";
+        }
+        String trimmed = value.trim();
+        while (trimmed.endsWith(".")) {
+            trimmed = trimmed.substring(0, trimmed.length() - 1);
+        }
+        return trimmed;
     }
 }
 

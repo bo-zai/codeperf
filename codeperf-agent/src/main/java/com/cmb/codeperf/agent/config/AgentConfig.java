@@ -13,9 +13,11 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
 /**
  * Agent 运行参数。正式环境由 -javaagent 参数指向 agent.yml 配置文件。
@@ -24,7 +26,14 @@ import java.util.Properties;
 @Data
 public class AgentConfig {
 
+    private static final List<String> DEFAULT_EXCLUDED_PACKAGES = Arrays.asList(
+            "com.cmb.cjtz",
+            "com.cmb.checkerframework",
+            "com.cmb.bee",
+            "com.cmbchina.ugw");
+
     private List<String> targetPackages = new ArrayList<>();
+    private List<String> excludedPackages = defaultExcludedPackages();
     private String entryMethod = "GET";   // HTTP method，大写
     private String entryPath = "/";        // HTTP path 前缀
     private long slowSqlMs = 500;
@@ -78,6 +87,9 @@ public class AgentConfig {
         }
         if (kv.containsKey("targetPackage")) {
             cfg.targetPackages = new ArrayList<>(Arrays.asList(kv.get("targetPackage").split(",")));
+        }
+        if (kv.containsKey("excludedPackage")) {
+            cfg.excludedPackages = mergeExcludedPackages(Arrays.asList(kv.get("excludedPackage").split(",")));
         }
         if (kv.containsKey("entry")) {
             // 形如 "POST /api/orders/report"
@@ -142,6 +154,16 @@ public class AgentConfig {
                     cfg.targetPackages.add(item.toString());
                 }
             }
+        }
+        Object excludedPackages = yaml.get("excludedPackages");
+        if (excludedPackages instanceof List) {
+            List<String> values = new ArrayList<>();
+            for (Object item : (List<Object>) excludedPackages) {
+                if (item != null) {
+                    values.add(item.toString());
+                }
+            }
+            cfg.excludedPackages = mergeExcludedPackages(values);
         }
         Object entry = yaml.get("entry");
         if (entry instanceof Map) {
@@ -231,6 +253,33 @@ public class AgentConfig {
             return primary;
         }
         return trimToNull(secondary);
+    }
+
+    private static List<String> defaultExcludedPackages() {
+        return new ArrayList<>(DEFAULT_EXCLUDED_PACKAGES);
+    }
+
+    private static List<String> mergeExcludedPackages(List<String> configuredPackages) {
+        Set<String> merged = new LinkedHashSet<>();
+        for (String value : DEFAULT_EXCLUDED_PACKAGES) {
+            addPackagePrefix(merged, value);
+        }
+        if (configuredPackages != null) {
+            for (String value : configuredPackages) {
+                addPackagePrefix(merged, value);
+            }
+        }
+        return new ArrayList<>(merged);
+    }
+
+    private static void addPackagePrefix(Set<String> values, String value) {
+        if (value == null) {
+            return;
+        }
+        String trimmed = value.trim();
+        if (!trimmed.isEmpty()) {
+            values.add(trimmed);
+        }
     }
 }
 

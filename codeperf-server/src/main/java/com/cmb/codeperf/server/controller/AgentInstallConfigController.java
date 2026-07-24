@@ -39,14 +39,15 @@ public class AgentInstallConfigController {
         response.setAgentSha256(properties.getAgentSha256());
         response.setAppName(valueOrDefault(request.getProject(), repoName(request.getRemoteUrl())));
         response.setEnv(valueOrDefault(request.getEnv(), "dev"));
-        response.setTargetPackages(targetPackages());
+        response.setTargetPackages(splitPackages(properties.getTargetPackages()));
+        response.setExcludedPackages(splitPackages(properties.getExcludedPackages()));
         response.setEntry(entry());
         response.setSlowSqlMs(properties.getSlowSqlMs());
         response.setSampleMs(properties.getSampleMs());
         response.setMode(properties.getMode());
-        log.info("event=codeperf.agent.install_config.response enabled={} appName={} env={} targetPackages={} entryMethod={} entryPath={} mode={}",
+        log.info("event=codeperf.agent.install_config.response enabled={} appName={} env={} targetPackages={} excludedPackages={} entryMethod={} entryPath={} mode={}",
                 response.isEnabled(), response.getAppName(), response.getEnv(), response.getTargetPackages(),
-                response.getEntry().getMethod(), response.getEntry().getPath(), response.getMode());
+                response.getExcludedPackages(), response.getEntry().getMethod(), response.getEntry().getPath(), response.getMode());
         return response;
     }
 
@@ -57,9 +58,8 @@ public class AgentInstallConfigController {
         return entry;
     }
 
-    private List<String> targetPackages() {
+    private List<String> splitPackages(String raw) {
         List<String> values = new ArrayList<>();
-        String raw = properties.getTargetPackages();
         if (raw == null || raw.trim().isEmpty()) {
             return values;
         }

@@ -31,16 +31,41 @@ import java.util.Map;
  */
 public class StaticReportUploader {
 
+    private static final int DEFAULT_CONNECT_TIMEOUT_MS = 5000;
+    private static final int DEFAULT_READ_TIMEOUT_MS = 60000;
+
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ConnectionFactory connectionFactory;
+
+    public StaticReportUploader() {
+        this(url -> (HttpURLConnection) new URL(url).openConnection());
+    }
+
+    StaticReportUploader(ConnectionFactory connectionFactory) {
+        this.connectionFactory = connectionFactory;
+    }
 
     public String upload(String serverUrl, StaticReportUploadRequest request) throws IOException {
+        return upload(serverUrl, request, DEFAULT_CONNECT_TIMEOUT_MS, DEFAULT_READ_TIMEOUT_MS);
+    }
+
+    public String upload(String serverUrl,
+                         StaticReportUploadRequest request,
+                         int connectTimeoutMs,
+                         int readTimeoutMs) throws IOException {
         // 两阶段上传：先创建任务获取 taskId，再上传报告内容
-        String taskId = createTask(serverUrl, request);
-        post(serverUrl + "/api/tasks/" + taskId + "/static-results", request.getReportJson());
+        String taskId = createTask(serverUrl, request, connectTimeoutMs, readTimeoutMs);
+        post(serverUrl + "/api/tasks/" + taskId + "/static-results",
+                request.getReportJson(),
+                connectTimeoutMs,
+                readTimeoutMs);
         return taskId;
     }
 
-    private String createTask(String serverUrl, StaticReportUploadRequest request) throws IOException {
+    private String createTask(String serverUrl,
+                              StaticReportUploadRequest request,
+                              int connectTimeoutMs,
+                              int readTimeoutMs) throws IOException {
         Map<String, String> payload = new LinkedHashMap<>();
         payload.put("project", request.getProject());
         payload.put("remoteUrl", request.getRemoteUrl());
@@ -53,7 +78,10 @@ public class StaticReportUploader {
         payload.put("committerName", request.getCommitterName());
         payload.put("committerEmail", request.getCommitterEmail());
         payload.put("commitMessage", request.getCommitMessage());
-        String response = post(serverUrl + "/api/tasks", objectMapper.writeValueAsString(payload));
+        String response = post(serverUrl + "/api/tasks",
+                objectMapper.writeValueAsString(payload),
+                connectTimeoutMs,
+                readTimeoutMs);
         JsonNode node = objectMapper.readTree(response);
         JsonNode taskId = node.get("analysisTaskId");
         if (taskId == null || taskId.asText().trim().isEmpty()) {
@@ -62,11 +90,11 @@ public class StaticReportUploader {
         return taskId.asText();
     }
 
-    private String post(String url, String body) throws IOException {
-        HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
+    private String post(String url, String body, int connectTimeoutMs, int readTimeoutMs) throws IOException {
+        HttpURLConnection connection = connectionFactory.open(url);
         connection.setRequestMethod("POST");
-        connection.setConnectTimeout(3000);
-        connection.setReadTimeout(10000);
+        connection.setConnectTimeout(connectTimeoutMs);
+        connection.setReadTimeout(readTimeoutMs);
         connection.setDoOutput(true);
         connection.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
         byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
@@ -97,6 +125,10 @@ public class StaticReportUploader {
             }
             return response.toString();
         }
+    }
+
+    interface ConnectionFactory {
+        HttpURLConnection open(String url) throws IOException;
     }
 }
 

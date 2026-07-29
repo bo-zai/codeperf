@@ -124,6 +124,8 @@ public class CodePerfCliConfig {
     private static void applyUploadReport(UploadReportConfig config, Map<String, Object> yaml) {
         config.setEnabled(booleanValue(yaml.get("enabled"), config.isEnabled()));
         config.setServerUrl(stringValue(yaml.get("serverUrl"), config.getServerUrl()));
+        config.setConnectTimeoutMs(intValue(yaml.get("connectTimeoutMs"), config.getConnectTimeoutMs()));
+        config.setReadTimeoutMs(intValue(yaml.get("readTimeoutMs"), config.getReadTimeoutMs()));
     }
 
     @SuppressWarnings("unchecked")

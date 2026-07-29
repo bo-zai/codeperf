@@ -40,6 +40,16 @@ public class MainTest {
     }
 
     @Test
+    public void should_PrintInitEnvOption_When_InitHelpRequested() {
+        CapturedRun capturedRun = captureStdout(() -> Main.run(new String[]{"init", "--help"}));
+
+        assertEquals(0, capturedRun.exitCode);
+        assertTrue(capturedRun.output.contains("Usage: codeperf init"));
+        assertTrue(capturedRun.output.contains("--env"));
+        assertTrue(capturedRun.output.contains("--force"));
+    }
+
+    @Test
     public void should_ReturnFailure_When_UnknownCommandProvided() {
         CapturedRun capturedRun = captureStdout(() -> Main.run(new String[]{"unknown"}));
 

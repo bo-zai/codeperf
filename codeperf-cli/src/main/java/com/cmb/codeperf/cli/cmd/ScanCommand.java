@@ -340,7 +340,11 @@ public class ScanCommand {
                 metadata.getCommitterEmail(),
                 metadata.getCommitMessage(),
                 new String(Files.readAllBytes(reportPath), StandardCharsets.UTF_8));
-        String taskId = new StaticReportUploader().upload(trimTrailingSlash(serverUrl), request);
+        String taskId = new StaticReportUploader().upload(
+                trimTrailingSlash(serverUrl),
+                request,
+                uploadConfig.getConnectTimeoutMs(),
+                uploadConfig.getReadTimeoutMs());
         System.out.println("[codeperf] static report uploaded, taskId=" + taskId);
     }
 

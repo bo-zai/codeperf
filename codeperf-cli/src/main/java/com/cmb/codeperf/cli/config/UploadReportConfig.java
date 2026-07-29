@@ -13,7 +13,12 @@ import lombok.Data;
  */
 @Data
 public class UploadReportConfig {
+    private static final int DEFAULT_CONNECT_TIMEOUT_MS = 5000;
+    private static final int DEFAULT_READ_TIMEOUT_MS = 60000;
+
     private boolean enabled;
     private String serverUrl;
+    private int connectTimeoutMs = DEFAULT_CONNECT_TIMEOUT_MS;
+    private int readTimeoutMs = DEFAULT_READ_TIMEOUT_MS;
 }
 

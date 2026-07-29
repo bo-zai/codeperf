@@ -43,6 +43,8 @@ public class CodePerfCliConfigTest {
                         + "  upload:\n"
                         + "    enabled: true\n"
                         + "    serverUrl: http://codeperf-report.company.com\n"
+                        + "    connectTimeoutMs: 7000\n"
+                        + "    readTimeoutMs: 120000\n"
                         + "gitHooks:\n"
                         + "  prePush:\n"
                         + "    blockOnFailure: true\n").getBytes(StandardCharsets.UTF_8));
@@ -66,6 +68,8 @@ public class CodePerfCliConfigTest {
         assertEquals(".codeperf/report/custom-source-report.json", loaded.getReport().getLocal().getPath());
         assertTrue(loaded.getReport().getUpload().isEnabled());
         assertEquals("http://codeperf-report.company.com", loaded.getReport().getUpload().getServerUrl());
+        assertEquals(7000, loaded.getReport().getUpload().getConnectTimeoutMs());
+        assertEquals(120000, loaded.getReport().getUpload().getReadTimeoutMs());
         assertTrue(loaded.getGitHooks().getPrePush().isBlockOnFailure());
     }
 
@@ -88,6 +92,8 @@ public class CodePerfCliConfigTest {
         assertTrue(loaded.getReport().getLocal().isEnabled());
         assertEquals(".codeperf/report/source-report.json", loaded.getReport().getLocal().getPath());
         assertFalse(loaded.getReport().getUpload().isEnabled());
+        assertEquals(5000, loaded.getReport().getUpload().getConnectTimeoutMs());
+        assertEquals(60000, loaded.getReport().getUpload().getReadTimeoutMs());
         assertFalse(loaded.getGitHooks().getPrePush().isBlockOnFailure());
     }
 

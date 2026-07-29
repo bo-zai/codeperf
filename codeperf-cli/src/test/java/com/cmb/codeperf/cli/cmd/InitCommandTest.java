@@ -36,7 +36,52 @@ public class InitCommandTest {
         assertTrue(config.contains("    blockOnFailure: false\n"));
         assertTrue(config.contains("    path: .codeperf/report/source-report.json\n"));
         assertTrue(config.contains("    enabled: false\n"));
+        assertTrue(config.contains("    serverUrl: http://localhost:9095\n"));
+        assertTrue(config.contains("    connectTimeoutMs: 5000\n"));
+        assertTrue(config.contains("    readTimeoutMs: 60000\n"));
         assertFalse(config.contains("agent:\n"));
+    }
+
+    @Test
+    public void should_WriteLocalServerUrl_When_InitEnvIsLocal() throws Exception {
+        Files.createDirectories(tempDir.resolve(".git"));
+
+        InitCommand command = new InitCommand();
+        command.setWorkingDirectoryForTest(tempDir);
+        command.setEnvForTest("local");
+
+        int exitCode = command.execute();
+
+        assertEquals(0, exitCode);
+        assertTrue(configText(tempDir).contains("    serverUrl: http://localhost:9095\n"));
+    }
+
+    @Test
+    public void should_WriteDevServerUrl_When_InitEnvIsDev() throws Exception {
+        Files.createDirectories(tempDir.resolve(".git"));
+
+        InitCommand command = new InitCommand();
+        command.setWorkingDirectoryForTest(tempDir);
+        command.setEnvForTest("dev");
+
+        int exitCode = command.execute();
+
+        assertEquals(0, exitCode);
+        assertTrue(configText(tempDir).contains("    serverUrl: http://codeperf-server.paas.cmbchina.cn\n"));
+    }
+
+    @Test
+    public void should_ReturnFailure_When_InitEnvIsInvalid() throws Exception {
+        Files.createDirectories(tempDir.resolve(".git"));
+
+        InitCommand command = new InitCommand();
+        command.setWorkingDirectoryForTest(tempDir);
+        command.setEnvForTest("test");
+
+        int exitCode = command.execute();
+
+        assertEquals(2, exitCode);
+        assertFalse(Files.exists(tempDir.resolve(".codeperf.yml")));
     }
 
     @Test
@@ -177,6 +222,25 @@ public class InitCommandTest {
         assertEquals("project: existing\n",
                 new String(Files.readAllBytes(tempDir.resolve(".codeperf.yml")), StandardCharsets.UTF_8));
         assertFalse(Files.exists(tempDir.resolve(".codeperf/agent.yml")));
+    }
+
+    @Test
+    public void should_OverwriteExistingConfig_When_ForceProvided() throws Exception {
+        Files.createDirectories(tempDir.resolve(".git"));
+        Files.write(tempDir.resolve(".codeperf.yml"), "project: existing\n".getBytes(StandardCharsets.UTF_8));
+
+        InitCommand command = new InitCommand();
+        command.setWorkingDirectoryForTest(tempDir);
+        command.setForceForTest(true);
+
+        int exitCode = command.execute();
+
+        String config = configText(tempDir);
+        assertEquals(0, exitCode);
+        assertTrue(config.contains("project: "));
+        assertTrue(config.contains("staticScan:\n"));
+        assertTrue(config.contains("report:\n"));
+        assertFalse("project: existing\n".equals(config));
     }
 
     @Test

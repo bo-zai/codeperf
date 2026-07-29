@@ -45,7 +45,7 @@ java -jar codeperf-cli/target/codeperf-cli.jar doctor
 
 | 命令 | 说明 |
 |---|---|
-| `codeperf init` | 在 Git 根目录生成 `.codeperf.yml`。已存在的文件不会被覆盖。 |
+| `codeperf init [--env local\|dev] [--force]` | 在 Git 根目录生成 `.codeperf.yml`。默认 `local`，已存在的文件不会被覆盖；加 `--force` 会强制覆盖。 |
 | `codeperf doctor` | 检查 `.codeperf.yml` 和配置的源码目录是否有效。 |
 | `codeperf scan` | 扫描 Git 变更的 Java 源文件，默认输出 `.codeperf/report/source-report.json`。 |
 | `codeperf scan --all` | 扫描 `.codeperf.yml` 中配置的全部源码目录。 |
@@ -55,7 +55,7 @@ java -jar codeperf-cli/target/codeperf-cli.jar doctor
 真实业务项目接入的最小流程：
 
 ```bash
-codeperf init
+codeperf init --env local
 codeperf doctor
 codeperf scan
 ```
@@ -91,12 +91,17 @@ codeperf scan --all --upload
 
 `.codeperf.yml` 必须位于 Git 根目录。CLI 可以从子目录执行，但配置路径和源码路径都按 Git 根目录解析。
 
-`codeperf init` 会自动生成 `.codeperf.yml`。生成逻辑会优先从 `remote.origin.url` 截取项目名，解析失败时回退到 Git 根目录文件夹名；同时会自动发现 `src/main/java` 源码目录，单模块项目生成一个 `sourceRoots`，多模块项目生成所有模块的 `sourceRoots` 和 `modules` 配置。真实项目接入后通常只需要确认服务端地址和 Git 基准分支。
+`codeperf init` 会自动生成 `.codeperf.yml`。生成逻辑会优先从 `remote.origin.url` 截取项目名，解析失败时回退到 Git 根目录文件夹名；同时会自动发现 `src/main/java` 源码目录，单模块项目生成一个 `sourceRoots`，多模块项目生成所有模块的 `sourceRoots` 和 `modules` 配置。
+
+初始化环境通过 `--env` 指定，只允许 `local` 或 `dev`，省略时默认 `local`。`local` 会生成 `http://localhost:9095`，`dev` 会生成 `http://codeperf-server.paas.cmbchina.cn`。真实项目接入后通常只需要确认 Git 基准分支和是否启用上传。
+
+如果需要重新生成配置，可以执行 `codeperf init --force`。该命令会覆盖 Git 根目录下已有的 `.codeperf.yml`，适合模板升级或重新选择初始化环境；已有手工配置会被替换，执行前应确认没有需要保留的定制项。
 
 单模块项目初始化后的典型默认配置：
 
 ```yaml
 project: mall
+env: local
 
 staticScan:
   enabled: true
@@ -121,13 +126,16 @@ report:
     path: .codeperf/report/source-report.json
   upload:
     enabled: false
-    serverUrl: http://codeperf.company.com
+    serverUrl: http://localhost:9095
+    connectTimeoutMs: 5000
+    readTimeoutMs: 60000
 ```
 
 多模块项目会自动初始化为类似下面的结构：
 
 ```yaml
 project: mall
+env: local
 
 staticScan:
   enabled: true
@@ -189,7 +197,9 @@ report:
     path: .codeperf/report/source-report.json
   upload:
     enabled: false
-    serverUrl: http://codeperf.company.com
+    serverUrl: http://localhost:9095
+    connectTimeoutMs: 5000
+    readTimeoutMs: 60000
 ```
 
 `mode: changed` 使用 Git diff 选择变更 Java 文件；`scan --all` 会忽略 changed 模式，直接扫描全部 `sourceRoots`。
@@ -199,6 +209,7 @@ report:
 | 配置项 | 自动生成 | 是否通常需要手改 | 作用 |
 |---|---:|---:|---|
 | `project` | 是 | 通常不用 | 项目标识。`codeperf init` 优先从 Git `remote.origin.url` 截取项目名，例如 `git@github.com:macrozheng/mall.git` 会生成 `mall`；解析失败时回退到 Git 根目录文件夹名。只有希望报告展示业务别名时才需要手改。 |
+| `env` | 是 | 视接入环境调整 | CodePerf 环境标识。`codeperf init --env local` 生成 `local`，`codeperf init --env dev` 生成 `dev`。 |
 | `staticScan.enabled` | 是 | 通常不用 | 静态扫描开关。当前 CLI 的 `scan` 命令会读取静态扫描配置，保留该字段用于后续统一启停。 |
 | `staticScan.mode` | 是 | 通常不用 | 默认扫描模式。`changed` 表示普通 `codeperf scan` 扫描 Git 变更 Java 文件；`codeperf scan --all` 会扫描全部 `sourceRoots`。 |
 | `staticScan.sourceRoots` | 是 | 通常不用 | Java 源码根目录。`codeperf init` 会自动发现单模块或多模块下的 `src/main/java`；只有特殊目录结构才需要手工调整。 |
@@ -214,7 +225,9 @@ report:
 | `report.local.enabled` | 是 | 通常不用 | 是否生成本地静态扫描报告。默认开启；企业接入初期建议保留，便于离线排查和复现。 |
 | `report.local.path` | 是 | 通常不用 | 本地静态扫描报告路径。默认 `.codeperf/report/source-report.json`，也可通过 `codeperf scan --output <path>` 临时覆盖。 |
 | `report.upload.enabled` | 是 | 视团队策略调整 | 是否默认上传静态扫描结果。默认关闭；建议先使用 `codeperf scan --upload` 显式验证，再考虑开启。 |
-| `report.upload.serverUrl` | 是 | 是 | 静态报告上传的 CodePerf Server 地址。企业环境应改成内部服务地址。 |
+| `report.upload.serverUrl` | 是 | 通常不用 | 静态报告上传的 CodePerf Server 地址。`--env local` 自动生成 `http://localhost:9095`，`--env dev` 自动生成 `http://codeperf-server.paas.cmbchina.cn`；只有服务地址变更时才需要手工修改。 |
+| `report.upload.connectTimeoutMs` | 是 | 网络环境异常时调整 | CLI 连接 CodePerf Server 的超时时间，默认 `5000` 毫秒。连接超时通常表示服务不可达、域名解析异常或网络策略拦截。 |
+| `report.upload.readTimeoutMs` | 是 | 大项目上传时可调整 | CLI 等待 CodePerf Server 响应的超时时间，默认 `60000` 毫秒。`/static-results` 会解析报告并写入多张表，大报告或数据库慢时可以适当调大。 |
 
 Agent 运行配置不由 `codeperf init` 生成，也不由 `codeperf doctor` 检查。它属于测试/预发运行环境配置，应该由部署脚本、配置中心、Kubernetes ConfigMap、镜像环境变量或运维标准路径管理。
 

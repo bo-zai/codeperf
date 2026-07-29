@@ -1,5 +1,6 @@
 package com.cmb.codeperf.cli.cmd;
 
+import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
 
 import java.nio.charset.StandardCharsets;
@@ -26,6 +27,17 @@ import java.util.stream.Stream;
 @Parameters(commandDescription = "Initialize CodePerf local config")
 public class InitCommand {
 
+    private static final String ENV_LOCAL = "local";
+    private static final String ENV_DEV = "dev";
+    private static final String LOCAL_SERVER_URL = "http://localhost:9095";
+    private static final String DEV_SERVER_URL = "http://codeperf-server.paas.cmbchina.cn";
+
+    @Parameter(names = "--env", description = "初始化环境，只允许 local 或 dev")
+    private String env = ENV_LOCAL;
+
+    @Parameter(names = "--force", description = "强制覆盖已存在的 .codeperf.yml")
+    private boolean force;
+
     private Path workingDirectory;
 
     /**
@@ -37,10 +49,15 @@ public class InitCommand {
         try {
             Path start = workingDirectory == null ? Paths.get(".").toAbsolutePath().normalize() : workingDirectory;
             Path root = findGitRoot(start);
+            String normalizedEnv = normalizeEnv(env);
             String projectName = inferProjectName(root);
             List<String> sourceRoots = discoverSourceRoots(root);
-            writeIfAbsent(root.resolve(".codeperf.yml"), defaultConfig(projectName, sourceRoots));
-            System.out.println("[codeperf] init 完成，已存在的配置文件不会被覆盖");
+            writeConfig(root.resolve(".codeperf.yml"), defaultConfig(projectName, sourceRoots, normalizedEnv));
+            if (force) {
+                System.out.println("[codeperf] init 完成，已按 --force 覆盖配置文件");
+            } else {
+                System.out.println("[codeperf] init 完成，已存在的配置文件不会被覆盖");
+            }
             System.out.println("[codeperf] 如需接入 Git pre-push，请执行: codeperf install-hooks");
             return 0;
         } catch (Exception e) {
@@ -53,13 +70,25 @@ public class InitCommand {
         this.workingDirectory = workingDirectory;
     }
 
-    private void writeIfAbsent(Path path, String content) throws Exception {
-        if (Files.exists(path)) {
+    void setEnvForTest(String env) {
+        this.env = env;
+    }
+
+    void setForceForTest(boolean force) {
+        this.force = force;
+    }
+
+    private void writeConfig(Path path, String content) throws Exception {
+        if (Files.exists(path) && !force) {
             System.out.println("[codeperf] 已存在，跳过: " + path);
             return;
         }
         Files.write(path, content.getBytes(StandardCharsets.UTF_8));
-        System.out.println("[codeperf] 已生成: " + path);
+        if (force) {
+            System.out.println("[codeperf] 已覆盖: " + path);
+        } else {
+            System.out.println("[codeperf] 已生成: " + path);
+        }
     }
 
     private Path findGitRoot(Path start) throws Exception {
@@ -172,12 +201,14 @@ public class InitCommand {
         return root.relativize(path.toAbsolutePath().normalize()).toString().replace('\\', '/');
     }
 
-    private String defaultConfig(String projectName, List<String> sourceRoots) {
+    private String defaultConfig(String projectName, List<String> sourceRoots, String env) {
         List<String> roots = sourceRoots == null || sourceRoots.isEmpty()
                 ? Collections.singletonList("src/main/java")
                 : sourceRoots;
         StringBuilder builder = new StringBuilder();
         builder.append("project: ").append(projectName).append("\n")
+                .append("env: ").append(env).append("\n")
+                .append("\n")
                 .append("staticScan:\n")
                 .append("  enabled: true\n")
                 .append("  mode: changed\n")
@@ -203,8 +234,22 @@ public class InitCommand {
                 .append("    path: .codeperf/report/source-report.json\n")
                 .append("  upload:\n")
                 .append("    enabled: false\n")
-                .append("    serverUrl: http://codeperf.company.com\n");
+                .append("    serverUrl: ").append(serverUrl(env)).append("\n")
+                .append("    connectTimeoutMs: 5000\n")
+                .append("    readTimeoutMs: 60000\n");
         return builder.toString();
+    }
+
+    private String normalizeEnv(String value) {
+        String normalized = value == null ? ENV_LOCAL : value.trim().toLowerCase();
+        if (ENV_LOCAL.equals(normalized) || ENV_DEV.equals(normalized)) {
+            return normalized;
+        }
+        throw new IllegalArgumentException("init --env 只允许 local 或 dev");
+    }
+
+    private String serverUrl(String env) {
+        return ENV_DEV.equals(env) ? DEV_SERVER_URL : LOCAL_SERVER_URL;
     }
 
     private void appendModules(StringBuilder builder, List<String> sourceRoots) {

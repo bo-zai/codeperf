@@ -2,12 +2,14 @@ package com.cmb.codeperf.server.controller;
 
 import com.cmb.codeperf.server.model.bo.AnalysisTaskBO;
 import com.cmb.codeperf.server.service.impl.AnalysisTaskService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/tasks/{taskId}/static-results")
 public class StaticResultController {
@@ -20,7 +22,27 @@ public class StaticResultController {
 
     @PostMapping
     public AnalysisTaskBO upload(@PathVariable String taskId, @RequestBody String payload) {
-        return service.acceptStaticResult(taskId, payload);
+        long startNanos = System.nanoTime();
+        int payloadBytes = payload == null ? 0 : payload.getBytes(java.nio.charset.StandardCharsets.UTF_8).length;
+        log.info("接收静态扫描报告 taskId={} payloadBytes={}", taskId, payloadBytes);
+        try {
+            AnalysisTaskBO result = service.acceptStaticResult(taskId, payload);
+            log.info("静态扫描报告接收完成 taskId={} status={} totalMs={}",
+                    taskId,
+                    result.getStatus(),
+                    elapsedMs(startNanos));
+            return result;
+        } catch (RuntimeException e) {
+            log.warn("静态扫描报告接收失败 taskId={} totalMs={} message={}",
+                    taskId,
+                    elapsedMs(startNanos),
+                    e.getMessage());
+            throw e;
+        }
+    }
+
+    private long elapsedMs(long startNanos) {
+        return (System.nanoTime() - startNanos) / 1_000_000L;
     }
 }
 

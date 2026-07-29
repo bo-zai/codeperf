@@ -11,6 +11,7 @@ import com.cmb.codeperf.server.model.bo.TaskStatus;
 import com.cmb.codeperf.server.service.repository.AnalysisTaskRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -22,6 +23,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 @Service
 public class AnalysisTaskService {
 
@@ -67,18 +69,46 @@ public class AnalysisTaskService {
     }
 
     public AnalysisTaskBO acceptStaticResult(String taskId, String payload) {
+        long startNanos = System.nanoTime();
         AnalysisTaskBO task = get(taskId);
+        long getTaskNanos = System.nanoTime();
         staticReportSummarizer.validate(payload);
+        long validateNanos = System.nanoTime();
         RiskLevel staticRisk = deriveStaticRisk(payload);
+        long deriveRiskNanos = System.nanoTime();
         task.setStaticPayload(payload);
         task.setStaticRiskLevel(staticRisk);
         task.setRiskLevel(RiskLevel.max(task.getRiskLevel(), staticRisk));
         task.setStatus(TaskStatus.STATIC_RECEIVED);
         List<StaticFindingBO> findings = extractStaticFindings(taskId, payload);
+        long extractFindingNanos = System.nanoTime();
         validateRuleDefinitions(findings);
+        long validateRuleNanos = System.nanoTime();
         AnalysisTaskBO saved = repository.save(task);
+        long saveTaskNanos = System.nanoTime();
         repository.replaceStaticFindings(taskId, findings);
-        syncFindingIssues(saved, findings, extractScannedSourceFiles(payload, findings));
+        long replaceFindingNanos = System.nanoTime();
+        List<String> scannedSourceFiles = extractScannedSourceFiles(payload, findings);
+        long extractScannedFileNanos = System.nanoTime();
+        syncFindingIssues(saved, findings, scannedSourceFiles);
+        long syncIssueNanos = System.nanoTime();
+        log.info("静态报告处理完成 taskId={} findingCount={} scannedFileCount={} staticRisk={} "
+                        + "getTaskMs={} validateMs={} deriveRiskMs={} extractFindingMs={} validateRuleMs={} "
+                        + "saveTaskMs={} replaceFindingMs={} extractScannedFileMs={} syncIssueMs={} totalMs={}",
+                taskId,
+                findings.size(),
+                scannedSourceFiles.size(),
+                staticRisk,
+                elapsedMs(startNanos, getTaskNanos),
+                elapsedMs(getTaskNanos, validateNanos),
+                elapsedMs(validateNanos, deriveRiskNanos),
+                elapsedMs(deriveRiskNanos, extractFindingNanos),
+                elapsedMs(extractFindingNanos, validateRuleNanos),
+                elapsedMs(validateRuleNanos, saveTaskNanos),
+                elapsedMs(saveTaskNanos, replaceFindingNanos),
+                elapsedMs(replaceFindingNanos, extractScannedFileNanos),
+                elapsedMs(extractScannedFileNanos, syncIssueNanos),
+                elapsedMs(startNanos, syncIssueNanos));
         return saved;
     }
 
@@ -316,6 +346,10 @@ public class AnalysisTaskService {
         } catch (NoSuchAlgorithmException e) {
             throw new IllegalStateException("SHA-256 algorithm unavailable", e);
         }
+    }
+
+    private long elapsedMs(long startNanos, long endNanos) {
+        return (endNanos - startNanos) / 1_000_000L;
     }
 
     private static final class DynamicEvidenceIdentity {

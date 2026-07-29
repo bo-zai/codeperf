@@ -11,6 +11,7 @@ import com.cmb.codeperf.cli.attribution.GitRiskAttributionEnricher;
 import com.cmb.codeperf.cli.config.StaticScanConfig;
 import com.cmb.codeperf.cli.module.SourceModuleResolver;
 import com.cmb.codeperf.cli.config.UploadReportConfig;
+import com.cmb.codeperf.cli.git.GitPushRange;
 import com.cmb.codeperf.cli.git.GitDiffResolver;
 import com.cmb.codeperf.cli.project.ProjectContext;
 import com.cmb.codeperf.cli.project.ProjectContextResolver;
@@ -79,12 +80,12 @@ public class ScanCommand {
             ProjectContext context = new ProjectContextResolver().resolve(cwd);
             StaticScanConfig config = context.getConfig().getStaticScan();
             SourceModuleResolver moduleResolver = new SourceModuleResolver(context.getConfig().getModules());
+            GitPushRange pushRange = GitPushRange.current();
 
             // 获取变更文件：变更模式使用 git diff，全量模式遍历 sourceRoots 目录
             List<Path> files = scanAll
                     ? resolveAllSourceFiles(context, config)
-                    : GitDiffResolver.changedJavaFilePaths(context.getRootDirectory(),
-                    config.getBaseRef(), config.getHeadRef(), config.getMode());
+                    : resolveChangedSourceFiles(context, config, pushRange);
 
             // 执行源码扫描：先构建类索引再执行规则，支持跨方法调用链追踪
             SourceScanResult result = new SourceScanner().scan(new SourceScanRequest(
@@ -95,8 +96,8 @@ public class ScanCommand {
                 result = new GitRiskAttributionEnricher().enrich(
                         result,
                         context.getRootDirectory(),
-                        config.getBaseRef(),
-                        config.getHeadRef(),
+                        resolveBaseRef(config, pushRange),
+                        resolveHeadRef(config, pushRange),
                         config.getMode());
             }
 
@@ -129,7 +130,7 @@ public class ScanCommand {
                 System.out.println("[codeperf] 历史风险数量=" + gateDecision.getHistorical() + "，请查看 HTML 报告详情。");
             }
             if (uploadRequested) {
-                uploadReport(context, reportPath);
+                uploadReport(context, reportPath, pushRange);
             }
             return gateDecision.isFailed() ? 1 : 0;
         } catch (Exception e) {
@@ -270,6 +271,20 @@ public class ScanCommand {
         return files;
     }
 
+    private List<Path> resolveChangedSourceFiles(ProjectContext context, StaticScanConfig config,
+                                                 GitPushRange pushRange) throws Exception {
+        return GitDiffResolver.changedJavaFilePaths(context.getRootDirectory(),
+                resolveBaseRef(config, pushRange), resolveHeadRef(config, pushRange), config.getMode());
+    }
+
+    private String resolveBaseRef(StaticScanConfig config, GitPushRange pushRange) {
+        return pushRange.isPresent() ? pushRange.getBaseRef() : config.getBaseRef();
+    }
+
+    private String resolveHeadRef(StaticScanConfig config, GitPushRange pushRange) {
+        return pushRange.isPresent() ? pushRange.getHeadRef() : config.getHeadRef();
+    }
+
     private List<Path> filterConfiguredSourceFiles(ProjectContext context, StaticScanConfig config, List<Path> files) {
         List<Path> roots = new ArrayList<>();
         for (String sourceRoot : SourceModuleResolver.effectiveSourceRoots(config, context.getConfig().getModules())) {
@@ -302,7 +317,7 @@ public class ScanCommand {
         return upload || context.getConfig().getReport().getUpload().isEnabled();
     }
 
-    private void uploadReport(ProjectContext context, Path reportPath) throws Exception {
+    private void uploadReport(ProjectContext context, Path reportPath, GitPushRange pushRange) throws Exception {
         UploadReportConfig uploadConfig = context.getConfig().getReport().getUpload();
         String serverUrl = uploadConfig.getServerUrl();
         if (serverUrl == null || serverUrl.trim().isEmpty()) {
@@ -316,7 +331,7 @@ public class ScanCommand {
                 context.getConfig().getProject(),
                 context.getConfig().getEnv(),
                 metadata.getCommit(),
-                metadata.getBranch(),
+                uploadBranch(metadata, pushRange),
                 metadata.getRemoteUrl(),
                 metadata.getAuthorName(),
                 metadata.getAuthorEmail(),
@@ -327,6 +342,14 @@ public class ScanCommand {
                 new String(Files.readAllBytes(reportPath), StandardCharsets.UTF_8));
         String taskId = new StaticReportUploader().upload(trimTrailingSlash(serverUrl), request);
         System.out.println("[codeperf] static report uploaded, taskId=" + taskId);
+    }
+
+    private String uploadBranch(GitMetadata metadata, GitPushRange pushRange) {
+        if (pushRange.isPresent() && pushRange.getRemoteBranch() != null
+                && !pushRange.getRemoteBranch().trim().isEmpty()) {
+            return pushRange.getRemoteBranch();
+        }
+        return metadata.getBranch();
     }
 
     private String trimTrailingSlash(String value) {

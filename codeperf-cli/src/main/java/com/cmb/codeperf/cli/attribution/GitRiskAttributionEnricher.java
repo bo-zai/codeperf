@@ -54,7 +54,8 @@ public class GitRiskAttributionEnricher {
             enriched.add(finding.withAttribution(attribution));
         }
 
-        return new SourceScanResult(result.getFilesScanned(), enriched, result.getParseErrors());
+        return new SourceScanResult(result.getFilesScanned(), result.getScannedSourceFiles(),
+                enriched, result.getParseErrors());
     }
 
     private ChangedLineSet resolveChangedLines(Path workingDirectory, String base, String head, String diffMode) {

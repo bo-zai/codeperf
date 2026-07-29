@@ -66,6 +66,48 @@ public class GitDiffResolverTest {
         assertEquals(Arrays.asList("src/main/java/com/acme/OrderService.java"), files);
     }
 
+    @Test
+    public void should_ResolvePushRange_When_PrePushEnvironmentProvided() {
+        GitPushRange range = GitPushRange.fromEnvironment(new GitPushRange.EnvironmentReader() {
+            @Override
+            public String get(String name) {
+                if ("CODEPERF_PUSH_OLD_SHA".equals(name)) {
+                    return "1111111";
+                }
+                if ("CODEPERF_PUSH_NEW_SHA".equals(name)) {
+                    return "2222222";
+                }
+                if ("CODEPERF_PUSH_REMOTE_BRANCH".equals(name)) {
+                    return "develop";
+                }
+                return "";
+            }
+        });
+
+        assertEquals("1111111", range.getBaseRef());
+        assertEquals("2222222", range.getHeadRef());
+        assertEquals("develop", range.getRemoteBranch());
+        assertEquals(true, range.isPresent());
+    }
+
+    @Test
+    public void should_IgnoreDeletedRemoteBranch_When_PrePushNewShaIsZero() {
+        GitPushRange range = GitPushRange.fromEnvironment(new GitPushRange.EnvironmentReader() {
+            @Override
+            public String get(String name) {
+                if ("CODEPERF_PUSH_OLD_SHA".equals(name)) {
+                    return "1111111";
+                }
+                if ("CODEPERF_PUSH_NEW_SHA".equals(name)) {
+                    return "0000000000000000000000000000000000000000";
+                }
+                return "";
+            }
+        });
+
+        assertEquals(false, range.isPresent());
+    }
+
     private void write(String file, String content) throws Exception {
         Path path = tempDir.resolve(file);
         Files.createDirectories(path.getParent());

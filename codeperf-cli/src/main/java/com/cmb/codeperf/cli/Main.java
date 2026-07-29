@@ -3,6 +3,7 @@ package com.cmb.codeperf.cli;
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.ParameterException;
 import com.cmb.codeperf.cli.cmd.DoctorCommand;
+import com.cmb.codeperf.cli.cmd.HookPolicyCommand;
 import com.cmb.codeperf.cli.cmd.InitCommand;
 import com.cmb.codeperf.cli.cmd.InstallHooksCommand;
 import com.cmb.codeperf.cli.cmd.ScanCommand;
@@ -28,6 +29,7 @@ public class Main {
         ScanCommand scan = new ScanCommand();
         DoctorCommand doctor = new DoctorCommand();
         InstallHooksCommand installHooks = new InstallHooksCommand();
+        HookPolicyCommand hookPolicy = new HookPolicyCommand();
 
         JCommander jc = JCommander.newBuilder()
                 .programName("codeperf")
@@ -35,6 +37,7 @@ public class Main {
                 .addCommand("scan", scan)
                 .addCommand("doctor", doctor)
                 .addCommand("install-hooks", installHooks)
+                .addCommand("hook-policy", hookPolicy)
                 .build();
 
         if (args.length == 0) {
@@ -80,6 +83,9 @@ public class Main {
                         break;
                     case "install-hooks":
                         exitCode = installHooks.execute();
+                        break;
+                    case "hook-policy":
+                        exitCode = hookPolicy.execute();
                         break;
                     default:
                         System.err.println("未知命令: " + parsed);

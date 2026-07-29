@@ -6,6 +6,8 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
+import java.time.LocalDateTime;
+
 @Data
 @TableName("analysis_task")
 public class AnalysisTask {
@@ -48,5 +50,13 @@ public class AnalysisTask {
     /** 动态证据原始报告JSON */
     @TableField("dynamic_payload")
     private String dynamicPayload;
+
+    /** 创建时间 */
+    @TableField("created_at")
+    private LocalDateTime createdAt;
+
+    /** 更新时间 */
+    @TableField("updated_at")
+    private LocalDateTime updatedAt;
 }
 

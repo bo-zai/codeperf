@@ -3,6 +3,8 @@ package com.cmb.codeperf.server.service.repository.mysql;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.cmb.codeperf.server.model.bo.AnalysisTaskBO;
 import com.cmb.codeperf.server.model.bo.DynamicEvidenceBO;
+import com.cmb.codeperf.server.model.bo.FindingIssueBO;
+import com.cmb.codeperf.server.model.bo.FindingOccurrenceBO;
 import com.cmb.codeperf.server.model.bo.RiskLevel;
 import com.cmb.codeperf.server.model.bo.StaticFindingBO;
 import com.cmb.codeperf.server.model.bo.TaskStatus;
@@ -10,15 +12,20 @@ import com.cmb.codeperf.server.service.repository.AnalysisTaskRepository;
 import com.cmb.codeperf.server.model.entity.AnalysisTask;
 import com.cmb.codeperf.server.model.entity.CodeRepository;
 import com.cmb.codeperf.server.model.entity.DynamicEvidence;
+import com.cmb.codeperf.server.model.entity.FindingIssue;
+import com.cmb.codeperf.server.model.entity.FindingOccurrence;
 import com.cmb.codeperf.server.model.entity.GitCommit;
 import com.cmb.codeperf.server.model.entity.RuleDefinition;
 import com.cmb.codeperf.server.model.entity.StaticFinding;
 import com.cmb.codeperf.server.mapper.AnalysisTaskMapper;
 import com.cmb.codeperf.server.mapper.CodeRepositoryMapper;
 import com.cmb.codeperf.server.mapper.DynamicEvidenceMapper;
+import com.cmb.codeperf.server.mapper.FindingIssueMapper;
+import com.cmb.codeperf.server.mapper.FindingOccurrenceMapper;
 import com.cmb.codeperf.server.mapper.GitCommitMapper;
 import com.cmb.codeperf.server.mapper.RuleDefinitionMapper;
 import com.cmb.codeperf.server.mapper.StaticFindingMapper;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Repository;
 
@@ -26,13 +33,19 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
+@Slf4j
 @Repository
 @ConditionalOnProperty(name = "codeperf.storage.mode", havingValue = "mysql")
 public class MybatisPlusAnalysisTaskRepository implements AnalysisTaskRepository {
+
+    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private final AnalysisTaskMapper mapper;
     private final CodeRepositoryMapper repositoryMapper;
@@ -40,19 +53,25 @@ public class MybatisPlusAnalysisTaskRepository implements AnalysisTaskRepository
     private final StaticFindingMapper staticFindingMapper;
     private final DynamicEvidenceMapper dynamicEvidenceMapper;
     private final RuleDefinitionMapper ruleDefinitionMapper;
+    private final FindingIssueMapper findingIssueMapper;
+    private final FindingOccurrenceMapper findingOccurrenceMapper;
 
     public MybatisPlusAnalysisTaskRepository(AnalysisTaskMapper mapper,
                                              CodeRepositoryMapper repositoryMapper,
                                              GitCommitMapper gitCommitMapper,
                                              StaticFindingMapper staticFindingMapper,
                                              DynamicEvidenceMapper dynamicEvidenceMapper,
-                                             RuleDefinitionMapper ruleDefinitionMapper) {
+                                             RuleDefinitionMapper ruleDefinitionMapper,
+                                             FindingIssueMapper findingIssueMapper,
+                                             FindingOccurrenceMapper findingOccurrenceMapper) {
         this.mapper = mapper;
         this.repositoryMapper = repositoryMapper;
         this.gitCommitMapper = gitCommitMapper;
         this.staticFindingMapper = staticFindingMapper;
         this.dynamicEvidenceMapper = dynamicEvidenceMapper;
         this.ruleDefinitionMapper = ruleDefinitionMapper;
+        this.findingIssueMapper = findingIssueMapper;
+        this.findingOccurrenceMapper = findingOccurrenceMapper;
     }
 
     @Override
@@ -95,6 +114,46 @@ public class MybatisPlusAnalysisTaskRepository implements AnalysisTaskRepository
     }
 
     @Override
+    public List<AnalysisTaskBO> listRecentTasks(int limit) {
+        LambdaQueryWrapper<AnalysisTask> query = new LambdaQueryWrapper<>();
+        query.orderByDesc(AnalysisTask::getId);
+        query.last("LIMIT " + Math.max(limit, 0));
+        List<AnalysisTask> entities = mapper.selectList(query);
+        List<AnalysisTaskBO> result = new java.util.ArrayList<>(entities.size());
+        for (AnalysisTask entity : entities) {
+            result.add(toDomain(entity));
+        }
+        return result;
+    }
+
+    @Override
+    public List<StaticFindingBO> listStaticFindings(String taskId) {
+        LambdaQueryWrapper<StaticFinding> query = new LambdaQueryWrapper<>();
+        query.eq(StaticFinding::getTaskId, taskId);
+        query.orderByAsc(StaticFinding::getSourceFile);
+        query.orderByAsc(StaticFinding::getLineNumber);
+        List<StaticFinding> entities = staticFindingMapper.selectList(query);
+        List<StaticFindingBO> result = new java.util.ArrayList<>(entities.size());
+        for (StaticFinding entity : entities) {
+            result.add(toStaticFindingBO(entity));
+        }
+        return result;
+    }
+
+    @Override
+    public List<DynamicEvidenceBO> listDynamicEvidence(String taskId) {
+        LambdaQueryWrapper<DynamicEvidence> query = new LambdaQueryWrapper<>();
+        query.eq(DynamicEvidence::getTaskId, taskId);
+        query.orderByDesc(DynamicEvidence::getId);
+        List<DynamicEvidence> entities = dynamicEvidenceMapper.selectList(query);
+        List<DynamicEvidenceBO> result = new java.util.ArrayList<>(entities.size());
+        for (DynamicEvidence entity : entities) {
+            result.add(toDynamicEvidenceBO(entity));
+        }
+        return result;
+    }
+
+    @Override
     public void replaceStaticFindings(String taskId, List<StaticFindingBO> findings) {
         LambdaQueryWrapper<StaticFinding> deleteQuery = new LambdaQueryWrapper<>();
         deleteQuery.eq(StaticFinding::getTaskId, taskId);
@@ -130,11 +189,168 @@ public class MybatisPlusAnalysisTaskRepository implements AnalysisTaskRepository
         return ruleDefinitionMapper.selectOne(query) != null;
     }
 
+    @Override
+    public FindingIssueBO saveOrUpdateIssue(AnalysisTaskBO task, StaticFindingBO finding, String issueKey) {
+        CodeRepository repository = saveRepository(task);
+        FindingIssue entity = findIssue(issueKey).orElse(null);
+        if (entity == null) {
+            entity = new FindingIssue();
+            entity.setIssueKey(issueKey);
+            entity.setRepositoryId(repository.getId());
+            entity.setBranchName(task.getBranch());
+            entity.setRuleId(finding.getRuleId());
+            entity.setEvidenceHash(finding.getEvidenceHash());
+            entity.setSourceFile(finding.getSourceFile());
+            entity.setLineNumber(finding.getLineNumber());
+            entity.setLoopMethodName(finding.getLoopMethodName());
+            entity.setIoType(finding.getIoType());
+            entity.setOwnerName(finding.getIntroducedByName());
+            entity.setOwnerEmail(finding.getIntroducedByEmail());
+            entity.setFirstSeenTaskId(task.getAnalysisTaskId());
+            entity.setFirstSeenAt(LocalDateTime.now());
+        }
+        entity.setStatus("OPEN");
+        entity.setSeverity(finding.getSeverity());
+        entity.setLastSeenTaskId(task.getAnalysisTaskId());
+        entity.setRawPayload(finding.getRawPayload());
+        entity.setLastSeenAt(LocalDateTime.now());
+        if (entity.getId() == null) {
+            findingIssueMapper.insert(entity);
+        } else {
+            findingIssueMapper.updateById(entity);
+        }
+        return toFindingIssueBO(entity);
+    }
+
+    @Override
+    public void appendFindingOccurrence(FindingOccurrenceBO occurrence) {
+        FindingOccurrence entity = new FindingOccurrence();
+        entity.setIssueId(occurrence.getIssueId());
+        entity.setTaskId(occurrence.getTaskId());
+        entity.setOccurrenceType(occurrence.getOccurrenceType());
+        entity.setRiskScope(occurrence.getRiskScope());
+        entity.setSeverity(occurrence.getSeverity());
+        entity.setConfidence(occurrence.getConfidence());
+        entity.setRawPayload(occurrence.getRawPayload());
+        FindingOccurrence existing = findOccurrence(occurrence.getIssueId(), occurrence.getTaskId()).orElse(null);
+        if (existing == null) {
+            findingOccurrenceMapper.insert(entity);
+            return;
+        }
+        entity.setId(existing.getId());
+        findingOccurrenceMapper.updateById(entity);
+    }
+
+    @Override
+    public List<FindingIssueBO> listOpenIssues(String remoteUrl, String branch) {
+        CodeRepository repository = findRepository(repoKey(remoteUrl)).orElse(null);
+        if (repository == null) {
+            return new java.util.ArrayList<>();
+        }
+        LambdaQueryWrapper<FindingIssue> query = new LambdaQueryWrapper<>();
+        query.eq(FindingIssue::getRepositoryId, repository.getId());
+        query.eq(FindingIssue::getBranchName, branch);
+        query.eq(FindingIssue::getStatus, "OPEN");
+        query.orderByAsc(FindingIssue::getOwnerEmail);
+        query.orderByAsc(FindingIssue::getSourceFile);
+        List<FindingIssue> entities = findingIssueMapper.selectList(query);
+        List<FindingIssueBO> result = new java.util.ArrayList<>(entities.size());
+        for (FindingIssue entity : entities) {
+            result.add(toFindingIssueBO(entity));
+        }
+        return result;
+    }
+
+    @Override
+    public List<DynamicEvidenceBO> listLatestDynamicEvidence(String remoteUrl, String branch, String env) {
+        List<AnalysisTaskBO> tasks = listRecentTasks(100);
+        for (AnalysisTaskBO task : tasks) {
+            if (same(task.getRemoteUrl(), remoteUrl) && same(task.getBranch(), branch) && same(task.getEnv(), env)) {
+                List<DynamicEvidenceBO> records = listDynamicEvidence(task.getAnalysisTaskId());
+                if (!records.isEmpty()) {
+                    return records;
+                }
+            }
+        }
+        return new java.util.ArrayList<>();
+    }
+
+    @Override
+    public void closeResolvedIssues(AnalysisTaskBO task, List<String> scannedSourceFiles, List<String> currentIssueKeys) {
+        if (scannedSourceFiles == null || scannedSourceFiles.isEmpty()) {
+            return;
+        }
+        CodeRepository repository = saveRepository(task);
+        Set<String> currentKeys = new HashSet<>(currentIssueKeys);
+        List<String> normalizedSourceFiles = normalizeSourceFiles(scannedSourceFiles);
+        if (normalizedSourceFiles.isEmpty()) {
+            return;
+        }
+        LambdaQueryWrapper<FindingIssue> query = new LambdaQueryWrapper<>();
+        query.eq(FindingIssue::getRepositoryId, repository.getId());
+        query.eq(FindingIssue::getBranchName, task.getBranch());
+        query.eq(FindingIssue::getStatus, "OPEN");
+        query.in(FindingIssue::getSourceFile, normalizedSourceFiles);
+        List<FindingIssue> issues = findingIssueMapper.selectList(query);
+        for (FindingIssue issue : issues) {
+            if (currentKeys.contains(issue.getIssueKey())) {
+                continue;
+            }
+            issue.setStatus("FIXED");
+            issue.setFixedTaskId(task.getAnalysisTaskId());
+            issue.setFixedAt(LocalDateTime.now());
+            findingIssueMapper.updateById(issue);
+            appendFixedOccurrence(task, issue);
+        }
+    }
+
     private Optional<AnalysisTask> findEntity(String taskId) {
         LambdaQueryWrapper<AnalysisTask> query = new LambdaQueryWrapper<>();
         query.eq(AnalysisTask::getTaskId, taskId);
         query.last("LIMIT 1");
         return Optional.ofNullable(mapper.selectOne(query));
+    }
+
+    private void appendFixedOccurrence(AnalysisTaskBO task, FindingIssue issue) {
+        FindingOccurrenceBO occurrence = new FindingOccurrenceBO();
+        occurrence.setIssueId(issue.getId());
+        occurrence.setTaskId(task.getAnalysisTaskId());
+        occurrence.setOccurrenceType("FIXED");
+        occurrence.setRiskScope("FIXED");
+        occurrence.setSeverity(issue.getSeverity());
+        occurrence.setConfidence("");
+        occurrence.setRawPayload(issue.getRawPayload());
+        appendFindingOccurrence(occurrence);
+    }
+
+    private List<String> normalizeSourceFiles(List<String> scannedSourceFiles) {
+        List<String> result = new java.util.ArrayList<>(scannedSourceFiles.size());
+        for (String sourceFile : scannedSourceFiles) {
+            String normalized = normalizeSourceFile(sourceFile);
+            if (!normalized.isEmpty() && !result.contains(normalized)) {
+                result.add(normalized);
+            }
+        }
+        return result;
+    }
+
+    private String normalizeSourceFile(String sourceFile) {
+        return sourceFile == null ? "" : sourceFile.trim().replace('\\', '/');
+    }
+
+    private Optional<FindingIssue> findIssue(String issueKey) {
+        LambdaQueryWrapper<FindingIssue> query = new LambdaQueryWrapper<>();
+        query.eq(FindingIssue::getIssueKey, issueKey);
+        query.last("LIMIT 1");
+        return Optional.ofNullable(findingIssueMapper.selectOne(query));
+    }
+
+    private Optional<FindingOccurrence> findOccurrence(Long issueId, String taskId) {
+        LambdaQueryWrapper<FindingOccurrence> query = new LambdaQueryWrapper<>();
+        query.eq(FindingOccurrence::getIssueId, issueId);
+        query.eq(FindingOccurrence::getTaskId, taskId);
+        query.last("LIMIT 1");
+        return Optional.ofNullable(findingOccurrenceMapper.selectOne(query));
     }
 
     private AnalysisTask toEntity(AnalysisTaskBO task, CodeRepository repository, GitCommit gitCommit) {
@@ -174,6 +390,61 @@ public class MybatisPlusAnalysisTaskRepository implements AnalysisTaskRepository
         return entity;
     }
 
+    private StaticFindingBO toStaticFindingBO(StaticFinding entity) {
+        StaticFindingBO finding = new StaticFindingBO();
+        finding.setTaskId(entity.getTaskId());
+        finding.setRuleId(entity.getRuleId());
+        finding.setSeverity(entity.getSeverity());
+        finding.setConfidence(entity.getConfidence());
+        finding.setSourceFile(entity.getSourceFile());
+        finding.setLineNumber(value(entity.getLineNumber()));
+        finding.setLoopStartLine(value(entity.getLoopStartLine()));
+        finding.setLoopEndLine(value(entity.getLoopEndLine()));
+        finding.setLoopMethodName(entity.getLoopMethodName());
+        finding.setIoType(entity.getIoType());
+        finding.setRiskScope(entity.getRiskScope());
+        finding.setChangedLine(Boolean.TRUE.equals(entity.getChangedLine()));
+        finding.setIntroducedByName(entity.getIntroducedByName());
+        finding.setIntroducedByEmail(entity.getIntroducedByEmail());
+        finding.setIntroducedCommit(entity.getIntroducedCommit());
+        finding.setIntroducedCommitTime(entity.getIntroducedCommitTime());
+        finding.setEvidenceHash(entity.getEvidenceHash());
+        finding.setRawPayload(entity.getRawPayload());
+        return finding;
+    }
+
+    private DynamicEvidenceBO toDynamicEvidenceBO(DynamicEvidence entity) {
+        DynamicEvidenceBO evidence = new DynamicEvidenceBO();
+        evidence.setTaskId(entity.getTaskId());
+        evidence.setEnv(entity.getEnvName());
+        evidence.setAppName(entity.getAppName());
+        evidence.setEntryKey(entity.getEntryKey());
+        evidence.setRawPayload(entity.getRawPayload());
+        return evidence;
+    }
+
+    private FindingIssueBO toFindingIssueBO(FindingIssue entity) {
+        FindingIssueBO issue = new FindingIssueBO();
+        issue.setId(entity.getId());
+        issue.setIssueKey(entity.getIssueKey());
+        issue.setRepositoryId(entity.getRepositoryId());
+        issue.setBranchName(entity.getBranchName());
+        issue.setRuleId(entity.getRuleId());
+        issue.setEvidenceHash(entity.getEvidenceHash());
+        issue.setSourceFile(entity.getSourceFile());
+        issue.setLineNumber(value(entity.getLineNumber()));
+        issue.setLoopMethodName(entity.getLoopMethodName());
+        issue.setIoType(entity.getIoType());
+        issue.setOwnerName(entity.getOwnerName());
+        issue.setOwnerEmail(entity.getOwnerEmail());
+        issue.setStatus(entity.getStatus());
+        issue.setSeverity(entity.getSeverity());
+        issue.setFirstSeenTaskId(entity.getFirstSeenTaskId());
+        issue.setLastSeenTaskId(entity.getLastSeenTaskId());
+        issue.setRawPayload(entity.getRawPayload());
+        return issue;
+    }
+
     private AnalysisTaskBO toDomain(AnalysisTask entity) {
         CodeRepository repository = repositoryMapper.selectById(entity.getRepositoryId());
         GitCommit gitCommit = gitCommitMapper.selectById(entity.getGitCommitId());
@@ -195,6 +466,8 @@ public class MybatisPlusAnalysisTaskRepository implements AnalysisTaskRepository
         task.setStaticRiskLevel(RiskLevel.valueOf(entity.getStaticRiskLevel()));
         task.setStaticPayload(entity.getStaticPayload());
         task.setDynamicPayload(entity.getDynamicPayload());
+        task.setCreatedAt(formatDateTime(entity.getCreatedAt()));
+        task.setUpdatedAt(formatDateTime(entity.getUpdatedAt()));
         return task;
     }
 
@@ -336,17 +609,19 @@ public class MybatisPlusAnalysisTaskRepository implements AnalysisTaskRepository
         }
         try {
             return OffsetDateTime.parse(value).toLocalDateTime();
-        } catch (DateTimeParseException ignored) {
+        } catch (DateTimeParseException e) {
+            log.debug("无法使用 OffsetDateTime 格式解析时间: {}", value);
         }
         try {
             return LocalDateTime.parse(value);
         } catch (DateTimeParseException e) {
+            log.debug("无法解析作者时间，所有格式均不匹配: {}", value);
             return null;
         }
     }
 
     private String formatDateTime(LocalDateTime dateTime) {
-        return dateTime == null ? "" : dateTime.toString();
+        return dateTime == null ? "" : dateTime.format(DATE_TIME_FORMATTER);
     }
 
     private String firstNonBlank(String primary, String fallback) {
@@ -355,5 +630,12 @@ public class MybatisPlusAnalysisTaskRepository implements AnalysisTaskRepository
         }
         return fallback;
     }
-}
 
+    private boolean same(String left, String right) {
+        return firstNonBlank(left, "").trim().equals(firstNonBlank(right, "").trim());
+    }
+
+    private int value(Integer value) {
+        return value == null ? 0 : value;
+    }
+}

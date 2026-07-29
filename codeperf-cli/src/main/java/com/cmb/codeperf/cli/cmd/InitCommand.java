@@ -193,6 +193,10 @@ public class InitCommand {
                 .append("    enabled: true\n")
                 .append("    maxDepth: 2\n");
         appendModules(builder, roots);
+        builder.append("gitHooks:\n")
+                .append("  prePush:\n")
+                .append("    blockOnFailure: false\n")
+                .append("\n");
         builder.append("report:\n")
                 .append("  local:\n")
                 .append("    enabled: true\n")

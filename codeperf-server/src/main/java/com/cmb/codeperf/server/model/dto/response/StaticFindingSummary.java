@@ -12,6 +12,7 @@ public class StaticFindingSummary {
     private String severity;
     private String confidence;
     private String sourceFile;
+    private String evidence;
     private int lineNumber;
     private int loopStartLine;
     private int loopEndLine;

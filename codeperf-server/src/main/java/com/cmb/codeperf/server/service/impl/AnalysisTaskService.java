@@ -3,6 +3,8 @@ package com.cmb.codeperf.server.service.impl;
 import com.cmb.codeperf.server.model.bo.AnalysisTaskBO;
 import com.cmb.codeperf.server.model.bo.AnalysisTaskCreateBO;
 import com.cmb.codeperf.server.model.bo.DynamicEvidenceBO;
+import com.cmb.codeperf.server.model.bo.FindingIssueBO;
+import com.cmb.codeperf.server.model.bo.FindingOccurrenceBO;
 import com.cmb.codeperf.server.model.bo.RiskLevel;
 import com.cmb.codeperf.server.model.bo.StaticFindingBO;
 import com.cmb.codeperf.server.model.bo.TaskStatus;
@@ -16,6 +18,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
@@ -75,6 +78,7 @@ public class AnalysisTaskService {
         validateRuleDefinitions(findings);
         AnalysisTaskBO saved = repository.save(task);
         repository.replaceStaticFindings(taskId, findings);
+        syncFindingIssues(saved, findings, extractScannedSourceFiles(payload, findings));
         return saved;
     }
 
@@ -158,7 +162,7 @@ public class AnalysisTaskService {
                 record.setIntroducedCommit(text(attribution, "introducedCommit"));
                 record.setIntroducedCommitTime(text(attribution, "introducedCommitTime"));
                 record.setRawPayload(finding.toString());
-                record.setEvidenceHash(sha256(finding.toString()));
+                record.setEvidenceHash(stableEvidenceHash(finding));
                 records.add(record);
             }
             return records;
@@ -217,6 +221,74 @@ public class AnalysisTaskService {
                 throw new IllegalArgumentException("undefined static ruleId: " + finding.getRuleId());
             }
         }
+    }
+
+    private void syncFindingIssues(AnalysisTaskBO task, List<StaticFindingBO> findings, List<String> scannedSourceFiles) {
+        List<String> currentIssueKeys = new ArrayList<>();
+        for (StaticFindingBO finding : findings) {
+            String issueKey = issueKey(task, finding);
+            currentIssueKeys.add(issueKey);
+            FindingIssueBO issue = repository.saveOrUpdateIssue(task, finding, issueKey);
+            FindingOccurrenceBO occurrence = new FindingOccurrenceBO();
+            occurrence.setIssueId(issue.getId());
+            occurrence.setTaskId(task.getAnalysisTaskId());
+            occurrence.setOccurrenceType("NEW".equals(finding.getRiskScope()) ? "NEW" : "EXISTING");
+            occurrence.setRiskScope(finding.getRiskScope());
+            occurrence.setSeverity(finding.getSeverity());
+            occurrence.setConfidence(finding.getConfidence());
+            occurrence.setRawPayload(finding.getRawPayload());
+            repository.appendFindingOccurrence(occurrence);
+        }
+        repository.closeResolvedIssues(task, scannedSourceFiles, currentIssueKeys);
+    }
+
+    private String issueKey(AnalysisTaskBO task, StaticFindingBO finding) {
+        return sha256(valueOrEmpty(task.getRemoteUrl()).toLowerCase()
+                + "|" + valueOrEmpty(task.getBranch())
+                + "|" + valueOrEmpty(finding.getRuleId())
+                + "|" + valueOrEmpty(finding.getSourceFile()).replace('\\', '/')
+                + "|" + valueOrEmpty(finding.getLoopMethodName())
+                + "|" + valueOrEmpty(finding.getEvidenceHash()));
+    }
+
+    private String stableEvidenceHash(JsonNode finding) {
+        return sha256(text(finding, "ruleId")
+                + "|" + text(finding, "sourceFile").replace('\\', '/')
+                + "|" + text(finding, "loopMethodName")
+                + "|" + text(finding, "ioType")
+                + "|" + text(finding, "evidence"));
+    }
+
+    private List<String> extractScannedSourceFiles(String payload, List<StaticFindingBO> findings) {
+        try {
+            JsonNode root = mapper.readTree(payload);
+            JsonNode scannedSourceFiles = root.path("scannedSourceFiles");
+            if (scannedSourceFiles.isArray()) {
+                List<String> files = new ArrayList<>();
+                for (JsonNode file : scannedSourceFiles) {
+                    String value = file.asText("");
+                    if (!value.trim().isEmpty()) {
+                        files.add(normalizeSourceFile(value));
+                    }
+                }
+                return files;
+            }
+        } catch (IOException e) {
+            return Collections.emptyList();
+        }
+        // 旧版本报告没有 scannedSourceFiles，只能认为 finding 所在文件被扫描过，避免空 findings 误关全分支。
+        List<String> files = new ArrayList<>();
+        for (StaticFindingBO finding : findings) {
+            String sourceFile = normalizeSourceFile(finding.getSourceFile());
+            if (!sourceFile.isEmpty() && !files.contains(sourceFile)) {
+                files.add(sourceFile);
+            }
+        }
+        return files;
+    }
+
+    private String normalizeSourceFile(String sourceFile) {
+        return sourceFile == null ? "" : sourceFile.trim().replace('\\', '/');
     }
 
     private String text(JsonNode node, String field) {

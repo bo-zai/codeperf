@@ -32,6 +32,8 @@ public class InitCommandTest {
         assertFalse(Files.exists(tempDir.resolve(".codeperf/agent.yml")));
         String config = configText(tempDir);
         assertTrue(config.contains("report:\n"));
+        assertTrue(config.contains("gitHooks:\n"));
+        assertTrue(config.contains("    blockOnFailure: false\n"));
         assertTrue(config.contains("    path: .codeperf/report/source-report.json\n"));
         assertTrue(config.contains("    enabled: false\n"));
         assertFalse(config.contains("agent:\n"));

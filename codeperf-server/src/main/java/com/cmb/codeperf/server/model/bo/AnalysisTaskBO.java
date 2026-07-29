@@ -2,8 +2,13 @@ package com.cmb.codeperf.server.model.bo;
 
 import lombok.Data;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+
 @Data
 public class AnalysisTaskBO {
+    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
     private final String analysisTaskId;
     private final String project;
     private final String remoteUrl;
@@ -21,6 +26,8 @@ public class AnalysisTaskBO {
     private RiskLevel staticRiskLevel;
     private String staticPayload;
     private String dynamicPayload;
+    private String createdAt;
+    private String updatedAt;
 
     public AnalysisTaskBO(String analysisTaskId, String project, String commit, String branch, String env) {
         this(analysisTaskId, project, "", commit, branch, env, "", "", "", "", "", "");
@@ -44,6 +51,12 @@ public class AnalysisTaskBO {
         this.status = TaskStatus.CREATED;
         this.riskLevel = RiskLevel.NONE;
         this.staticRiskLevel = RiskLevel.NONE;
+        this.createdAt = now();
+        this.updatedAt = this.createdAt;
+    }
+
+    private String now() {
+        return LocalDateTime.now().format(DATE_TIME_FORMATTER);
     }
 }
 

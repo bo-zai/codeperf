@@ -77,7 +77,16 @@ public class SourceScanner {
         }
 
         // 去重策略：保留最高严重度和置信度的发现，避免同一风险多次报告
-        return new SourceScanResult(parsedSources.size(), deduplicate(findings), parseErrors);
+        return new SourceScanResult(parsedSources.size(), scannedSourceFiles(request, parsedSources),
+                deduplicate(findings), parseErrors);
+    }
+
+    private List<String> scannedSourceFiles(SourceScanRequest request, List<ParsedSource> parsedSources) {
+        List<String> files = new ArrayList<>(parsedSources.size());
+        for (ParsedSource parsedSource : parsedSources) {
+            files.add(reportSourceFile(request.getRootDirectory(), parsedSource.getFile()));
+        }
+        return files;
     }
 
     private List<SourceFinding> deduplicate(List<SourceFinding> findings) {

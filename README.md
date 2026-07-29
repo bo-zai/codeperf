@@ -41,7 +41,7 @@ java -jar codeperf-cli/target/codeperf-cli.jar doctor
 
 ## CLI 使用
 
-`codeperf` 当前只提供四个命令：
+`codeperf` 当前常用命令：
 
 | 命令 | 说明 |
 |---|---|
@@ -50,7 +50,7 @@ java -jar codeperf-cli/target/codeperf-cli.jar doctor
 | `codeperf scan` | 扫描 Git 变更的 Java 源文件，默认输出 `.codeperf/report/source-report.json`。 |
 | `codeperf scan --all` | 扫描 `.codeperf.yml` 中配置的全部源码目录。 |
 | `codeperf scan --upload` | 扫描后上传静态报告到 CodePerf Server；上传是显式行为，默认不启用。 |
-| `codeperf install-hooks` | 安装本地 pre-push 提醒；如果 `.git/hooks/pre-push` 已存在，不会覆盖，只输出需要手工合并的片段。 |
+| `codeperf install-hooks` | 安装本地 pre-push 提醒；默认扫描失败只提示并允许推送，可通过 `gitHooks.prePush.blockOnFailure=true` 改为阻断。已存在的 hook 不会覆盖，只输出需要手工合并的片段。 |
 
 真实业务项目接入的最小流程：
 
@@ -110,6 +110,10 @@ staticScan:
   callChain:
     enabled: true
     maxDepth: 2
+
+gitHooks:
+  prePush:
+    blockOnFailure: false
 
 report:
   local:
@@ -175,6 +179,10 @@ modules:
     sourceRoots:
       - mall-security/src/main/java
 
+gitHooks:
+  prePush:
+    blockOnFailure: false
+
 report:
   local:
     enabled: true
@@ -202,6 +210,7 @@ report:
 | `staticScan.callChain.maxDepth` | 是 | 谨慎调整 | 调用链最大追踪深度。默认 `2`，适合第一阶段；调大可能发现更多间接风险，也可能增加误报和扫描成本。 |
 | `staticScan.ioTypes` | 否，部分示例包含 | 暂不建议依赖 | 计划中的 I/O 类型配置项。当前主要识别逻辑仍在内置 matcher 中，后续会演进为可配置规则。 |
 | `modules` | 是 | 通常不用 | 多模块源码映射。`codeperf init` 会根据发现的 `*/src/main/java` 自动生成；如果仓库有非标准模块路径，可以手工调整。 |
+| `gitHooks.prePush.blockOnFailure` | 是 | 视治理阶段调整 | pre-push 钩子扫描失败时是否中止推送。默认 `false`，只提示风险并允许推送；如果仓库进入强门禁阶段，改为 `true` 后会在扫描未通过时阻断 push。 |
 | `report.local.enabled` | 是 | 通常不用 | 是否生成本地静态扫描报告。默认开启；企业接入初期建议保留，便于离线排查和复现。 |
 | `report.local.path` | 是 | 通常不用 | 本地静态扫描报告路径。默认 `.codeperf/report/source-report.json`，也可通过 `codeperf scan --output <path>` 临时覆盖。 |
 | `report.upload.enabled` | 是 | 视团队策略调整 | 是否默认上传静态扫描结果。默认关闭；建议先使用 `codeperf scan --upload` 显式验证，再考虑开启。 |

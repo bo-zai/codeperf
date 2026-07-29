@@ -29,9 +29,11 @@ public class AgentInstallConfigController {
 
     @PostMapping
     public AgentInstallConfigResponse config(@RequestBody AgentInstallConfigRequest request) {
-        log.info("event=codeperf.agent.install_config.request project={} remoteUrl={} commit={} branch={} env={} authorName={} authorEmail={} commitTime={} commitMessage={}",
-                request.getProject(), request.getRemoteUrl(), request.getCommit(), request.getBranch(), request.getEnv(),
-                request.getAuthorName(), request.getAuthorEmail(), request.getCommitTime(), request.getCommitMessage());
+        log.info("event=codeperf.agent.install_config.request project={} remoteUrl={} commit={} branch={} env={} " +
+                        "authorName={} authorEmail={} commitTime={} commitMessage={}",
+                request.getProject(), request.getRemoteUrl(), request.getCommit(), request.getBranch(),
+                request.getEnv(), request.getAuthorName(), request.getAuthorEmail(),
+                request.getCommitTime(), request.getCommitMessage());
         AgentInstallConfigResponse response = new AgentInstallConfigResponse();
         response.setEnabled(properties.isEnabled());
         response.setServerUrl(properties.getServerUrl());

@@ -41,6 +41,7 @@ public class CodePerfCliConfig {
     private String project;
     private StaticScanConfig staticScan = new StaticScanConfig();
     private ReportConfig report = new ReportConfig();
+    private GitHooksConfig gitHooks = new GitHooksConfig();
     private List<ModuleScanConfig> modules = new ArrayList<>();
     private String classesDir;
     private String env = "local";
@@ -68,6 +69,10 @@ public class CodePerfCliConfig {
         Object report = yaml.get("report");
         if (report instanceof Map) {
             applyReport(config.report, (Map<String, Object>) report);
+        }
+        Object gitHooks = yaml.get("gitHooks");
+        if (gitHooks instanceof Map) {
+            applyGitHooks(config.gitHooks, (Map<String, Object>) gitHooks);
         }
         Object modules = yaml.get("modules");
         if (modules instanceof List) {
@@ -119,6 +124,18 @@ public class CodePerfCliConfig {
     private static void applyUploadReport(UploadReportConfig config, Map<String, Object> yaml) {
         config.setEnabled(booleanValue(yaml.get("enabled"), config.isEnabled()));
         config.setServerUrl(stringValue(yaml.get("serverUrl"), config.getServerUrl()));
+    }
+
+    @SuppressWarnings("unchecked")
+    private static void applyGitHooks(GitHooksConfig config, Map<String, Object> yaml) {
+        Object prePush = yaml.get("prePush");
+        if (prePush instanceof Map) {
+            applyPrePush(config.getPrePush(), (Map<String, Object>) prePush);
+        }
+    }
+
+    private static void applyPrePush(PrePushHookConfig config, Map<String, Object> yaml) {
+        config.setBlockOnFailure(booleanValue(yaml.get("blockOnFailure"), config.isBlockOnFailure()));
     }
 
     @SuppressWarnings("unchecked")

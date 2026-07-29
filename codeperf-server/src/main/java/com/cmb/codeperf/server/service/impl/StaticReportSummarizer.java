@@ -45,6 +45,7 @@ public class StaticReportSummarizer {
                     text(finding, "severity"),
                     text(finding, "confidence"),
                     text(finding, "sourceFile"),
+                    text(finding, "evidence"),
                     finding.path("lineNumber").asInt(0),
                     finding.path("loopStartLine").asInt(0),
                     finding.path("loopEndLine").asInt(0),

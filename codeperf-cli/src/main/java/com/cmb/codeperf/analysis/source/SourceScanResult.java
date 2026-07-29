@@ -1,8 +1,9 @@
 package com.cmb.codeperf.analysis.source;
 
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -16,10 +17,24 @@ import java.util.List;
  * </ul>
  */
 @Getter
-@AllArgsConstructor
 public class SourceScanResult {
     private final int filesScanned;
+    private final List<String> scannedSourceFiles;
     private final List<SourceFinding> findings;
     private final List<String> parseErrors;
+
+    public SourceScanResult(int filesScanned, List<SourceFinding> findings, List<String> parseErrors) {
+        this(filesScanned, Collections.<String>emptyList(), findings, parseErrors);
+    }
+
+    public SourceScanResult(int filesScanned, List<String> scannedSourceFiles, List<SourceFinding> findings,
+                            List<String> parseErrors) {
+        this.filesScanned = filesScanned;
+        this.scannedSourceFiles = scannedSourceFiles == null
+                ? Collections.<String>emptyList()
+                : Collections.unmodifiableList(new ArrayList<>(scannedSourceFiles));
+        this.findings = findings;
+        this.parseErrors = parseErrors;
+    }
 }
 

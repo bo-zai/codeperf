@@ -2,6 +2,8 @@ package com.cmb.codeperf.server.service.repository;
 
 import com.cmb.codeperf.server.model.bo.AnalysisTaskBO;
 import com.cmb.codeperf.server.model.bo.DynamicEvidenceBO;
+import com.cmb.codeperf.server.model.bo.FindingIssueBO;
+import com.cmb.codeperf.server.model.bo.FindingOccurrenceBO;
 import com.cmb.codeperf.server.model.bo.StaticFindingBO;
 
 import java.util.List;
@@ -41,10 +43,44 @@ public interface AnalysisTaskRepository {
      */
     Optional<AnalysisTaskBO> findLatestByCommitIdentity(String remoteUrl, String commit, String branch, String env);
 
+    /**
+     * 查询最近创建的分析任务。
+     *
+     * @param limit 返回数量上限
+     * @return 最近任务列表，按创建顺序倒序
+     */
+    List<AnalysisTaskBO> listRecentTasks(int limit);
+
+    /**
+     * 查询任务下的静态风险明细。
+     *
+     * @param taskId 分析任务 ID
+     * @return 静态风险列表
+     */
+    List<StaticFindingBO> listStaticFindings(String taskId);
+
+    /**
+     * 查询任务下的动态运行证据。
+     *
+     * @param taskId 分析任务 ID
+     * @return 动态证据列表
+     */
+    List<DynamicEvidenceBO> listDynamicEvidence(String taskId);
+
     void replaceStaticFindings(String taskId, List<StaticFindingBO> findings);
 
     void appendDynamicEvidence(DynamicEvidenceBO evidence);
 
     boolean isRuleDefined(String ruleId);
+
+    FindingIssueBO saveOrUpdateIssue(AnalysisTaskBO task, StaticFindingBO finding, String issueKey);
+
+    void appendFindingOccurrence(FindingOccurrenceBO occurrence);
+
+    List<FindingIssueBO> listOpenIssues(String remoteUrl, String branch);
+
+    List<DynamicEvidenceBO> listLatestDynamicEvidence(String remoteUrl, String branch, String env);
+
+    void closeResolvedIssues(AnalysisTaskBO task, List<String> scannedSourceFiles, List<String> currentIssueKeys);
 }
 

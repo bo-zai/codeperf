@@ -42,7 +42,10 @@ public class CodePerfCliConfigTest {
                         + "    path: .codeperf/report/custom-source-report.json\n"
                         + "  upload:\n"
                         + "    enabled: true\n"
-                        + "    serverUrl: http://codeperf-report.company.com\n").getBytes(StandardCharsets.UTF_8));
+                        + "    serverUrl: http://codeperf-report.company.com\n"
+                        + "gitHooks:\n"
+                        + "  prePush:\n"
+                        + "    blockOnFailure: true\n").getBytes(StandardCharsets.UTF_8));
 
         CodePerfCliConfig loaded = CodePerfCliConfig.load(config);
 
@@ -63,6 +66,7 @@ public class CodePerfCliConfigTest {
         assertEquals(".codeperf/report/custom-source-report.json", loaded.getReport().getLocal().getPath());
         assertTrue(loaded.getReport().getUpload().isEnabled());
         assertEquals("http://codeperf-report.company.com", loaded.getReport().getUpload().getServerUrl());
+        assertTrue(loaded.getGitHooks().getPrePush().isBlockOnFailure());
     }
 
     @Test
@@ -84,6 +88,7 @@ public class CodePerfCliConfigTest {
         assertTrue(loaded.getReport().getLocal().isEnabled());
         assertEquals(".codeperf/report/source-report.json", loaded.getReport().getLocal().getPath());
         assertFalse(loaded.getReport().getUpload().isEnabled());
+        assertFalse(loaded.getGitHooks().getPrePush().isBlockOnFailure());
     }
 
     @Test

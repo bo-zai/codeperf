@@ -46,10 +46,13 @@ public class AgentInstallConfigController {
         response.setEntry(entry());
         response.setSlowSqlMs(properties.getSlowSqlMs());
         response.setSampleMs(properties.getSampleMs());
+        response.setConnectTimeoutMs(properties.getConnectTimeoutMs());
+        response.setReadTimeoutMs(properties.getReadTimeoutMs());
         response.setMode(properties.getMode());
-        log.info("event=codeperf.agent.install_config.response enabled={} appName={} env={} targetPackages={} excludedPackages={} entryMethod={} entryPath={} mode={}",
+        log.info("event=codeperf.agent.install_config.response enabled={} appName={} env={} targetPackages={} excludedPackages={} entryMethod={} entryPath={} mode={} connectTimeoutMs={} readTimeoutMs={}",
                 response.isEnabled(), response.getAppName(), response.getEnv(), response.getTargetPackages(),
-                response.getExcludedPackages(), response.getEntry().getMethod(), response.getEntry().getPath(), response.getMode());
+                response.getExcludedPackages(), response.getEntry().getMethod(), response.getEntry().getPath(),
+                response.getMode(), response.getConnectTimeoutMs(), response.getReadTimeoutMs());
         return response;
     }
 

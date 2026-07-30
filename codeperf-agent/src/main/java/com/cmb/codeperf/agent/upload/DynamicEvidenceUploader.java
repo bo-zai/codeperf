@@ -15,11 +15,13 @@ import java.nio.charset.StandardCharsets;
  */
 public class DynamicEvidenceUploader {
 
-    private static final int CONNECT_TIMEOUT_MS = 3000;
-    private static final int READ_TIMEOUT_MS = 10000;
+    private static final int DEFAULT_CONNECT_TIMEOUT_MS = 5000;
+    private static final int DEFAULT_READ_TIMEOUT_MS = 60000;
 
     private final String baseUrl;
     private final String analysisTaskId;
+    private final int connectTimeoutMs;
+    private final int readTimeoutMs;
     private final String appName;
     private final String env;
     private final String remoteUrl;
@@ -27,13 +29,29 @@ public class DynamicEvidenceUploader {
     private final String branch;
 
     public DynamicEvidenceUploader(String baseUrl, String analysisTaskId) {
-        this(baseUrl, analysisTaskId, null, null, null, null, null);
+        this(baseUrl, analysisTaskId, DEFAULT_CONNECT_TIMEOUT_MS, DEFAULT_READ_TIMEOUT_MS,
+                null, null, null, null, null);
     }
 
     public DynamicEvidenceUploader(String baseUrl, String analysisTaskId, String appName, String env,
                                    String remoteUrl, String commit, String branch) {
+        this(baseUrl, analysisTaskId, DEFAULT_CONNECT_TIMEOUT_MS, DEFAULT_READ_TIMEOUT_MS,
+                appName, env, remoteUrl, commit, branch);
+    }
+
+    public DynamicEvidenceUploader(String baseUrl,
+                                   String analysisTaskId,
+                                   int connectTimeoutMs,
+                                   int readTimeoutMs,
+                                   String appName,
+                                   String env,
+                                   String remoteUrl,
+                                   String commit,
+                                   String branch) {
         this.baseUrl = normalizeBaseUrl(baseUrl);
         this.analysisTaskId = analysisTaskId;
+        this.connectTimeoutMs = positiveOrDefault(connectTimeoutMs, DEFAULT_CONNECT_TIMEOUT_MS);
+        this.readTimeoutMs = positiveOrDefault(readTimeoutMs, DEFAULT_READ_TIMEOUT_MS);
         this.appName = appName;
         this.env = env;
         this.remoteUrl = remoteUrl;
@@ -52,7 +70,10 @@ public class DynamicEvidenceUploader {
         byte[] bytes = requestPayload(payload).getBytes(StandardCharsets.UTF_8);
         connection.setDoOutput(true);
         connection.setRequestProperty("Content-Type", "application/json");
-        AgentLogger.info("dynamic evidence uploading, url=" + uploadUrl() + ", bytes=" + bytes.length);
+        AgentLogger.info("dynamic evidence uploading, url=" + uploadUrl()
+                + ", bytes=" + bytes.length
+                + ", connectTimeoutMs=" + connectTimeoutMs
+                + ", readTimeoutMs=" + readTimeoutMs);
         // 动态证据无 taskId 时依赖这组身份回挂静态扫描任务，必须在目标应用日志中可直接核对。
         AgentLogger.info("dynamic identity analysisTaskId=" + valueOrUnknown(analysisTaskId)
                 + ", appName=" + valueOrUnknown(appName)
@@ -74,8 +95,8 @@ public class DynamicEvidenceUploader {
     private HttpURLConnection open() throws IOException {
         URL url = new URL(uploadUrl());
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-        connection.setConnectTimeout(CONNECT_TIMEOUT_MS);
-        connection.setReadTimeout(READ_TIMEOUT_MS);
+        connection.setConnectTimeout(connectTimeoutMs);
+        connection.setReadTimeout(readTimeoutMs);
         connection.setRequestMethod("POST");
         connection.setRequestProperty("Accept", "application/json");
         return connection;
@@ -168,6 +189,10 @@ public class DynamicEvidenceUploader {
 
     private String valueOrUnknown(String value) {
         return isBlank(value) ? "unknown" : value.trim();
+    }
+
+    private int positiveOrDefault(int value, int defaultValue) {
+        return value > 0 ? value : defaultValue;
     }
 }
 

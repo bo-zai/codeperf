@@ -58,6 +58,92 @@ public class RuntimeEvidenceAggregatorTest {
         assertEquals("当前没有找到能够直接对应这条静态风险的运行证据。", summary.getText());
     }
 
+    @Test
+    public void should_CorroborateByMybatisMappedStatement_When_CallTreeOnlyContainsInterceptor() {
+        StaticFindingSummary finding = finding("orderMapper.selectById(userId)");
+        DynamicEvidenceBO evidence = new DynamicEvidenceBO();
+        evidence.setTaskId("task-1");
+        evidence.setAppName("order-service");
+        evidence.setEnv("dev");
+        evidence.setEntryKey("GET /demo/orders");
+        evidence.setRawPayload("{"
+                + "\"evidence\":{\"requests\":[{"
+                + "\"httpMethod\":\"GET\","
+                + "\"path\":\"/demo/orders\","
+                + "\"callTree\":{\"method\":\"ROOT\",\"count\":0,\"children\":[{"
+                + "\"method\":\"com.cmb.demo.mybatis.TraceInterceptor.intercept\","
+                + "\"count\":1,\"children\":[]"
+                + "}]},"
+                + "\"ioEvents\":[{"
+                + "\"ioType\":\"DB\","
+                + "\"framework\":\"MYBATIS\","
+                + "\"operation\":\"SELECT\","
+                + "\"mappedStatementId\":\"com.cmb.demo.OrderMapper.selectById\","
+                + "\"className\":\"com.cmb.demo.OrderMapper\","
+                + "\"methodName\":\"selectById\","
+                + "\"count\":5,"
+                + "\"elapsedMs\":11,"
+                + "\"businessCallPath\":\"OrderService.preview\""
+                + "}]"
+                + "}]}}");
+
+        Map<String, RuntimeCorroborationSummaryVO> summaries = aggregator.aggregate(Arrays.asList(finding),
+                Arrays.asList(evidence));
+        RuntimeCorroborationSummaryVO summary = summaries.get(aggregator.findingKey(finding));
+
+        assertEquals("HIT_EXACT", summary.getStatus());
+        assertEquals(1, summary.getHitRequestCount());
+        assertEquals(5, summary.getMaxRepeatCount());
+        assertEquals("selectById", summary.getMatchedReason());
+    }
+
+    @Test
+    public void should_CorroborateByHttpMethodName_When_CallTreeDoesNotContainRestTemplateMethod() {
+        StaticFindingSummary finding = finding("restTemplate.getForObject(url, Order.class)");
+        finding.setIoType("HTTP");
+        DynamicEvidenceBO evidence = ioEventEvidence("GET /demo/orders",
+                "\"ioType\":\"HTTP\","
+                        + "\"framework\":\"SPRING_REST_TEMPLATE\","
+                        + "\"operation\":\"getForObject\","
+                        + "\"target\":\"http://order-service/api/orders/1\","
+                        + "\"methodName\":\"getForObject\","
+                        + "\"count\":2,"
+                        + "\"elapsedMs\":18,"
+                        + "\"businessCallPath\":\"OrderService.preview\"");
+
+        Map<String, RuntimeCorroborationSummaryVO> summaries = aggregator.aggregate(Arrays.asList(finding),
+                Arrays.asList(evidence));
+        RuntimeCorroborationSummaryVO summary = summaries.get(aggregator.findingKey(finding));
+
+        assertEquals("HIT", summary.getStatus());
+        assertEquals(2, summary.getMaxRepeatCount());
+        assertEquals("getForObject", summary.getMatchedReason());
+    }
+
+    @Test
+    public void should_CorroborateByRpcMethodName_When_CallTreeOnlyContainsBusinessPath() {
+        StaticFindingSummary finding = finding("inventoryFacade.queryStock(itemId)");
+        finding.setIoType("RPC");
+        DynamicEvidenceBO evidence = ioEventEvidence("GET /demo/orders",
+                "\"ioType\":\"RPC\","
+                        + "\"framework\":\"DUBBO\","
+                        + "\"operation\":\"queryStock\","
+                        + "\"target\":\"com.cmb.demo.InventoryFacade.queryStock\","
+                        + "\"className\":\"com.cmb.demo.InventoryFacade\","
+                        + "\"methodName\":\"queryStock\","
+                        + "\"count\":4,"
+                        + "\"elapsedMs\":31,"
+                        + "\"businessCallPath\":\"OrderService.preview\"");
+
+        Map<String, RuntimeCorroborationSummaryVO> summaries = aggregator.aggregate(Arrays.asList(finding),
+                Arrays.asList(evidence));
+        RuntimeCorroborationSummaryVO summary = summaries.get(aggregator.findingKey(finding));
+
+        assertEquals("HIT", summary.getStatus());
+        assertEquals(4, summary.getMaxRepeatCount());
+        assertEquals("queryStock", summary.getMatchedReason());
+    }
+
     private StaticFindingSummary finding(String evidence) {
         StaticFindingSummary finding = new StaticFindingSummary();
         finding.setRuleId("LOOP_IO_AMPLIFICATION");
@@ -96,6 +182,25 @@ public class RuntimeEvidenceAggregatorTest {
                 + "}]"
                 + "}]}}"
                 + "]}}");
+        return evidence;
+    }
+
+    private DynamicEvidenceBO ioEventEvidence(String entryKey, String ioEventJson) {
+        DynamicEvidenceBO evidence = new DynamicEvidenceBO();
+        evidence.setTaskId("task-1");
+        evidence.setAppName("codeperf-demo-app");
+        evidence.setEnv("local");
+        evidence.setEntryKey(entryKey);
+        evidence.setRawPayload("{"
+                + "\"evidence\":{\"requests\":[{"
+                + "\"httpMethod\":\"" + entryKey.substring(0, entryKey.indexOf(' ')) + "\","
+                + "\"path\":\"" + entryKey.substring(entryKey.indexOf(' ') + 1) + "\","
+                + "\"callTree\":{\"method\":\"ROOT\",\"count\":0,\"children\":[{"
+                + "\"method\":\"com.cmb.demo.OrderService.preview\","
+                + "\"count\":1,\"children\":[]"
+                + "}]},"
+                + "\"ioEvents\":[{" + ioEventJson + "}]"
+                + "}]}}");
         return evidence;
     }
 }

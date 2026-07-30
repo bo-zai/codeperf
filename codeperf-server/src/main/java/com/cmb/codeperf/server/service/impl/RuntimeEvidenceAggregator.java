@@ -25,6 +25,7 @@ public class RuntimeEvidenceAggregator {
 
     private static final String STATUS_NOT_HIT = "NOT_HIT";
     private static final String STATUS_HIT = "HIT";
+    private static final String STATUS_HIT_EXACT = "HIT_EXACT";
     private static final String STATUS_FREQUENT_HIT = "FREQUENT_HIT";
     private static final String STATUS_MULTI_ENTRY_HIT = "MULTI_ENTRY_HIT";
     private static final String STATUS_HIGH_AMPLIFICATION = "HIGH_AMPLIFICATION";
@@ -99,9 +100,11 @@ public class RuntimeEvidenceAggregator {
         EntryStats topEntry = topEntry(entryStats);
         int maxRepeat = 0;
         int totalRepeat = 0;
+        boolean exactHit = false;
         for (RuntimeHitSnapshot hit : hits) {
             maxRepeat = Math.max(maxRepeat, hit.call.getCount());
             totalRepeat += hit.call.getCount();
+            exactHit = exactHit || hit.call.isExact();
         }
         summary.setMatched(true);
         summary.setHitRequestCount(hits.size());
@@ -113,7 +116,7 @@ public class RuntimeEvidenceAggregator {
         summary.setLatestCallPath(latest.call.getCallPath());
         summary.setLatestMatchedMethod(latest.call.getSimpleMethodName());
         summary.setMatchedReason(latest.matchedReason);
-        summary.setStatus(status(summary));
+        summary.setStatus(status(summary, exactHit));
         summary.setTopEntries(toEntryVOs(entryStats));
         summary.setText("动态运行已命中：命中请求 " + summary.getHitRequestCount()
                 + " 次，涉及入口 " + summary.getHitEntryCount()
@@ -123,7 +126,7 @@ public class RuntimeEvidenceAggregator {
         return summary;
     }
 
-    private String status(RuntimeCorroborationSummaryVO summary) {
+    private String status(RuntimeCorroborationSummaryVO summary, boolean exactHit) {
         if (summary.getMaxRepeatCount() >= HIGH_AMPLIFICATION_THRESHOLD) {
             return STATUS_HIGH_AMPLIFICATION;
         }
@@ -132,6 +135,9 @@ public class RuntimeEvidenceAggregator {
         }
         if (summary.getHitRequestCount() >= FREQUENT_HIT_THRESHOLD) {
             return STATUS_FREQUENT_HIT;
+        }
+        if (exactHit) {
+            return STATUS_HIT_EXACT;
         }
         return STATUS_HIT;
     }
@@ -217,6 +223,7 @@ public class RuntimeEvidenceAggregator {
                 String entryKey = requestEntryKey(request, record.getEntryKey());
                 List<RuntimeCallSnapshot> calls = new ArrayList<>();
                 collectRuntimeCalls(request.path("callTree"), new ArrayList<String>(), calls);
+                collectIoEvents(request.path("ioEvents"), calls);
                 snapshots.add(new RuntimeRequestSnapshot(entryKey, calls));
             }
             return snapshots;
@@ -245,6 +252,39 @@ public class RuntimeEvidenceAggregator {
         nextPath.add(simpleMethodDisplay(method));
         calls.add(new RuntimeCallSnapshot(method, simpleMethodDisplay(method), joinPath(nextPath), node.path("count").asInt(0)));
         collectChildren(node, nextPath, calls);
+    }
+
+    private void collectIoEvents(JsonNode ioEvents, List<RuntimeCallSnapshot> calls) {
+        if (ioEvents == null || !ioEvents.isArray()) {
+            return;
+        }
+        for (JsonNode event : ioEvents) {
+            String framework = text(event, "framework");
+            String mappedStatementId = text(event, "mappedStatementId");
+            String target = firstText(mappedStatementId, text(event, "target"));
+            String methodName = firstText(text(event, "methodName"), lastSegment(target));
+            if (!hasText(target) && !hasText(methodName)) {
+                continue;
+            }
+            String fullMethodName = hasText(target) ? target : methodName;
+            String callPath = ioCallPath(event, fullMethodName);
+            int count = Math.max(event.path("count").asInt(1), 1);
+            // MyBatis 的 MappedStatement.id 比调用树更接近静态 Mapper 证据，可绕过业务 Interceptor 干扰。
+            boolean exact = "MYBATIS".equalsIgnoreCase(framework) && hasText(mappedStatementId);
+            calls.add(new RuntimeCallSnapshot(fullMethodName, methodName, callPath, count, exact));
+        }
+    }
+
+    private String ioCallPath(JsonNode event, String fullMethodName) {
+        String businessCallPath = text(event, "businessCallPath");
+        String ioDisplay = simpleMethodDisplay(fullMethodName);
+        if (!hasText(businessCallPath)) {
+            return ioDisplay;
+        }
+        if (!hasText(ioDisplay)) {
+            return businessCallPath;
+        }
+        return businessCallPath + " -> " + ioDisplay;
     }
 
     private void collectChildren(JsonNode node, List<String> path, List<RuntimeCallSnapshot> calls) {
@@ -334,6 +374,18 @@ public class RuntimeEvidenceAggregator {
         return builder.toString();
     }
 
+    private String firstText(String first, String second) {
+        return hasText(first) ? first : value(second);
+    }
+
+    private String lastSegment(String value) {
+        if (!hasText(value)) {
+            return "";
+        }
+        int dot = value.lastIndexOf('.');
+        return dot >= 0 ? value.substring(dot + 1) : value;
+    }
+
     private String text(JsonNode node, String field) {
         JsonNode value = node.path(field);
         return value.isMissingNode() || value.isNull() ? "" : value.asText();
@@ -399,12 +451,19 @@ public class RuntimeEvidenceAggregator {
         private final String methodName;
         private final String callPath;
         private final int count;
+        private final boolean exact;
 
         private RuntimeCallSnapshot(String fullMethodName, String methodName, String callPath, int count) {
+            this(fullMethodName, methodName, callPath, count, false);
+        }
+
+        private RuntimeCallSnapshot(String fullMethodName, String methodName, String callPath, int count,
+                                    boolean exact) {
             this.fullMethodName = fullMethodName;
             this.methodName = methodName;
             this.callPath = callPath;
             this.count = count;
+            this.exact = exact;
         }
 
         private boolean matchesAny(List<String> candidates) {
@@ -439,6 +498,10 @@ public class RuntimeEvidenceAggregator {
 
         private int getCount() {
             return count;
+        }
+
+        private boolean isExact() {
+            return exact;
         }
     }
 }

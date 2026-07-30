@@ -78,6 +78,47 @@ public class RecorderTest {
         assertEquals(2, reporter.getLastRequestCount());
     }
 
+    @Test
+    public void should_RecordIoEvents_When_RuntimeFrameworkCallsHappenInsideRequest() {
+        AgentConfig config = new AgentConfig();
+        config.setEntryMethod("GET");
+        config.setEntryPath("/api");
+        config.setMode("continuous");
+        CountingEvidenceReporter reporter = new CountingEvidenceReporter();
+        Recorder.init(config, null, null, reporter);
+
+        assertTrue(Recorder.tryStartRequest(new MockRequest("GET", "/api/orders")));
+        Recorder.enterMethod("com.cmb.demo.OrderService.preview");
+        Recorder.recordMybatis("com.cmb.demo.OrderMapper.selectById", "SELECT", 5L);
+        Recorder.recordHttp("SPRING_REST_TEMPLATE", "getForObject", "http://inventory/api/items", 8L);
+        Recorder.recordRpc("DUBBO", "com.cmb.demo.InventoryFacade", "queryStock", 13L);
+        Recorder.finishRequest();
+
+        assertEquals(3, reporter.getLastIoEventCount());
+        assertEquals("getForObject", reporter.getLastHttpMethodName());
+    }
+
+    @Test
+    public void should_AggregateSameIoEvent_When_RuntimeFrameworkCallRepeatsInsideRequest() {
+        AgentConfig config = new AgentConfig();
+        config.setEntryMethod("GET");
+        config.setEntryPath("/api");
+        config.setMode("continuous");
+        CountingEvidenceReporter reporter = new CountingEvidenceReporter();
+        Recorder.init(config, null, null, reporter);
+
+        assertTrue(Recorder.tryStartRequest(new MockRequest("GET", "/api/orders")));
+        Recorder.enterMethod("com.cmb.demo.OrderService.preview");
+        Recorder.recordMybatis("com.cmb.demo.OrderMapper.selectById", "SELECT", 5L);
+        Recorder.recordMybatis("com.cmb.demo.OrderMapper.selectById", "SELECT", 8L);
+        Recorder.recordMybatis("com.cmb.demo.OrderMapper.selectById", "SELECT", 13L);
+        Recorder.finishRequest();
+
+        assertEquals(1, reporter.getLastIoEventCount());
+        assertEquals(3, reporter.getLastIoEventRepeatCount());
+        assertEquals(26L, reporter.getLastIoEventElapsedMs());
+    }
+
     public static class MockRequest {
         private final String method;
         private final String uri;
@@ -118,6 +159,10 @@ public class RecorderTest {
 
         private int reportCount;
         private int lastRequestCount;
+        private int lastIoEventCount;
+        private int lastIoEventRepeatCount;
+        private long lastIoEventElapsedMs;
+        private String lastHttpMethodName;
 
         CountingEvidenceReporter() {
             super(null);
@@ -127,6 +172,23 @@ public class RecorderTest {
         public void report(SessionData session) throws IOException {
             reportCount++;
             lastRequestCount = session.getRequests().size();
+            lastIoEventCount = session.getRequests().isEmpty()
+                    ? 0
+                    : session.getRequests().get(session.getRequests().size() - 1).getIoEvents().size();
+            if (!session.getRequests().isEmpty()
+                    && !session.getRequests().get(session.getRequests().size() - 1).getIoEvents().isEmpty()) {
+                lastIoEventRepeatCount = session.getRequests().get(session.getRequests().size() - 1)
+                        .getIoEvents().get(0).getCount();
+                lastIoEventElapsedMs = session.getRequests().get(session.getRequests().size() - 1)
+                        .getIoEvents().get(0).getElapsedMs();
+                for (int i = 0; i < session.getRequests().get(session.getRequests().size() - 1).getIoEvents().size(); i++) {
+                    if ("HTTP".equals(session.getRequests().get(session.getRequests().size() - 1)
+                            .getIoEvents().get(i).getIoType())) {
+                        lastHttpMethodName = session.getRequests().get(session.getRequests().size() - 1)
+                                .getIoEvents().get(i).getMethodName();
+                    }
+                }
+            }
         }
 
         int getReportCount() {
@@ -135,6 +197,22 @@ public class RecorderTest {
 
         int getLastRequestCount() {
             return lastRequestCount;
+        }
+
+        int getLastIoEventCount() {
+            return lastIoEventCount;
+        }
+
+        int getLastIoEventRepeatCount() {
+            return lastIoEventRepeatCount;
+        }
+
+        long getLastIoEventElapsedMs() {
+            return lastIoEventElapsedMs;
+        }
+
+        String getLastHttpMethodName() {
+            return lastHttpMethodName;
         }
     }
 }

@@ -50,7 +50,8 @@ public final class AgentBootstrap {
         }
         validateUploadIdentity(cfg);
         return new DynamicEvidenceReporter(new DynamicEvidenceUploader(
-                cfg.getServerUrl(), cfg.getAnalysisTaskId(), cfg.getAppName(), cfg.getEnv(),
+                cfg.getServerUrl(), cfg.getAnalysisTaskId(), cfg.getConnectTimeoutMs(), cfg.getReadTimeoutMs(),
+                cfg.getAppName(), cfg.getEnv(),
                 cfg.getRemoteUrl(), cfg.getCommit(), cfg.getBranch()));
     }
 

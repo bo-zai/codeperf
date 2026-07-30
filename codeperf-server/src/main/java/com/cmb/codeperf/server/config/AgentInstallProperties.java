@@ -27,6 +27,8 @@ public class AgentInstallProperties {
     private String entryPath = "/";
     private long slowSqlMs = 500L;
     private long sampleMs = 10L;
+    private int connectTimeoutMs = 5000;
+    private int readTimeoutMs = 60000;
     private String mode = "session";
 
 }

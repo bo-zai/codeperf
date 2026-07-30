@@ -1,0 +1,21 @@
+serverUrl: http://127.0.0.1:9095
+appName: codeperf-demo-app
+env: local
+uploadEnabled: true
+buildInfoPath: D:/workspace/codeperf/codeperf-demo-app/build-info.properties
+targetPackages:
+  - com.cmb.codeperf.demo.app
+excludedPackages:
+  - com.cmb.cjtz
+  - com.cmb.checkerframework
+  - com.cmb.bee
+  - com.cmbchina.ugw
+  - com.sun
+  - com.tencentcloud
+entry:
+  method: GET,POST,PUT,DELETE
+  path: /
+slowSqlMs: 500
+sampleMs: 10
+mode: continuous
+output: D:/workspace/codeperf/codeperf-demo-app/target/codeperf/perf-data-idea.raw

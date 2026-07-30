@@ -271,6 +271,8 @@ PY
   ENTRY_PATH="$(json_get "entry.path" "/" "$response")"
   SLOW_SQL_MS="$(json_get "slowSqlMs" "500" "$response")"
   SAMPLE_MS="$(json_get "sampleMs" "10" "$response")"
+  CONNECT_TIMEOUT_MS="$(json_get "connectTimeoutMs" "5000" "$response")"
+  READ_TIMEOUT_MS="$(json_get "readTimeoutMs" "60000" "$response")"
   MODE="$(json_get "mode" "session" "$response")"
 
   [ -n "$SERVER_URL" ] || fail "配置接口缺少 serverUrl"
@@ -435,6 +437,8 @@ ${excluded_packages_yaml}entry:
   path: $(yaml_scalar "$ENTRY_PATH")
 slowSqlMs: ${SLOW_SQL_MS}
 sampleMs: ${SAMPLE_MS}
+connectTimeoutMs: ${CONNECT_TIMEOUT_MS}
+readTimeoutMs: ${READ_TIMEOUT_MS}
 mode: $(yaml_scalar "$MODE")
 output: ${IMAGE_AGENT_DIR}/perf-data.raw
 EOF

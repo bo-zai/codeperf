@@ -139,7 +139,9 @@ public class TaskApiTest {
                 .andExpect(jsonPath("$.excludedPackages[0]").value("com.company.framework"))
                 .andExpect(jsonPath("$.excludedPackages[1]").value("com.company.starter"))
                 .andExpect(jsonPath("$.entry.method").value("POST"))
-                .andExpect(jsonPath("$.entry.path").value("/api/orders/report"));
+                .andExpect(jsonPath("$.entry.path").value("/api/orders/report"))
+                .andExpect(jsonPath("$.connectTimeoutMs").value(5000))
+                .andExpect(jsonPath("$.readTimeoutMs").value(60000));
     }
 
     @Test

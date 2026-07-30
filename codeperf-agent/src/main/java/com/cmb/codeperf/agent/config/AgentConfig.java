@@ -44,6 +44,8 @@ public class AgentConfig {
     private String output = "perf-data.raw";
     private long sampleMs = 10;
     private String mode = "session";
+    private int connectTimeoutMs = 5000;
+    private int readTimeoutMs = 60000;
     private String serverUrl;
     private String appName;
     private String env = "dev";
@@ -121,6 +123,12 @@ public class AgentConfig {
         if (kv.containsKey("serverUrl")) {
             cfg.serverUrl = kv.get("serverUrl");
         }
+        if (kv.containsKey("connectTimeoutMs")) {
+            cfg.connectTimeoutMs = Integer.parseInt(kv.get("connectTimeoutMs"));
+        }
+        if (kv.containsKey("readTimeoutMs")) {
+            cfg.readTimeoutMs = Integer.parseInt(kv.get("readTimeoutMs"));
+        }
         if (kv.containsKey("analysisTaskId")) {
             cfg.analysisTaskId = kv.get("analysisTaskId");
         }
@@ -184,6 +192,8 @@ public class AgentConfig {
         cfg.slowSqlMs = longValue(yaml.get("slowSqlMs"), cfg.slowSqlMs);
         cfg.sampleMs = longValue(yaml.get("sampleMs"), cfg.sampleMs);
         cfg.mode = stringValue(yaml.get("mode"), cfg.mode);
+        cfg.connectTimeoutMs = intValue(yaml.get("connectTimeoutMs"), cfg.connectTimeoutMs);
+        cfg.readTimeoutMs = intValue(yaml.get("readTimeoutMs"), cfg.readTimeoutMs);
         cfg.output = stringValue(yaml.get("output"), cfg.output);
         cfg.serverUrl = stringValue(yaml.get("serverUrl"), cfg.serverUrl);
         cfg.appName = stringValue(yaml.get("appName"), cfg.appName);
@@ -232,6 +242,16 @@ public class AgentConfig {
             return ((Number) value).longValue();
         }
         return Long.parseLong(value.toString());
+    }
+
+    private static int intValue(Object value, int defaultValue) {
+        if (value == null) {
+            return defaultValue;
+        }
+        if (value instanceof Number) {
+            return ((Number) value).intValue();
+        }
+        return Integer.parseInt(value.toString());
     }
 
     private static boolean booleanValue(Object value, boolean defaultValue) {

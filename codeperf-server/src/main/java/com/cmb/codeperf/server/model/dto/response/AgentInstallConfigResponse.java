@@ -17,6 +17,8 @@ public class AgentInstallConfigResponse {
     private AgentEntryConfig entry;
     private long slowSqlMs;
     private long sampleMs;
+    private int connectTimeoutMs;
+    private int readTimeoutMs;
     private String mode;
 
     @Data

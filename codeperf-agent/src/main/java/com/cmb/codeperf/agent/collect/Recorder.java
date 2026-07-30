@@ -3,6 +3,7 @@ package com.cmb.codeperf.agent.collect;
 import com.cmb.codeperf.agent.config.AgentConfig;
 import com.cmb.codeperf.agent.logging.AgentLogger;
 import com.cmb.codeperf.agent.session.CallNode;
+import com.cmb.codeperf.agent.session.IoEvent;
 import com.cmb.codeperf.agent.session.RequestData;
 import com.cmb.codeperf.agent.session.SessionData;
 import com.cmb.codeperf.agent.upload.DynamicEvidenceReporter;
@@ -269,6 +270,69 @@ public final class Recorder {
         recordSql(sql, startNano);
     }
 
+    public static void recordMybatis(String mappedStatementId, String operation, long elapsedMs) {
+        try {
+            if (mappedStatementId == null || mappedStatementId.trim().isEmpty()) {
+                return;
+            }
+            IoEvent event = new IoEvent();
+            event.setIoType("DB");
+            event.setFramework("MYBATIS");
+            event.setOperation(valueOrUnknown(operation));
+            event.setMappedStatementId(mappedStatementId.trim());
+            event.setClassName(className(mappedStatementId));
+            event.setMethodName(methodName(mappedStatementId));
+            event.setTarget(mappedStatementId.trim());
+            event.setCount(1);
+            event.setElapsedMs(Math.max(elapsedMs, 0L));
+            event.setBusinessCallPath(currentBusinessCallPath());
+            addIoEvent(event);
+        } catch (Throwable ignore) {
+            // agent 采集失败必须降级为丢弃本次事件，不能影响被检测应用的业务请求。
+        }
+    }
+
+    public static void recordHttp(String framework, String method, String uri, long elapsedMs) {
+        try {
+            if (uri == null || uri.trim().isEmpty()) {
+                return;
+            }
+            IoEvent event = new IoEvent();
+            event.setIoType("HTTP");
+            event.setFramework(valueOrUnknown(framework));
+            event.setOperation(valueOrUnknown(method));
+            event.setMethodName(valueOrUnknown(method));
+            event.setTarget(uri.trim());
+            event.setCount(1);
+            event.setElapsedMs(Math.max(elapsedMs, 0L));
+            event.setBusinessCallPath(currentBusinessCallPath());
+            addIoEvent(event);
+        } catch (Throwable ignore) {
+            // agent 采集失败必须降级为丢弃本次事件，不能影响被检测应用的业务请求。
+        }
+    }
+
+    public static void recordRpc(String framework, String service, String method, long elapsedMs) {
+        try {
+            if ((service == null || service.trim().isEmpty()) && (method == null || method.trim().isEmpty())) {
+                return;
+            }
+            IoEvent event = new IoEvent();
+            event.setIoType("RPC");
+            event.setFramework(valueOrUnknown(framework));
+            event.setOperation(valueOrUnknown(method));
+            event.setTarget(target(service, method));
+            event.setClassName(valueOrUnknown(service));
+            event.setMethodName(valueOrUnknown(method));
+            event.setCount(1);
+            event.setElapsedMs(Math.max(elapsedMs, 0L));
+            event.setBusinessCallPath(currentBusinessCallPath());
+            addIoEvent(event);
+        } catch (Throwable ignore) {
+            // agent 采集失败必须降级为丢弃本次事件，不能影响被检测应用的业务请求。
+        }
+    }
+
     private static void recordSql(String sql, long startNano) {
         try {
             RequestData rd = ACTIVE.get();
@@ -283,7 +347,62 @@ public final class Recorder {
         }
     }
 
+    private static void addIoEvent(IoEvent event) {
+        RequestData rd = ACTIVE.get();
+        if (rd != null) {
+            rd.addIoEvent(event);
+        }
+    }
+
     // ===================== 辅助 =====================
+
+    private static String currentBusinessCallPath() {
+        Deque<Frame> stack = STACK.get();
+        if (stack.isEmpty()) {
+            return "";
+        }
+        java.util.List<String> values = new java.util.ArrayList<>();
+        java.util.Iterator<Frame> iterator = stack.descendingIterator();
+        while (iterator.hasNext()) {
+            values.add(iterator.next().node.getMethod());
+        }
+        return join(values);
+    }
+
+    private static String join(java.util.List<String> values) {
+        StringBuilder builder = new StringBuilder();
+        for (int i = 0; i < values.size(); i++) {
+            if (i > 0) {
+                builder.append(" -> ");
+            }
+            builder.append(values.get(i));
+        }
+        return builder.toString();
+    }
+
+    private static String className(String fullMethod) {
+        int lastDot = fullMethod.lastIndexOf('.');
+        return lastDot < 0 ? "" : fullMethod.substring(0, lastDot);
+    }
+
+    private static String methodName(String fullMethod) {
+        int lastDot = fullMethod.lastIndexOf('.');
+        return lastDot < 0 ? fullMethod : fullMethod.substring(lastDot + 1);
+    }
+
+    private static String target(String service, String method) {
+        if (service == null || service.trim().isEmpty()) {
+            return valueOrUnknown(method);
+        }
+        if (method == null || method.trim().isEmpty()) {
+            return service.trim();
+        }
+        return service.trim() + "." + method.trim();
+    }
+
+    private static String valueOrUnknown(String value) {
+        return value == null || value.trim().isEmpty() ? "unknown" : value.trim();
+    }
 
     private static long currentThreadAllocatedBytes(long threadId) {
         try {

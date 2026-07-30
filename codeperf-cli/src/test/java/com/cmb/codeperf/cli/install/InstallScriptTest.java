@@ -79,6 +79,8 @@ public class InstallScriptTest {
         assertTrue(agentConfig.contains("  - com.cmb.checkerframework"));
         assertTrue(agentConfig.contains("  - com.cmb.bee"));
         assertTrue(agentConfig.contains("  - com.cmbchina.ugw"));
+        assertTrue(agentConfig.contains("connectTimeoutMs: 5000"));
+        assertTrue(agentConfig.contains("readTimeoutMs: 60000"));
 
         String buildInfo = readUtf8(codeperfDir.resolve("build-info.properties"));
         assertTrue(buildInfo.contains("remoteUrl=git@gitlab.example.com:demo/demo-app.git"));
@@ -354,6 +356,8 @@ public class InstallScriptTest {
                 + "\"entry\":{\"method\":\"POST\",\"path\":\"/api/orders/report\"},"
                 + "\"slowSqlMs\":500,"
                 + "\"sampleMs\":10,"
+                + "\"connectTimeoutMs\":5000,"
+                + "\"readTimeoutMs\":60000,"
                 + "\"mode\":\"session\""
                 + "}";
         byte[] bytes = response.getBytes(StandardCharsets.UTF_8);

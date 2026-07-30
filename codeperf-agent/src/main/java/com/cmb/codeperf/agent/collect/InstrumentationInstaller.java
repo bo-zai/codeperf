@@ -1,13 +1,17 @@
 package com.cmb.codeperf.agent.collect;
 
 import com.cmb.codeperf.agent.collect.advice.EntryAdvice;
+import com.cmb.codeperf.agent.collect.advice.DubboInvokerAdvice;
 import com.cmb.codeperf.agent.collect.advice.JdbcPrepareBindAdvice;
 import com.cmb.codeperf.agent.collect.advice.JdbcPreparedExecAdvice;
 import com.cmb.codeperf.agent.collect.advice.JdbcStatementAdvice;
 import com.cmb.codeperf.agent.collect.advice.MethodTraceAdvice;
+import com.cmb.codeperf.agent.collect.advice.MybatisExecutorAdvice;
+import com.cmb.codeperf.agent.collect.advice.SpringRestTemplateAdvice;
 import com.cmb.codeperf.agent.config.AgentConfig;
 import net.bytebuddy.agent.builder.AgentBuilder;
 import net.bytebuddy.asm.Advice;
+import net.bytebuddy.description.method.MethodDescription;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.matcher.ElementMatcher;
 
@@ -82,7 +86,32 @@ public class InstrumentationInstaller {
                         b.visit(Advice.to(JdbcPrepareBindAdvice.class).on(
                                 named("prepareStatement").and(takesArgument(0, String.class)))));
 
+        // 6) MyBatis：Executor#query/update，使用 MappedStatement.id 还原 Mapper 方法。
+        builder = builder.type(not(isInterface()).and(hasSuperType(named("org.apache.ibatis.executor.Executor"))))
+                .transform((b, td, cl, module, pd) ->
+                        b.visit(Advice.to(MybatisExecutorAdvice.class).on(namedOneOf("query", "update"))));
+
+        // 7) HTTP：Spring RestTemplate 公共调用方法，保留静态 evidence 可匹配的方法名。
+        builder = builder.type(named("org.springframework.web.client.RestTemplate"))
+                .transform((b, td, cl, module, pd) ->
+                        b.visit(Advice.to(SpringRestTemplateAdvice.class).on(restTemplateMethodMatcher())));
+
+        // 8) RPC：Dubbo Invoker#invoke，兼容 Apache Dubbo 和 Alibaba Dubbo。
+        builder = builder.type(not(isInterface()).and(dubboInvokerMatcher()))
+                .transform((b, td, cl, module, pd) ->
+                        b.visit(Advice.to(DubboInvokerAdvice.class).on(named("invoke"))));
+
         builder.installOn(inst);
+    }
+
+    private ElementMatcher.Junction<TypeDescription> dubboInvokerMatcher() {
+        return hasSuperType(named("org.apache.dubbo.rpc.Invoker"))
+                .or(hasSuperType(named("com.alibaba.dubbo.rpc.Invoker")));
+    }
+
+    private ElementMatcher.Junction<MethodDescription> restTemplateMethodMatcher() {
+        return namedOneOf("getForObject", "getForEntity", "postForObject", "postForEntity", "postForLocation",
+                "put", "patchForObject", "delete", "optionsForAllow", "exchange", "execute");
     }
 
     ElementMatcher.Junction<TypeDescription> buildPackageMatcher(List<String> packages) {

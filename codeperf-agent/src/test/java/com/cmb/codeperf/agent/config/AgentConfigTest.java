@@ -31,6 +31,8 @@ public class AgentConfigTest {
                         + "  path: /api/orders/report\n"
                         + "slowSqlMs: 250\n"
                         + "sampleMs: 20\n"
+                        + "connectTimeoutMs: 7000\n"
+                        + "readTimeoutMs: 120000\n"
                         + "mode: continuous\n"
                         + "output: build/codeperf/perf-data.raw\n").getBytes(StandardCharsets.UTF_8));
 
@@ -51,6 +53,8 @@ public class AgentConfigTest {
         assertEquals("/api/orders/report", loaded.getEntryPath());
         assertEquals(250, loaded.getSlowSqlMs());
         assertEquals(20, loaded.getSampleMs());
+        assertEquals(7000, loaded.getConnectTimeoutMs());
+        assertEquals(120000, loaded.getReadTimeoutMs());
         assertEquals("continuous", loaded.getMode());
         assertEquals("build/codeperf/perf-data.raw", loaded.getOutput());
     }

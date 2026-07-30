@@ -49,6 +49,7 @@ public class PipelineVerificationService {
             row.put("profile", profile);
             row.put("reconciliationStatus", "WAIT_CONFIRM");
             row.put("reconciliationStatus1", "WAIT_CONFIRM");
+            row.put("reconciliationStatus2", "WAIT_CONFIRM");
             rows.add(row);
         }
         return rows;

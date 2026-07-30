@@ -41,3 +41,7 @@ report:
   upload:
     enabled: true
     serverUrl: http://127.0.0.1:9095
+
+gitHooks:
+  prePush:
+    blockOnFailure: true

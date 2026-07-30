@@ -153,6 +153,7 @@ public class ScanCommand {
 
     private void printSummary(SourceScanResult result, StaticGateDecision gateDecision,
                               SourceModuleResolver moduleResolver, GitScanRange scanRange) {
+        System.out.println("[codeperf] 命令=scan，用途=Git 推送门禁，范围=pre-push 推送提交范围");
         System.out.println("[codeperf] 扫描基线=" + scanRange.getSource()
                 + "，范围=" + describeScanRange(scanRange));
         System.out.println("[codeperf] 扫描文件=" + result.getFilesScanned()
@@ -222,7 +223,8 @@ public class ScanCommand {
         }
         RiskAttribution.RiskScope riskScope = finding.getAttribution().getRiskScope();
         return RiskAttribution.RiskScope.NEW.equals(riskScope)
-                || RiskAttribution.RiskScope.MODIFIED.equals(riskScope);
+                || RiskAttribution.RiskScope.MODIFIED.equals(riskScope)
+                || RiskAttribution.RiskScope.LOCAL_UNCOMMITTED.equals(riskScope);
     }
 
     private String formatBlockingFinding(SourceFinding finding, String moduleName) {

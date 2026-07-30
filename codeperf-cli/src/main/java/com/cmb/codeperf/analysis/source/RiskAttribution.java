@@ -11,6 +11,7 @@ import lombok.Getter;
  *   <li>NEW：本次新增代码引入的风险</li>
  *   <li>MODIFIED：本次修改代码引入的风险</li>
  *   <li>HISTORICAL：历史遗留风险（不在本次变更范围内）</li>
+ *   <li>LOCAL_UNCOMMITTED：本地未提交代码状态中的风险</li>
  *   <li>UNKNOWN：无法归因（全量扫描或缺少 git 信息）</li>
  * </ul>
  * <p>
@@ -19,7 +20,7 @@ import lombok.Getter;
 @Getter
 @AllArgsConstructor
 public class RiskAttribution {
-    public enum RiskScope { NEW, MODIFIED, HISTORICAL, UNKNOWN }
+    public enum RiskScope { NEW, MODIFIED, HISTORICAL, LOCAL_UNCOMMITTED, UNKNOWN }
 
     public enum AttributionConfidence { HIGH, MEDIUM, LOW }
 

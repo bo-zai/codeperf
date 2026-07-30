@@ -9,10 +9,11 @@ import lombok.Getter;
  * <p>
  * 统计维度：
  * <ul>
- *   <li>blocking：阻断风险总数（NEW + MODIFIED）</li>
+ *   <li>blocking：阻断风险总数（NEW + MODIFIED + LOCAL_UNCOMMITTED）</li>
  *   <li>newlyIntroduced：新增代码引入的风险数</li>
  *   <li>modified：修改代码引入的风险数</li>
  *   <li>historical：历史遗留风险数（不阻断）</li>
+ *   <li>localUncommitted：本地未提交代码状态中的风险数</li>
  *   <li>unknown：无法归因的风险数</li>
  * </ul>
  */
@@ -24,6 +25,7 @@ public class StaticGateDecision {
     private final int newlyIntroduced;
     private final int modified;
     private final int historical;
+    private final int localUncommitted;
     private final int unknown;
 
     public String summary() {
@@ -32,6 +34,7 @@ public class StaticGateDecision {
                 + "，新增=" + newlyIntroduced
                 + "，修改=" + modified
                 + "，历史=" + historical
+                + "，本地未提交=" + localUncommitted
                 + "，未归因=" + unknown;
     }
 }

@@ -6,6 +6,7 @@ import com.cmb.codeperf.cli.cmd.DoctorCommand;
 import com.cmb.codeperf.cli.cmd.HookPolicyCommand;
 import com.cmb.codeperf.cli.cmd.InitCommand;
 import com.cmb.codeperf.cli.cmd.InstallHooksCommand;
+import com.cmb.codeperf.cli.cmd.PreScanCommand;
 import com.cmb.codeperf.cli.cmd.ScanCommand;
 
 /**
@@ -27,6 +28,7 @@ public class Main {
     public static int run(String[] args) {
         InitCommand init = new InitCommand();
         ScanCommand scan = new ScanCommand();
+        PreScanCommand preScan = new PreScanCommand();
         DoctorCommand doctor = new DoctorCommand();
         InstallHooksCommand installHooks = new InstallHooksCommand();
         HookPolicyCommand hookPolicy = new HookPolicyCommand();
@@ -35,6 +37,7 @@ public class Main {
                 .programName("codeperf")
                 .addCommand("init", init)
                 .addCommand("scan", scan)
+                .addCommand("pre-scan", preScan)
                 .addCommand("doctor", doctor)
                 .addCommand("install-hooks", installHooks)
                 .addCommand("hook-policy", hookPolicy)
@@ -77,6 +80,9 @@ public class Main {
                         break;
                     case "scan":
                         exitCode = scan.execute();
+                        break;
+                    case "pre-scan":
+                        exitCode = preScan.execute();
                         break;
                     case "doctor":
                         exitCode = doctor.execute();

@@ -40,6 +40,14 @@ public class MainTest {
     }
 
     @Test
+    public void should_PrintCommandUsageAndReturnSuccess_When_PreScanHelpRequested() {
+        CapturedRun capturedRun = captureStdout(() -> Main.run(new String[]{"pre-scan", "--help"}));
+
+        assertEquals(0, capturedRun.exitCode);
+        assertTrue(capturedRun.output.contains("Usage: codeperf pre-scan"));
+    }
+
+    @Test
     public void should_PrintInitEnvOption_When_InitHelpRequested() {
         CapturedRun capturedRun = captureStdout(() -> Main.run(new String[]{"init", "--help"}));
 

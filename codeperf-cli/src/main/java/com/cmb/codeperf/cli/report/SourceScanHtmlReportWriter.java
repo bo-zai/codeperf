@@ -140,7 +140,8 @@ public class SourceScanHtmlReportWriter {
         }
         html.append("</select></div>");
         appendFixedSelect(html, "filterScope", "归因范围", "全部归因",
-                new String[][]{{"NEW", "本次新增"}, {"MODIFIED", "本次修改"}, {"HISTORICAL", "历史风险"}, {"UNKNOWN", "未归因"}});
+                new String[][]{{"NEW", "本次新增"}, {"MODIFIED", "本次修改"},
+                        {"LOCAL_UNCOMMITTED", "本地未提交"}, {"HISTORICAL", "历史风险"}, {"UNKNOWN", "未归因"}});
         appendFixedSelect(html, "filterIo", "I/O 类型", "全部 I/O",
                 new String[][]{{"DB", "DB"}, {"Redis", "Redis"}, {"MongoDB", "MongoDB"}, {"GaussDB", "GaussDB"},
                         {"HTTP", "HTTP"}, {"RPC", "RPC"}, {"SDK", "SDK"}});

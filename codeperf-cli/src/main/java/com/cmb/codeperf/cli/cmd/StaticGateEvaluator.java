@@ -29,6 +29,7 @@ public class StaticGateEvaluator {
         int newlyIntroduced = 0;
         int modified = 0;
         int historical = 0;
+        int localUncommitted = 0;
         int unknown = 0;
 
         for (SourceFinding finding : result.getFindings()) {
@@ -51,11 +52,15 @@ public class StaticGateEvaluator {
                 blocking++;
             } else if (RiskAttribution.RiskScope.HISTORICAL.equals(riskScope)) {
                 historical++;
+            } else if (RiskAttribution.RiskScope.LOCAL_UNCOMMITTED.equals(riskScope)) {
+                localUncommitted++;
+                blocking++;
             } else {
                 unknown++;
             }
         }
-        return new StaticGateDecision(blocking > 0, blocking, newlyIntroduced, modified, historical, unknown);
+        return new StaticGateDecision(blocking > 0, blocking, newlyIntroduced, modified,
+                historical, localUncommitted, unknown);
     }
 }
 

@@ -1,9 +1,12 @@
 package com.cmb.codeperf.cli.git;
 
+import lombok.Getter;
+
 /**
  * Git pre-push 钩子传入的推送范围。
  * Git hook 的标准输入能准确表达本次 push 的 old..new 范围，比配置里的默认 baseRef 更适合企业多人分支合并场景。
  */
+@Getter
 public class GitPushRange {
 
     private static final String OLD_SHA = "CODEPERF_PUSH_OLD_SHA";
@@ -51,18 +54,6 @@ public class GitPushRange {
 
     public boolean isPresent() {
         return !baseRef.isEmpty() && !headRef.isEmpty();
-    }
-
-    public String getBaseRef() {
-        return baseRef;
-    }
-
-    public String getHeadRef() {
-        return headRef;
-    }
-
-    public String getRemoteBranch() {
-        return remoteBranch;
     }
 
     private static String value(String value) {

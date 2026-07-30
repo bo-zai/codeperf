@@ -70,7 +70,16 @@ public class AnalysisTaskService {
                 valueOrEmpty(command.getCommitterName()),
                 valueOrEmpty(command.getCommitterEmail()),
                 valueOrEmpty(command.getCommitMessage()));
-        return repository.save(task);
+        AnalysisTaskBO saved = repository.save(task);
+        log.info("静态任务创建完成 taskId={} project={} remoteUrl={} commit={} branch={} env={} authorEmail={}",
+                saved.getAnalysisTaskId(),
+                saved.getProject(),
+                saved.getRemoteUrl(),
+                saved.getCommit(),
+                saved.getBranch(),
+                saved.getEnv(),
+                saved.getAuthorEmail());
+        return saved;
     }
 
     public AnalysisTaskBO get(String taskId) {
@@ -81,6 +90,14 @@ public class AnalysisTaskService {
     public AnalysisTaskBO acceptStaticResult(String taskId, String payload) {
         long startNanos = System.nanoTime();
         AnalysisTaskBO task = get(taskId);
+        log.info("静态报告接收身份 taskId={} project={} remoteUrl={} commit={} branch={} env={} authorEmail={}",
+                task.getAnalysisTaskId(),
+                task.getProject(),
+                task.getRemoteUrl(),
+                task.getCommit(),
+                task.getBranch(),
+                task.getEnv(),
+                task.getAuthorEmail());
         long getTaskNanos = System.nanoTime();
         staticReportSummarizer.validate(payload);
         long validateNanos = System.nanoTime();
@@ -138,9 +155,31 @@ public class AnalysisTaskService {
      */
     public AnalysisTaskBO acceptDynamicEvidenceByIdentity(String payload) {
         DynamicEvidenceIdentity identity = parseDynamicEvidenceIdentity(payload);
-        AnalysisTaskBO task = repository.findLatestByCommitIdentity(
-                        identity.remoteUrl, identity.commit, identity.branch, identity.env)
-                .orElseThrow(() -> new IllegalArgumentException("analysis task not found for dynamic evidence identity"));
+        log.info("动态证据匹配身份 appName={} remoteUrl={} commit={} branch={} env={}",
+                identity.appName,
+                identity.remoteUrl,
+                identity.commit,
+                identity.branch,
+                identity.env);
+        java.util.Optional<AnalysisTaskBO> matched = repository.findLatestByCommitIdentity(
+                identity.remoteUrl, identity.commit, identity.branch, identity.env);
+        if (!matched.isPresent()) {
+            log.warn("动态证据未匹配到静态任务 appName={} remoteUrl={} commit={} branch={} env={}",
+                    identity.appName,
+                    identity.remoteUrl,
+                    identity.commit,
+                    identity.branch,
+                    identity.env);
+            throw new IllegalArgumentException("analysis task not found for dynamic evidence identity");
+        }
+        AnalysisTaskBO task = matched.get();
+        log.info("动态证据匹配成功 taskId={} appName={} remoteUrl={} commit={} branch={} env={}",
+                task.getAnalysisTaskId(),
+                identity.appName,
+                identity.remoteUrl,
+                identity.commit,
+                identity.branch,
+                identity.env);
         return acceptDynamicEvidence(task.getAnalysisTaskId(), payload);
     }
 
@@ -454,6 +493,7 @@ public class AnalysisTaskService {
         try {
             JsonNode root = mapper.readTree(payload);
             DynamicEvidenceIdentity identity = new DynamicEvidenceIdentity();
+            identity.appName = text(root, "appName");
             identity.remoteUrl = requiredText(root, "remoteUrl");
             identity.commit = requiredText(root, "commit");
             identity.branch = requiredText(root, "branch");
@@ -586,6 +626,7 @@ public class AnalysisTaskService {
     }
 
     private static final class DynamicEvidenceIdentity {
+        private String appName;
         private String remoteUrl;
         private String commit;
         private String branch;

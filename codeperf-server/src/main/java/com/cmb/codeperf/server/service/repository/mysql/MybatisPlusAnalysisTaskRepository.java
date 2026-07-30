@@ -114,12 +114,18 @@ public class MybatisPlusAnalysisTaskRepository implements AnalysisTaskRepository
 
     @Override
     public Optional<AnalysisTaskBO> findLatestByCommitIdentity(String remoteUrl, String commit, String branch, String env) {
-        CodeRepository repository = findRepository(repoKey(remoteUrl)).orElse(null);
+        String normalizedRepoKey = repoKey(remoteUrl);
+        log.info("动态证据查询静态任务 remoteUrl={} repoKey={} commit={} branch={} env={}",
+                remoteUrl, normalizedRepoKey, commit, branch, env);
+        CodeRepository repository = findRepository(normalizedRepoKey).orElse(null);
         if (repository == null) {
+            log.warn("动态证据查询失败：代码仓库不存在 repoKey={} remoteUrl={}", normalizedRepoKey, remoteUrl);
             return Optional.empty();
         }
         GitCommit gitCommit = findGitCommit(repository.getId(), commit, branch).orElse(null);
         if (gitCommit == null) {
+            log.warn("动态证据查询失败：Git提交不存在 repositoryId={} commit={} branch={}",
+                    repository.getId(), commit, branch);
             return Optional.empty();
         }
         LambdaQueryWrapper<AnalysisTask> query = new LambdaQueryWrapper<>();
@@ -128,7 +134,15 @@ public class MybatisPlusAnalysisTaskRepository implements AnalysisTaskRepository
         query.eq(AnalysisTask::getEnvName, env);
         query.orderByDesc(AnalysisTask::getId);
         query.last("LIMIT 1");
-        return Optional.ofNullable(mapper.selectOne(query)).map(this::toDomain);
+        AnalysisTask task = mapper.selectOne(query);
+        if (task == null) {
+            log.warn("动态证据查询失败：分析任务不存在 repositoryId={} gitCommitId={} env={}",
+                    repository.getId(), gitCommit.getId(), env);
+            return Optional.empty();
+        }
+        log.info("动态证据查询成功 taskId={} repositoryId={} gitCommitId={} env={}",
+                task.getTaskId(), repository.getId(), gitCommit.getId(), env);
+        return Optional.of(task).map(this::toDomain);
     }
 
     @Override

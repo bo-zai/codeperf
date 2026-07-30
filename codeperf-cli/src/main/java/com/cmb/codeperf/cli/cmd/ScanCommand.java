@@ -362,6 +362,13 @@ public class ScanCommand {
                 metadata.getCommitterEmail(),
                 metadata.getCommitMessage(),
                 new String(Files.readAllBytes(reportPath), StandardCharsets.UTF_8));
+        // 静态与动态最终通过这组 Git 身份关联；上传前打印便于排查流水线与本地 Git 元数据差异。
+        System.out.println("[codeperf] static identity project=" + valueOrUnknown(request.getProject())
+                + ", remoteUrl=" + valueOrUnknown(request.getRemoteUrl())
+                + ", commit=" + valueOrUnknown(request.getCommit())
+                + ", branch=" + valueOrUnknown(request.getBranch())
+                + ", env=" + valueOrUnknown(request.getEnv())
+                + ", authorEmail=" + valueOrUnknown(request.getAuthorEmail()));
         long uploadStartNanos = System.nanoTime();
         String taskId = new StaticReportUploader().upload(
                 trimTrailingSlash(serverUrl),

@@ -53,6 +53,13 @@ public class DynamicEvidenceUploader {
         connection.setDoOutput(true);
         connection.setRequestProperty("Content-Type", "application/json");
         AgentLogger.info("dynamic evidence uploading, url=" + uploadUrl() + ", bytes=" + bytes.length);
+        // 动态证据无 taskId 时依赖这组身份回挂静态扫描任务，必须在目标应用日志中可直接核对。
+        AgentLogger.info("dynamic identity analysisTaskId=" + valueOrUnknown(analysisTaskId)
+                + ", appName=" + valueOrUnknown(appName)
+                + ", remoteUrl=" + valueOrUnknown(remoteUrl)
+                + ", commit=" + valueOrUnknown(commit)
+                + ", branch=" + valueOrUnknown(branch)
+                + ", env=" + valueOrUnknown(env));
         try (OutputStream output = connection.getOutputStream()) {
             output.write(bytes);
         }
@@ -157,6 +164,10 @@ public class DynamicEvidenceUploader {
 
     private boolean isBlank(String value) {
         return value == null || value.trim().isEmpty();
+    }
+
+    private String valueOrUnknown(String value) {
+        return isBlank(value) ? "unknown" : value.trim();
     }
 }
 

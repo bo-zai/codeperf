@@ -97,6 +97,165 @@ public class InstallScriptTest {
     }
 
     @Test
+    public void should_InferThreeSegmentTargetPackage_When_SourceDirectoryExists() throws Exception {
+        initGitRepository();
+        Files.write(tempDir.resolve("Dockerfile"), Arrays.asList(
+                "FROM eclipse-temurin:8-jre",
+                "ENTRYPOINT [\"java\", \"-jar\", \"/app/app.jar\"]"), StandardCharsets.UTF_8);
+        Path javaFile = tempDir.resolve("src/main/java/com/cmb/music/OrderService.java");
+        Files.createDirectories(javaFile.getParent());
+        Files.write(javaFile, Arrays.asList(
+                "package com.cmb.music;",
+                "public class OrderService { }"), StandardCharsets.UTF_8);
+        String configUrl = startInstallConfigServer(sha256(AGENT_BYTES), true);
+
+        ScriptResult result = runInstallScript(configUrl);
+
+        assertEquals(0, result.exitCode, result.output);
+        String agentConfig = readUtf8(tempDir.resolve("target/codeperf/agent.yml"));
+        assertTrue(result.output.contains("已根据 src/main/java 目录推断 targetPackages=com.cmb.music"), result.output);
+        assertTrue(agentConfig.contains("  - com.cmb.music"));
+        assertFalse(agentConfig.contains("  - com.demo.app"));
+    }
+
+    @Test
+    public void should_InferPackageTreeBoundaries_When_SourceContainsMultiplePackagePaths() throws Exception {
+        initGitRepository();
+        Files.write(tempDir.resolve("Dockerfile"), Arrays.asList(
+                "FROM eclipse-temurin:8-jre",
+                "ENTRYPOINT [\"java\", \"-jar\", \"/app/app.jar\"]"), StandardCharsets.UTF_8);
+        writeJavaSource("src/main/java/com/cmb/music/app/OrderService.java", "com.cmb.music.app");
+        writeJavaSource("src/main/java/com/cmb/music/common/MusicCommon.java", "com.cmb.music.common");
+        writeJavaSource("src/main/java/cn/job/worker/JobWorker.java", "cn.job.worker");
+        String configUrl = startInstallConfigServer(sha256(AGENT_BYTES), true);
+
+        ScriptResult result = runInstallScript(configUrl);
+
+        assertEquals(0, result.exitCode, result.output);
+        String agentConfig = readUtf8(tempDir.resolve("target/codeperf/agent.yml"));
+        assertTrue(result.output.contains("已根据 src/main/java 目录推断 targetPackages="), result.output);
+        assertTrue(result.output.contains("com.cmb.music"), result.output);
+        assertTrue(result.output.contains("cn.job.worker"), result.output);
+        assertTrue(agentConfig.contains("  - com.cmb.music"));
+        assertTrue(agentConfig.contains("  - cn.job.worker"));
+        assertFalse(agentConfig.contains("  - com.cmb.music.app"));
+        assertFalse(agentConfig.contains("  - com.cmb.music.common"));
+    }
+
+    @Test
+    public void should_StopAtPackageDirectory_When_DirectoryContainsJavaAndSubPackage() throws Exception {
+        initGitRepository();
+        Files.write(tempDir.resolve("Dockerfile"), Arrays.asList(
+                "FROM eclipse-temurin:8-jre",
+                "ENTRYPOINT [\"java\", \"-jar\", \"/app/app.jar\"]"), StandardCharsets.UTF_8);
+        writeJavaSource("src/main/java/com/cmb/music/MusicApplication.java", "com.cmb.music");
+        writeJavaSource("src/main/java/com/cmb/music/app/OrderService.java", "com.cmb.music.app");
+        String configUrl = startInstallConfigServer(sha256(AGENT_BYTES), true);
+
+        ScriptResult result = runInstallScript(configUrl);
+
+        assertEquals(0, result.exitCode, result.output);
+        String agentConfig = readUtf8(tempDir.resolve("target/codeperf/agent.yml"));
+        assertTrue(result.output.contains("已根据 src/main/java 目录推断 targetPackages=com.cmb.music"),
+                result.output);
+        assertTrue(agentConfig.contains("  - com.cmb.music"));
+        assertFalse(agentConfig.contains("  - com.cmb.music.app"));
+    }
+
+    @Test
+    public void should_InferEachModuleSourceRootIndependently_When_MavenMultiModuleProject() throws Exception {
+        initGitRepository();
+        Files.write(tempDir.resolve("Dockerfile"), Arrays.asList(
+                "FROM eclipse-temurin:8-jre",
+                "ENTRYPOINT [\"java\", \"-jar\", \"/app/app.jar\"]"), StandardCharsets.UTF_8);
+        writeJavaSource("mall-admin/src/main/java/com/cmb/mall/admin/AdminApplication.java", "com.cmb.mall.admin");
+        writeJavaSource("mall-admin/src/main/java/com/cmb/mall/admin/service/AdminService.java", "com.cmb.mall.admin.service");
+        writeJavaSource("mall-app/src/main/java/com/cmb/mall/app/AppApplication.java", "com.cmb.mall.app");
+        writeJavaSource("mall-common/src/main/java/com/cmb/mall/common/domain/Order.java", "com.cmb.mall.common.domain");
+        String configUrl = startInstallConfigServer(sha256(AGENT_BYTES), true);
+
+        ScriptResult result = runInstallScript(configUrl);
+
+        assertEquals(0, result.exitCode, result.output);
+        String agentConfig = readUtf8(tempDir.resolve("target/codeperf/agent.yml"));
+        assertYamlListItem(agentConfig, "com.cmb.mall.admin");
+        assertYamlListItem(agentConfig, "com.cmb.mall.app");
+        assertYamlListItem(agentConfig, "com.cmb.mall.common.domain");
+        assertNoYamlListItem(agentConfig, "com.cmb.mall");
+    }
+
+    @Test
+    public void should_IgnoreDirectoryWithoutJava_When_CalculatingPackageBoundary() throws Exception {
+        initGitRepository();
+        Files.write(tempDir.resolve("Dockerfile"), Arrays.asList(
+                "FROM eclipse-temurin:8-jre",
+                "ENTRYPOINT [\"java\", \"-jar\", \"/app/app.jar\"]"), StandardCharsets.UTF_8);
+        writeJavaSource("src/main/java/com/cmb/music/app/OrderService.java", "com.cmb.music.app");
+        Files.createDirectories(tempDir.resolve("src/main/java/com/cmb/music/docs"));
+        Files.write(tempDir.resolve("src/main/java/com/cmb/music/docs/readme.txt"),
+                Arrays.asList("not java"), StandardCharsets.UTF_8);
+        String configUrl = startInstallConfigServer(sha256(AGENT_BYTES), true);
+
+        ScriptResult result = runInstallScript(configUrl);
+
+        assertEquals(0, result.exitCode, result.output);
+        String agentConfig = readUtf8(tempDir.resolve("target/codeperf/agent.yml"));
+        assertYamlListItem(agentConfig, "com.cmb.music.app");
+        assertNoYamlListItem(agentConfig, "com.cmb.music");
+    }
+
+    @Test
+    public void should_IgnoreBuildOutputDirectories_When_TargetContainsJavaSources() throws Exception {
+        initGitRepository();
+        Files.write(tempDir.resolve("Dockerfile"), Arrays.asList(
+                "FROM eclipse-temurin:8-jre",
+                "ENTRYPOINT [\"java\", \"-jar\", \"/app/app.jar\"]"), StandardCharsets.UTF_8);
+        writeJavaSource("src/main/java/com/cmb/music/app/OrderService.java", "com.cmb.music.app");
+        writeJavaSource("target/generated-sources/src/main/java/cn/generated/BadSource.java", "cn.generated");
+        writeJavaSource("build/generated/src/main/java/org/generated/BuildSource.java", "org.generated");
+        String configUrl = startInstallConfigServer(sha256(AGENT_BYTES), true);
+
+        ScriptResult result = runInstallScript(configUrl);
+
+        assertEquals(0, result.exitCode, result.output);
+        String agentConfig = readUtf8(tempDir.resolve("target/codeperf/agent.yml"));
+        assertTrue(agentConfig.contains("  - com.cmb.music.app"));
+        assertFalse(agentConfig.contains("  - cn.generated"));
+        assertFalse(agentConfig.contains("  - org.generated"));
+    }
+
+    @Test
+    public void should_UseServerConfiguredTargetPackages_When_NoSourceRootExists() throws Exception {
+        initGitRepository();
+        Files.write(tempDir.resolve("Dockerfile"), Arrays.asList(
+                "FROM eclipse-temurin:8-jre",
+                "ENTRYPOINT [\"java\", \"-jar\", \"/app/app.jar\"]"), StandardCharsets.UTF_8);
+        String configUrl = startInstallConfigServer(sha256(AGENT_BYTES), true, "\"com.company.configured\"");
+
+        ScriptResult result = runInstallScript(configUrl);
+
+        assertEquals(0, result.exitCode, result.output);
+        String agentConfig = readUtf8(tempDir.resolve("target/codeperf/agent.yml"));
+        assertTrue(result.output.contains("未能从目录结构推断 targetPackages，继续使用服务端配置: com.company.configured"),
+                result.output);
+        assertTrue(agentConfig.contains("  - com.company.configured"));
+    }
+
+    @Test
+    public void should_Fail_When_TargetPackagesCannotBeDetermined() throws Exception {
+        initGitRepository();
+        Files.write(tempDir.resolve("Dockerfile"), Arrays.asList(
+                "FROM eclipse-temurin:8-jre",
+                "ENTRYPOINT [\"java\", \"-jar\", \"/app/app.jar\"]"), StandardCharsets.UTF_8);
+        String configUrl = startInstallConfigServer(sha256(AGENT_BYTES), true, "");
+
+        ScriptResult result = runInstallScript(configUrl);
+
+        assertEquals(1, result.exitCode, result.output);
+        assertTrue(result.output.contains("未能确定 targetPackages"), result.output);
+    }
+
+    @Test
     public void should_ResolveRemoteBranch_When_CiCheckoutDetachedHead() throws Exception {
         initGitRepository();
         run(tempDir, "git", "branch", "v1");
@@ -160,9 +319,14 @@ public class InstallScriptTest {
     }
 
     private String startInstallConfigServer(String checksum, boolean enabled) throws IOException {
+        return startInstallConfigServer(checksum, enabled, "\"com.demo.app\",\"com.demo.common\"");
+    }
+
+    private String startInstallConfigServer(String checksum, boolean enabled, String targetPackages) throws IOException {
         server = HttpServer.create(new InetSocketAddress(0), 0);
         server.createContext("/codeperf-agent.jar", this::handleAgentDownload);
-        server.createContext("/api/agent/install-config", exchange -> handleInstallConfig(exchange, checksum, enabled));
+        server.createContext("/api/agent/install-config",
+                exchange -> handleInstallConfig(exchange, checksum, enabled, targetPackages));
         server.start();
         return "http://127.0.0.1:" + server.getAddress().getPort() + "/api/agent/install-config";
     }
@@ -174,7 +338,8 @@ public class InstallScriptTest {
         }
     }
 
-    private void handleInstallConfig(HttpExchange exchange, String checksum, boolean enabled) throws IOException {
+    private void handleInstallConfig(HttpExchange exchange, String checksum, boolean enabled,
+                                     String targetPackages) throws IOException {
         lastConfigRequestBody = readProcessOutput(exchange.getRequestBody()).replace("\n", "");
         String baseUrl = "http://127.0.0.1:" + server.getAddress().getPort();
         String response = "{"
@@ -184,7 +349,7 @@ public class InstallScriptTest {
                 + "\"agentSha256\":\"" + checksum + "\","
                 + "\"appName\":\"demo-app\","
                 + "\"env\":\"dev\","
-                + "\"targetPackages\":[\"com.demo.app\",\"com.demo.common\"],"
+                + "\"targetPackages\":[" + targetPackages + "],"
                 + "\"excludedPackages\":[\"com.cmb.cjtz\",\"com.cmb.checkerframework\",\"com.cmb.bee\",\"com.cmbchina.ugw\"],"
                 + "\"entry\":{\"method\":\"POST\",\"path\":\"/api/orders/report\"},"
                 + "\"slowSqlMs\":500,"
@@ -206,6 +371,15 @@ public class InstallScriptTest {
         Files.write(tempDir.resolve("README.md"), Arrays.asList("demo"), StandardCharsets.UTF_8);
         run(tempDir, "git", "add", "README.md");
         run(tempDir, "git", "commit", "-m", "initial commit");
+    }
+
+    private void writeJavaSource(String file, String packageName) throws IOException {
+        Path javaFile = tempDir.resolve(file);
+        Files.createDirectories(javaFile.getParent());
+        Files.write(javaFile, Arrays.asList(
+                "package " + packageName + ";",
+                "public class " + javaFile.getFileName().toString().replace(".java", "") + " { }"),
+                StandardCharsets.UTF_8);
     }
 
     private ScriptResult runInstallScript(String configUrl) throws Exception {
@@ -279,6 +453,14 @@ public class InstallScriptTest {
             index = text.indexOf(pattern, index + pattern.length());
         }
         return total;
+    }
+
+    private void assertYamlListItem(String yaml, String value) {
+        assertTrue(yaml.contains("\n  - " + value + "\n"), yaml);
+    }
+
+    private void assertNoYamlListItem(String yaml, String value) {
+        assertFalse(yaml.contains("\n  - " + value + "\n"), yaml);
     }
 
     private String sha256(byte[] bytes) throws Exception {

@@ -276,7 +276,6 @@ PY
   [ -n "$SERVER_URL" ] || fail "配置接口缺少 serverUrl"
   [ -n "$AGENT_URL" ] || fail "配置接口缺少 agentUrl"
   [ -n "$APP_NAME" ] || fail "配置接口缺少 appName"
-  [ -n "$TARGET_PACKAGES" ] || fail "配置接口缺少 targetPackages"
 }
 
 infer_target_packages_from_sources() {
@@ -284,8 +283,6 @@ infer_target_packages_from_sources() {
 # -*- coding: utf-8 -*-
 import os
 
-MIN_TRUSTED_DEPTH = 4
-MAX_PACKAGE_DEPTH = 6
 EXCLUDED_DIRS = {".git", ".idea", ".gradle", "target", "build", "node_modules"}
 
 
@@ -305,60 +302,59 @@ def source_roots():
     return sorted(roots)
 
 
-def package_dirs(root):
-    packages = []
-    for current, dirs, files in os.walk(root):
-        dirs[:] = [item for item in dirs if item not in EXCLUDED_DIRS]
-        if not any(item.endswith(".java") for item in files):
-            continue
-        relative = os.path.relpath(current, root)
-        if relative == "." or is_excluded(relative):
-            continue
-        segments = [item for item in relative.replace("\\", "/").split("/") if item]
-        if segments:
-            packages.append(segments[:MAX_PACKAGE_DEPTH])
-    return packages
+def has_java_file(path):
+    try:
+        return any(item.endswith(".java") for item in os.listdir(path)
+                   if os.path.isfile(os.path.join(path, item)))
+    except OSError:
+        return False
 
 
-def common_prefix(packages):
-    if not packages:
+def child_dirs(path):
+    try:
+        children = []
+        for item in sorted(os.listdir(path)):
+            child = os.path.join(path, item)
+            if item in EXCLUDED_DIRS or not os.path.isdir(child):
+                continue
+            children.append(item)
+        return children
+    except OSError:
         return []
-    prefix = list(packages[0])
-    for package in packages[1:]:
-        length = 0
-        for left, right in zip(prefix, package):
-            if left != right:
-                break
-            length += 1
-        prefix = prefix[:length]
-        if not prefix:
-            break
-    return prefix
 
 
-def trusted(prefix):
-    return len(prefix) >= MIN_TRUSTED_DEPTH
+def contains_java(path):
+    for current, dirs, files in os.walk(path):
+        dirs[:] = [item for item in dirs if item not in EXCLUDED_DIRS]
+        if any(item.endswith(".java") for item in files):
+            return True
+    return False
 
 
-all_packages = []
-packages_by_root = []
-for root in source_roots():
-    packages = package_dirs(root)
-    if packages:
-        packages_by_root.append(packages)
-        all_packages.extend(packages)
+def infer_from_node(root, relative_segments):
+    current = os.path.join(root, *relative_segments) if relative_segments else root
+    children = [item for item in child_dirs(current)
+                if contains_java(os.path.join(current, item))]
+    current_has_java = has_java_file(current)
+
+    if relative_segments and (current_has_java or len(children) != 1):
+        return [".".join(relative_segments)]
+    if not children:
+        return []
+    if len(children) == 1:
+        return infer_from_node(root, relative_segments + [children[0]])
+
+    result = []
+    for child in children:
+        result.extend(infer_from_node(root, relative_segments + [child]))
+    return result
+
 
 result = []
-global_prefix = common_prefix(all_packages)
-if trusted(global_prefix):
-    result.append(".".join(global_prefix))
-else:
-    for packages in packages_by_root:
-        prefix = common_prefix(packages)
-        if trusted(prefix):
-            value = ".".join(prefix)
-            if value not in result:
-                result.append(value)
+for root in source_roots():
+    for package in infer_from_node(root, []):
+        if package and package not in result:
+            result.append(package)
 
 print(",".join(result))
 PY
@@ -424,7 +420,7 @@ write_agent_config() {
     fi
   done
   IFS="$old_ifs"
-  [ -n "$target_packages_yaml" ] || fail "配置接口返回的 targetPackages 不能为空"
+  [ -n "$target_packages_yaml" ] || fail "未能确定 targetPackages，请检查源码目录或配置 CODEPERF_AGENT_TARGET_PACKAGES"
 
   cat > "$AGENT_CONFIG_FILE" <<EOF
 serverUrl: $(yaml_scalar "$SERVER_URL")

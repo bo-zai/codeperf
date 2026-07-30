@@ -16,7 +16,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /**
  * 安装配置默认值回归测试。
- * 这里不注入任何 agent 安装相关环境变量，确保本地启动 Server 后接口默认不会返回空的 agentUrl/targetPackages。
+ * 这里不注入任何 agent 安装相关环境变量，确保本地启动 Server 后不会默认下发 demo 业务包名。
  */
 @SpringBootTest(
         classes = CodePerfServerApplication.class,
@@ -44,7 +44,7 @@ public class AgentInstallConfigDefaultTest {
                                 + "}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.agentUrl", not(emptyString())))
-                .andExpect(jsonPath("$.targetPackages[0]", not(emptyString())))
+                .andExpect(jsonPath("$.targetPackages.length()").value(0))
                 .andExpect(jsonPath("$.excludedPackages[0]").value("com.cmb.cjtz"))
                 .andExpect(jsonPath("$.excludedPackages[1]").value("com.cmb.checkerframework"))
                 .andExpect(jsonPath("$.excludedPackages[2]").value("com.cmb.bee"))

@@ -20,7 +20,7 @@ public class AgentInstallProperties {
     private String agentUrl = "http://127.0.0.1:9095/api/agent/artifact";
     private String agentSha256 = "";
     private String localArtifactPath = DEFAULT_LOCAL_ARTIFACT_PATH;
-    private String targetPackages = "com.cmb.codeperf.demo";
+    private String targetPackages = "";
     private String excludedPackages = "com.cmb.cjtz,com.cmb.checkerframework,com.cmb.bee,com.cmbchina.ugw,com.sun,com.tencentcloud";
     private String entryMethod = "POST";
     private String entryPath = "/";

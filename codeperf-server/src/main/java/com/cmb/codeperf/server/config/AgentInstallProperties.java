@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component;
 public class AgentInstallProperties {
 
     public static final String DEFAULT_LOCAL_ARTIFACT_PATH = "codeperf-agent/target/codeperf-agent.jar";
+    public static final String DEFAULT_ENTRY_METHODS = "GET,POST,PUT,DELETE";
 
     private boolean enabled = true;
     private String serverUrl = "http://127.0.0.1:9095";
@@ -22,7 +23,7 @@ public class AgentInstallProperties {
     private String localArtifactPath = DEFAULT_LOCAL_ARTIFACT_PATH;
     private String targetPackages = "";
     private String excludedPackages = "com.cmb.cjtz,com.cmb.checkerframework,com.cmb.bee,com.cmbchina.ugw,com.sun,com.tencentcloud";
-    private String entryMethod = "POST";
+    private String entryMethod = DEFAULT_ENTRY_METHODS;
     private String entryPath = "/";
     private long slowSqlMs = 500L;
     private long sampleMs = 10L;

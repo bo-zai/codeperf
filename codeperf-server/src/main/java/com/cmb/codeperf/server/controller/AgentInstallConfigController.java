@@ -55,7 +55,7 @@ public class AgentInstallConfigController {
 
     private AgentInstallConfigResponse.AgentEntryConfig entry() {
         AgentInstallConfigResponse.AgentEntryConfig entry = new AgentInstallConfigResponse.AgentEntryConfig();
-        entry.setMethod(valueOrDefault(properties.getEntryMethod(), "POST"));
+        entry.setMethod(valueOrDefault(properties.getEntryMethod(), AgentInstallProperties.DEFAULT_ENTRY_METHODS));
         entry.setPath(valueOrDefault(properties.getEntryPath(), "/"));
         return entry;
     }
@@ -88,4 +88,3 @@ public class AgentInstallConfigController {
         return value == null || value.trim().isEmpty() ? defaultValue : value.trim();
     }
 }
-

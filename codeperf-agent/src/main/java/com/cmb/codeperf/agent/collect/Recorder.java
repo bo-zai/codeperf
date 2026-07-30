@@ -59,6 +59,7 @@ public final class Recorder {
         sampler = s;
         writer = w;
         reporter = r;
+        completed.set(false);
         SessionData sd = new SessionData();
         sd.setEntryMethod(cfg.getEntryMethod());
         sd.setEntryPath(cfg.getEntryPath());
@@ -82,7 +83,7 @@ public final class Recorder {
     /**
      * 由 DispatcherServlet 的 Advice 调用：反射读取 HttpServletRequest 的 method/URI，
      * 与配置的 entry 匹配；匹配则开启采集窗口。不直接依赖 servlet 类型（反射）。
-     * 匹配规则：method 忽略大小写相等，且 URI 以 entryPath 为前缀。
+     * 匹配规则：method 命中 entryMethod 白名单，且 URI 以 entryPath 为前缀。
      * @return true 表示已开启（调用方需在退出时调用 finishRequest）。
      */
     public static boolean tryStartRequest(Object httpServletRequest) {
@@ -96,7 +97,7 @@ public final class Recorder {
             if (method == null || uri == null) {
                 return false;
             }
-            if (!method.equalsIgnoreCase(config.getEntryMethod())) {
+            if (!matchesEntryMethod(method, config.getEntryMethod())) {
                 return false;
             }
             if (!uri.startsWith(config.getEntryPath())) {
@@ -106,6 +107,18 @@ public final class Recorder {
         } catch (Throwable ignore) {
             return false;
         }
+    }
+
+    private static boolean matchesEntryMethod(String actualMethod, String configuredMethods) {
+        if (actualMethod == null || configuredMethods == null) {
+            return false;
+        }
+        for (String configuredMethod : configuredMethods.split(",")) {
+            if (actualMethod.equalsIgnoreCase(configuredMethod.trim())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -159,16 +172,18 @@ public final class Recorder {
                 s.clearTarget();
             }
 
-            boolean firstComplete = false;
+            boolean shouldWriteAndReport = false;
             if ("session".equals(config.getMode())) {
                 if (completed.compareAndSet(false, true)) {
                     session.addRequest(rd);
-                    firstComplete = true;
+                    shouldWriteAndReport = true;
                 }
             } else {
                 synchronized (session) {
                     session.addRequest(rd);
                 }
+                // continuous 模式每个请求结束都刷新完整会话，保证预发自动化测试能持续产生动态证据。
+                shouldWriteAndReport = true;
             }
 
             // 清理线程态
@@ -179,7 +194,7 @@ public final class Recorder {
             // 清理本请求登记的 prepared 绑定
             PREPARED_SQL.clear();
 
-            if (firstComplete) {
+            if (shouldWriteAndReport) {
                 writeAndReport(session);
             }
         } catch (Throwable ignore) {

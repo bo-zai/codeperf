@@ -181,6 +181,65 @@ CREATE TABLE IF NOT EXISTS dynamic_evidence (
   INDEX idx_dynamic_evidence_repo_commit_env (repository_id, git_commit_id, env_name)
 ) COMMENT='动态运行证据表';
 
+CREATE TABLE IF NOT EXISTS dynamic_request_evidence (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键ID',
+  task_id VARCHAR(64) NOT NULL COMMENT '分析任务ID，逻辑关联analysis_task.task_id',
+  raw_evidence_id BIGINT COMMENT '动态原始证据ID，逻辑关联dynamic_evidence.id',
+  env_name VARCHAR(64) COMMENT '环境名称',
+  app_name VARCHAR(128) COMMENT '应用名称',
+  entry_method VARCHAR(32) COMMENT 'HTTP请求方法',
+  entry_path VARCHAR(1024) COMMENT 'HTTP请求路径',
+  entry_key VARCHAR(1200) COMMENT 'HTTP入口标识，例如GET /demo/orders',
+  wall_time_ms BIGINT COMMENT '请求总耗时毫秒',
+  raw_payload JSON COMMENT '请求级原始JSON',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  INDEX idx_dynamic_request_task (task_id),
+  INDEX idx_dynamic_request_raw (raw_evidence_id),
+  INDEX idx_dynamic_request_entry (entry_key(255)),
+  INDEX idx_dynamic_request_app_env (app_name, env_name)
+) COMMENT='动态请求级证据表';
+
+CREATE TABLE IF NOT EXISTS dynamic_call_evidence (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键ID',
+  task_id VARCHAR(64) NOT NULL COMMENT '分析任务ID，逻辑关联analysis_task.task_id',
+  request_evidence_id BIGINT COMMENT '请求级证据ID，逻辑关联dynamic_request_evidence.id',
+  raw_evidence_id BIGINT COMMENT '动态原始证据ID，逻辑关联dynamic_evidence.id',
+  entry_key VARCHAR(1200) COMMENT 'HTTP入口标识',
+  class_name VARCHAR(512) COMMENT '类名',
+  method_name VARCHAR(256) COMMENT '方法名',
+  full_method_name VARCHAR(1024) COMMENT '完整方法名',
+  call_path VARCHAR(4096) COMMENT '调用路径',
+  call_count INT COMMENT '调用次数',
+  total_time_ms BIGINT COMMENT '总耗时毫秒',
+  raw_payload JSON COMMENT '调用节点原始JSON',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  INDEX idx_dynamic_call_task (task_id),
+  INDEX idx_dynamic_call_request (request_evidence_id),
+  INDEX idx_dynamic_call_raw (raw_evidence_id),
+  INDEX idx_dynamic_call_method (method_name),
+  INDEX idx_dynamic_call_entry (entry_key(255))
+) COMMENT='动态调用级证据表';
+
+CREATE TABLE IF NOT EXISTS static_dynamic_corroboration (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键ID',
+  task_id VARCHAR(64) NOT NULL COMMENT '分析任务ID，逻辑关联analysis_task.task_id',
+  static_finding_id BIGINT COMMENT '静态风险ID，逻辑关联static_finding.id',
+  finding_issue_id BIGINT COMMENT '问题ID，逻辑关联finding_issue.id',
+  status VARCHAR(64) NOT NULL COMMENT '佐证状态，例如NOT_HIT、HIT、HIGH_AMPLIFICATION',
+  hit_request_count INT NOT NULL DEFAULT 0 COMMENT '命中请求数',
+  hit_entry_count INT NOT NULL DEFAULT 0 COMMENT '命中入口数',
+  max_repeat_count INT NOT NULL DEFAULT 0 COMMENT '最大重复调用次数',
+  avg_repeat_count INT NOT NULL DEFAULT 0 COMMENT '平均重复调用次数',
+  top_entry_key VARCHAR(1200) COMMENT '主要入口',
+  reason VARCHAR(2048) COMMENT '佐证原因',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  INDEX idx_static_dynamic_task (task_id),
+  INDEX idx_static_dynamic_finding (static_finding_id),
+  INDEX idx_static_dynamic_issue (finding_issue_id),
+  INDEX idx_static_dynamic_status (status)
+) COMMENT='静态动态佐证关系表';
+
 CREATE TABLE IF NOT EXISTS finding_issue (
   id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键ID',
   issue_key VARCHAR(128) NOT NULL COMMENT '问题唯一标识',

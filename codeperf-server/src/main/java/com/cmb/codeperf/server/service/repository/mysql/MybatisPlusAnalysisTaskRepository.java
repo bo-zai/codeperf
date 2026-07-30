@@ -2,28 +2,37 @@ package com.cmb.codeperf.server.service.repository.mysql;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.cmb.codeperf.server.model.bo.AnalysisTaskBO;
+import com.cmb.codeperf.server.model.bo.DynamicCallEvidenceBO;
 import com.cmb.codeperf.server.model.bo.DynamicEvidenceBO;
+import com.cmb.codeperf.server.model.bo.DynamicRequestEvidenceBO;
 import com.cmb.codeperf.server.model.bo.FindingIssueBO;
 import com.cmb.codeperf.server.model.bo.FindingOccurrenceBO;
 import com.cmb.codeperf.server.model.bo.RiskLevel;
+import com.cmb.codeperf.server.model.bo.StaticDynamicCorroborationBO;
 import com.cmb.codeperf.server.model.bo.StaticFindingBO;
 import com.cmb.codeperf.server.model.bo.TaskStatus;
 import com.cmb.codeperf.server.service.repository.AnalysisTaskRepository;
 import com.cmb.codeperf.server.model.entity.AnalysisTask;
 import com.cmb.codeperf.server.model.entity.CodeRepository;
+import com.cmb.codeperf.server.model.entity.DynamicCallEvidence;
 import com.cmb.codeperf.server.model.entity.DynamicEvidence;
+import com.cmb.codeperf.server.model.entity.DynamicRequestEvidence;
 import com.cmb.codeperf.server.model.entity.FindingIssue;
 import com.cmb.codeperf.server.model.entity.FindingOccurrence;
 import com.cmb.codeperf.server.model.entity.GitCommit;
 import com.cmb.codeperf.server.model.entity.RuleDefinition;
+import com.cmb.codeperf.server.model.entity.StaticDynamicCorroboration;
 import com.cmb.codeperf.server.model.entity.StaticFinding;
 import com.cmb.codeperf.server.mapper.AnalysisTaskMapper;
 import com.cmb.codeperf.server.mapper.CodeRepositoryMapper;
+import com.cmb.codeperf.server.mapper.DynamicCallEvidenceMapper;
 import com.cmb.codeperf.server.mapper.DynamicEvidenceMapper;
+import com.cmb.codeperf.server.mapper.DynamicRequestEvidenceMapper;
 import com.cmb.codeperf.server.mapper.FindingIssueMapper;
 import com.cmb.codeperf.server.mapper.FindingOccurrenceMapper;
 import com.cmb.codeperf.server.mapper.GitCommitMapper;
 import com.cmb.codeperf.server.mapper.RuleDefinitionMapper;
+import com.cmb.codeperf.server.mapper.StaticDynamicCorroborationMapper;
 import com.cmb.codeperf.server.mapper.StaticFindingMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -52,6 +61,9 @@ public class MybatisPlusAnalysisTaskRepository implements AnalysisTaskRepository
     private final GitCommitMapper gitCommitMapper;
     private final StaticFindingMapper staticFindingMapper;
     private final DynamicEvidenceMapper dynamicEvidenceMapper;
+    private final DynamicRequestEvidenceMapper dynamicRequestEvidenceMapper;
+    private final DynamicCallEvidenceMapper dynamicCallEvidenceMapper;
+    private final StaticDynamicCorroborationMapper staticDynamicCorroborationMapper;
     private final RuleDefinitionMapper ruleDefinitionMapper;
     private final FindingIssueMapper findingIssueMapper;
     private final FindingOccurrenceMapper findingOccurrenceMapper;
@@ -61,6 +73,9 @@ public class MybatisPlusAnalysisTaskRepository implements AnalysisTaskRepository
                                              GitCommitMapper gitCommitMapper,
                                              StaticFindingMapper staticFindingMapper,
                                              DynamicEvidenceMapper dynamicEvidenceMapper,
+                                             DynamicRequestEvidenceMapper dynamicRequestEvidenceMapper,
+                                             DynamicCallEvidenceMapper dynamicCallEvidenceMapper,
+                                             StaticDynamicCorroborationMapper staticDynamicCorroborationMapper,
                                              RuleDefinitionMapper ruleDefinitionMapper,
                                              FindingIssueMapper findingIssueMapper,
                                              FindingOccurrenceMapper findingOccurrenceMapper) {
@@ -69,6 +84,9 @@ public class MybatisPlusAnalysisTaskRepository implements AnalysisTaskRepository
         this.gitCommitMapper = gitCommitMapper;
         this.staticFindingMapper = staticFindingMapper;
         this.dynamicEvidenceMapper = dynamicEvidenceMapper;
+        this.dynamicRequestEvidenceMapper = dynamicRequestEvidenceMapper;
+        this.dynamicCallEvidenceMapper = dynamicCallEvidenceMapper;
+        this.staticDynamicCorroborationMapper = staticDynamicCorroborationMapper;
         this.ruleDefinitionMapper = ruleDefinitionMapper;
         this.findingIssueMapper = findingIssueMapper;
         this.findingOccurrenceMapper = findingOccurrenceMapper;
@@ -159,12 +177,14 @@ public class MybatisPlusAnalysisTaskRepository implements AnalysisTaskRepository
         deleteQuery.eq(StaticFinding::getTaskId, taskId);
         staticFindingMapper.delete(deleteQuery);
         for (StaticFindingBO finding : findings) {
-            staticFindingMapper.insert(toStaticFinding(finding));
+            StaticFinding entity = toStaticFinding(finding);
+            staticFindingMapper.insert(entity);
+            finding.setId(entity.getId());
         }
     }
 
     @Override
-    public void appendDynamicEvidence(DynamicEvidenceBO evidence) {
+    public DynamicEvidenceBO appendDynamicEvidence(DynamicEvidenceBO evidence) {
         DynamicEvidence entity = new DynamicEvidence();
         entity.setTaskId(evidence.getTaskId());
         entity.setEnvName(evidence.getEnv());
@@ -178,6 +198,73 @@ public class MybatisPlusAnalysisTaskRepository implements AnalysisTaskRepository
             entity.setGitCommitId(gitCommit.getId());
         });
         dynamicEvidenceMapper.insert(entity);
+        evidence.setId(entity.getId());
+        return evidence;
+    }
+
+    @Override
+    public void appendDynamicRequestEvidence(DynamicRequestEvidenceBO evidence) {
+        DynamicRequestEvidence entity = toDynamicRequestEvidence(evidence);
+        dynamicRequestEvidenceMapper.insert(entity);
+        evidence.setId(entity.getId());
+    }
+
+    @Override
+    public void appendDynamicCallEvidence(DynamicCallEvidenceBO evidence) {
+        DynamicCallEvidence entity = toDynamicCallEvidence(evidence);
+        dynamicCallEvidenceMapper.insert(entity);
+        evidence.setId(entity.getId());
+    }
+
+    @Override
+    public List<DynamicRequestEvidenceBO> listDynamicRequestEvidence(String taskId) {
+        LambdaQueryWrapper<DynamicRequestEvidence> query = new LambdaQueryWrapper<>();
+        query.eq(DynamicRequestEvidence::getTaskId, taskId);
+        query.orderByAsc(DynamicRequestEvidence::getId);
+        List<DynamicRequestEvidence> entities = dynamicRequestEvidenceMapper.selectList(query);
+        List<DynamicRequestEvidenceBO> result = new java.util.ArrayList<>(entities.size());
+        for (DynamicRequestEvidence entity : entities) {
+            result.add(toDynamicRequestEvidenceBO(entity));
+        }
+        return result;
+    }
+
+    @Override
+    public List<DynamicCallEvidenceBO> listDynamicCallEvidence(String taskId) {
+        LambdaQueryWrapper<DynamicCallEvidence> query = new LambdaQueryWrapper<>();
+        query.eq(DynamicCallEvidence::getTaskId, taskId);
+        query.orderByAsc(DynamicCallEvidence::getId);
+        List<DynamicCallEvidence> entities = dynamicCallEvidenceMapper.selectList(query);
+        List<DynamicCallEvidenceBO> result = new java.util.ArrayList<>(entities.size());
+        for (DynamicCallEvidence entity : entities) {
+            result.add(toDynamicCallEvidenceBO(entity));
+        }
+        return result;
+    }
+
+    @Override
+    public void replaceStaticDynamicCorroborations(String taskId, List<StaticDynamicCorroborationBO> corroborations) {
+        LambdaQueryWrapper<StaticDynamicCorroboration> deleteQuery = new LambdaQueryWrapper<>();
+        deleteQuery.eq(StaticDynamicCorroboration::getTaskId, taskId);
+        staticDynamicCorroborationMapper.delete(deleteQuery);
+        for (StaticDynamicCorroborationBO corroboration : corroborations) {
+            StaticDynamicCorroboration entity = toStaticDynamicCorroboration(corroboration);
+            staticDynamicCorroborationMapper.insert(entity);
+            corroboration.setId(entity.getId());
+        }
+    }
+
+    @Override
+    public List<StaticDynamicCorroborationBO> listStaticDynamicCorroborations(String taskId) {
+        LambdaQueryWrapper<StaticDynamicCorroboration> query = new LambdaQueryWrapper<>();
+        query.eq(StaticDynamicCorroboration::getTaskId, taskId);
+        query.orderByAsc(StaticDynamicCorroboration::getId);
+        List<StaticDynamicCorroboration> entities = staticDynamicCorroborationMapper.selectList(query);
+        List<StaticDynamicCorroborationBO> result = new java.util.ArrayList<>(entities.size());
+        for (StaticDynamicCorroboration entity : entities) {
+            result.add(toStaticDynamicCorroborationBO(entity));
+        }
+        return result;
     }
 
     @Override
@@ -220,6 +307,11 @@ public class MybatisPlusAnalysisTaskRepository implements AnalysisTaskRepository
             findingIssueMapper.updateById(entity);
         }
         return toFindingIssueBO(entity);
+    }
+
+    @Override
+    public Optional<FindingIssueBO> findIssueByIssueKey(String issueKey) {
+        return findIssue(issueKey).map(this::toFindingIssueBO);
     }
 
     @Override
@@ -392,6 +484,7 @@ public class MybatisPlusAnalysisTaskRepository implements AnalysisTaskRepository
 
     private StaticFindingBO toStaticFindingBO(StaticFinding entity) {
         StaticFindingBO finding = new StaticFindingBO();
+        finding.setId(entity.getId());
         finding.setTaskId(entity.getTaskId());
         finding.setRuleId(entity.getRuleId());
         finding.setSeverity(entity.getSeverity());
@@ -415,10 +508,104 @@ public class MybatisPlusAnalysisTaskRepository implements AnalysisTaskRepository
 
     private DynamicEvidenceBO toDynamicEvidenceBO(DynamicEvidence entity) {
         DynamicEvidenceBO evidence = new DynamicEvidenceBO();
+        evidence.setId(entity.getId());
         evidence.setTaskId(entity.getTaskId());
         evidence.setEnv(entity.getEnvName());
         evidence.setAppName(entity.getAppName());
         evidence.setEntryKey(entity.getEntryKey());
+        evidence.setRawPayload(entity.getRawPayload());
+        return evidence;
+    }
+
+    private StaticDynamicCorroboration toStaticDynamicCorroboration(StaticDynamicCorroborationBO corroboration) {
+        StaticDynamicCorroboration entity = new StaticDynamicCorroboration();
+        entity.setTaskId(corroboration.getTaskId());
+        entity.setStaticFindingId(corroboration.getStaticFindingId());
+        entity.setFindingIssueId(corroboration.getFindingIssueId());
+        entity.setStatus(corroboration.getStatus());
+        entity.setHitRequestCount(corroboration.getHitRequestCount());
+        entity.setHitEntryCount(corroboration.getHitEntryCount());
+        entity.setMaxRepeatCount(corroboration.getMaxRepeatCount());
+        entity.setAvgRepeatCount(corroboration.getAvgRepeatCount());
+        entity.setTopEntryKey(corroboration.getTopEntryKey());
+        entity.setReason(corroboration.getReason());
+        return entity;
+    }
+
+    private StaticDynamicCorroborationBO toStaticDynamicCorroborationBO(StaticDynamicCorroboration entity) {
+        StaticDynamicCorroborationBO corroboration = new StaticDynamicCorroborationBO();
+        corroboration.setId(entity.getId());
+        corroboration.setTaskId(entity.getTaskId());
+        corroboration.setStaticFindingId(entity.getStaticFindingId());
+        corroboration.setFindingIssueId(entity.getFindingIssueId());
+        corroboration.setStatus(entity.getStatus());
+        corroboration.setHitRequestCount(value(entity.getHitRequestCount()));
+        corroboration.setHitEntryCount(value(entity.getHitEntryCount()));
+        corroboration.setMaxRepeatCount(value(entity.getMaxRepeatCount()));
+        corroboration.setAvgRepeatCount(value(entity.getAvgRepeatCount()));
+        corroboration.setTopEntryKey(entity.getTopEntryKey());
+        corroboration.setReason(entity.getReason());
+        return corroboration;
+    }
+
+    private DynamicRequestEvidence toDynamicRequestEvidence(DynamicRequestEvidenceBO evidence) {
+        DynamicRequestEvidence entity = new DynamicRequestEvidence();
+        entity.setTaskId(evidence.getTaskId());
+        entity.setRawEvidenceId(evidence.getRawEvidenceId());
+        entity.setEnvName(evidence.getEnv());
+        entity.setAppName(evidence.getAppName());
+        entity.setEntryMethod(evidence.getEntryMethod());
+        entity.setEntryPath(evidence.getEntryPath());
+        entity.setEntryKey(evidence.getEntryKey());
+        entity.setWallTimeMs(evidence.getWallTimeMs());
+        entity.setRawPayload(evidence.getRawPayload());
+        return entity;
+    }
+
+    private DynamicRequestEvidenceBO toDynamicRequestEvidenceBO(DynamicRequestEvidence entity) {
+        DynamicRequestEvidenceBO evidence = new DynamicRequestEvidenceBO();
+        evidence.setId(entity.getId());
+        evidence.setTaskId(entity.getTaskId());
+        evidence.setRawEvidenceId(entity.getRawEvidenceId());
+        evidence.setEnv(entity.getEnvName());
+        evidence.setAppName(entity.getAppName());
+        evidence.setEntryMethod(entity.getEntryMethod());
+        evidence.setEntryPath(entity.getEntryPath());
+        evidence.setEntryKey(entity.getEntryKey());
+        evidence.setWallTimeMs(value(entity.getWallTimeMs()));
+        evidence.setRawPayload(entity.getRawPayload());
+        return evidence;
+    }
+
+    private DynamicCallEvidence toDynamicCallEvidence(DynamicCallEvidenceBO evidence) {
+        DynamicCallEvidence entity = new DynamicCallEvidence();
+        entity.setTaskId(evidence.getTaskId());
+        entity.setRequestEvidenceId(evidence.getRequestEvidenceId());
+        entity.setRawEvidenceId(evidence.getRawEvidenceId());
+        entity.setEntryKey(evidence.getEntryKey());
+        entity.setClassName(evidence.getClassName());
+        entity.setMethodName(evidence.getMethodName());
+        entity.setFullMethodName(evidence.getFullMethodName());
+        entity.setCallPath(evidence.getCallPath());
+        entity.setCallCount(evidence.getCallCount());
+        entity.setTotalTimeMs(evidence.getTotalTimeMs());
+        entity.setRawPayload(evidence.getRawPayload());
+        return entity;
+    }
+
+    private DynamicCallEvidenceBO toDynamicCallEvidenceBO(DynamicCallEvidence entity) {
+        DynamicCallEvidenceBO evidence = new DynamicCallEvidenceBO();
+        evidence.setId(entity.getId());
+        evidence.setTaskId(entity.getTaskId());
+        evidence.setRequestEvidenceId(entity.getRequestEvidenceId());
+        evidence.setRawEvidenceId(entity.getRawEvidenceId());
+        evidence.setEntryKey(entity.getEntryKey());
+        evidence.setClassName(entity.getClassName());
+        evidence.setMethodName(entity.getMethodName());
+        evidence.setFullMethodName(entity.getFullMethodName());
+        evidence.setCallPath(entity.getCallPath());
+        evidence.setCallCount(value(entity.getCallCount()));
+        evidence.setTotalTimeMs(value(entity.getTotalTimeMs()));
         evidence.setRawPayload(entity.getRawPayload());
         return evidence;
     }
@@ -637,5 +824,9 @@ public class MybatisPlusAnalysisTaskRepository implements AnalysisTaskRepository
 
     private int value(Integer value) {
         return value == null ? 0 : value;
+    }
+
+    private long value(Long value) {
+        return value == null ? 0L : value;
     }
 }

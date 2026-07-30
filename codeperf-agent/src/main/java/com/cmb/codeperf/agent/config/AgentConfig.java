@@ -26,6 +26,8 @@ import java.util.Set;
 @Data
 public class AgentConfig {
 
+    public static final String DEFAULT_ENTRY_METHODS = "GET,POST,PUT,DELETE";
+
     private static final List<String> DEFAULT_EXCLUDED_PACKAGES = Arrays.asList(
             "com.cmb.cjtz",
             "com.cmb.checkerframework",
@@ -36,7 +38,7 @@ public class AgentConfig {
 
     private List<String> targetPackages = new ArrayList<>();
     private List<String> excludedPackages = defaultExcludedPackages();
-    private String entryMethod = "GET";   // HTTP method，大写
+    private String entryMethod = DEFAULT_ENTRY_METHODS;   // HTTP method 白名单，多个方法用逗号分隔。
     private String entryPath = "/";        // HTTP path 前缀
     private long slowSqlMs = 500;
     private String output = "perf-data.raw";

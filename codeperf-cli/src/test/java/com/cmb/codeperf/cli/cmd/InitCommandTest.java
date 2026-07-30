@@ -211,7 +211,7 @@ public class InitCommandTest {
     }
 
     @Test
-    public void should_AppendCodePerfDirectoryToGitignore_When_GitignoreExists() throws Exception {
+    public void should_AppendCodePerfGeneratedFilesToGitignore_When_GitignoreExists() throws Exception {
         Files.createDirectories(tempDir.resolve(".git"));
         Files.write(tempDir.resolve(".gitignore"), "target/\n".getBytes(StandardCharsets.UTF_8));
 
@@ -223,13 +223,25 @@ public class InitCommandTest {
         String gitignore = new String(Files.readAllBytes(tempDir.resolve(".gitignore")), StandardCharsets.UTF_8);
         assertEquals(0, exitCode);
         assertTrue(gitignore.contains("target/\n"));
-        assertTrue(gitignore.contains(".codeperf/\n"));
+        assertCodePerfIgnoreEntries(gitignore);
     }
 
     @Test
-    public void should_NotDuplicateCodePerfDirectory_When_GitignoreAlreadyContainsIt() throws Exception {
+    public void should_NotDuplicateCodePerfGeneratedFiles_When_GitignoreAlreadyContainsThem() throws Exception {
         Files.createDirectories(tempDir.resolve(".git"));
-        Files.write(tempDir.resolve(".gitignore"), "target/\n.codeperf/\n".getBytes(StandardCharsets.UTF_8));
+        Files.write(tempDir.resolve(".gitignore"), ("target/\n"
+                + ".codeperf.yml\n"
+                + ".codeperf/\n"
+                + "target/codeperf/\n"
+                + "agent.yml\n"
+                + "build-info.properties\n"
+                + "Dockerfile.codeperf.bak\n"
+                + "*.codeperf.bak\n"
+                + "perf-data.raw\n"
+                + "perf-data.raw.done\n"
+                + "perf-report.html\n"
+                + "perf-static.html\n"
+                + "perf-static.json\n").getBytes(StandardCharsets.UTF_8));
 
         InitCommand command = new InitCommand();
         command.setWorkingDirectoryForTest(tempDir);
@@ -239,10 +251,14 @@ public class InitCommandTest {
         String gitignore = new String(Files.readAllBytes(tempDir.resolve(".gitignore")), StandardCharsets.UTF_8);
         assertEquals(0, exitCode);
         assertEquals(1, countOccurrences(gitignore, ".codeperf/"));
+        assertEquals(1, countOccurrences(gitignore, ".codeperf.yml"));
+        assertEquals(1, countOccurrences(gitignore, "target/codeperf/"));
+        assertEquals(1, countOccurrences(gitignore, "agent.yml"));
+        assertEquals(1, countOccurrences(gitignore, "build-info.properties"));
     }
 
     @Test
-    public void should_NotCreateGitignore_When_GitignoreMissing() throws Exception {
+    public void should_CreateGitignoreWithCodePerfGeneratedFiles_When_GitignoreMissing() throws Exception {
         Files.createDirectories(tempDir.resolve(".git"));
 
         InitCommand command = new InitCommand();
@@ -251,7 +267,9 @@ public class InitCommandTest {
         int exitCode = command.execute();
 
         assertEquals(0, exitCode);
-        assertFalse(Files.exists(tempDir.resolve(".gitignore")));
+        assertTrue(Files.exists(tempDir.resolve(".gitignore")));
+        String gitignore = new String(Files.readAllBytes(tempDir.resolve(".gitignore")), StandardCharsets.UTF_8);
+        assertCodePerfIgnoreEntries(gitignore);
     }
 
     @Test
@@ -332,6 +350,21 @@ public class InitCommandTest {
             index = value.indexOf(target, index + target.length());
         }
         return count;
+    }
+
+    private void assertCodePerfIgnoreEntries(String gitignore) {
+        assertTrue(gitignore.contains(".codeperf.yml\n"));
+        assertTrue(gitignore.contains(".codeperf/\n"));
+        assertTrue(gitignore.contains("target/codeperf/\n"));
+        assertTrue(gitignore.contains("agent.yml\n"));
+        assertTrue(gitignore.contains("build-info.properties\n"));
+        assertTrue(gitignore.contains("Dockerfile.codeperf.bak\n"));
+        assertTrue(gitignore.contains("*.codeperf.bak\n"));
+        assertTrue(gitignore.contains("perf-data.raw\n"));
+        assertTrue(gitignore.contains("perf-data.raw.done\n"));
+        assertTrue(gitignore.contains("perf-report.html\n"));
+        assertTrue(gitignore.contains("perf-static.html\n"));
+        assertTrue(gitignore.contains("perf-static.json\n"));
     }
 
     private interface CommandAction {

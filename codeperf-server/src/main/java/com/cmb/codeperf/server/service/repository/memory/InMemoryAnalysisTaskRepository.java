@@ -1,9 +1,12 @@
 package com.cmb.codeperf.server.service.repository.memory;
 
 import com.cmb.codeperf.server.model.bo.AnalysisTaskBO;
+import com.cmb.codeperf.server.model.bo.DynamicCallEvidenceBO;
 import com.cmb.codeperf.server.model.bo.DynamicEvidenceBO;
+import com.cmb.codeperf.server.model.bo.DynamicRequestEvidenceBO;
 import com.cmb.codeperf.server.model.bo.FindingIssueBO;
 import com.cmb.codeperf.server.model.bo.FindingOccurrenceBO;
+import com.cmb.codeperf.server.model.bo.StaticDynamicCorroborationBO;
 import com.cmb.codeperf.server.model.bo.StaticFindingBO;
 import com.cmb.codeperf.server.service.repository.AnalysisTaskRepository;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -31,6 +34,9 @@ public class InMemoryAnalysisTaskRepository implements AnalysisTaskRepository {
     private final List<String> taskOrder = new CopyOnWriteArrayList<>();
     private final Map<String, List<StaticFindingBO>> staticFindings = new ConcurrentHashMap<>();
     private final Map<String, List<DynamicEvidenceBO>> dynamicEvidence = new ConcurrentHashMap<>();
+    private final Map<String, List<DynamicRequestEvidenceBO>> dynamicRequestEvidence = new ConcurrentHashMap<>();
+    private final Map<String, List<DynamicCallEvidenceBO>> dynamicCallEvidence = new ConcurrentHashMap<>();
+    private final Map<String, List<StaticDynamicCorroborationBO>> staticDynamicCorroborations = new ConcurrentHashMap<>();
     private final Map<String, FindingIssueBO> issues = new ConcurrentHashMap<>();
     private final List<FindingOccurrenceBO> occurrences = new CopyOnWriteArrayList<>();
     private final Set<String> ruleIds = new HashSet<>(Arrays.asList("LOOP_IO_AMPLIFICATION"));
@@ -92,12 +98,58 @@ public class InMemoryAnalysisTaskRepository implements AnalysisTaskRepository {
 
     @Override
     public void replaceStaticFindings(String taskId, List<StaticFindingBO> findings) {
-        staticFindings.put(taskId, new ArrayList<>(findings));
+        List<StaticFindingBO> stored = new ArrayList<>(findings.size());
+        for (StaticFindingBO finding : findings) {
+            finding.setId((long) staticFindings.values().stream().mapToInt(List::size).sum() + stored.size() + 1);
+            stored.add(finding);
+        }
+        staticFindings.put(taskId, stored);
     }
 
     @Override
-    public void appendDynamicEvidence(DynamicEvidenceBO evidence) {
+    public DynamicEvidenceBO appendDynamicEvidence(DynamicEvidenceBO evidence) {
+        evidence.setId((long) dynamicEvidence.values().stream().mapToInt(List::size).sum() + 1);
         dynamicEvidence.computeIfAbsent(evidence.getTaskId(), ignored -> new ArrayList<>()).add(evidence);
+        return evidence;
+    }
+
+    @Override
+    public void appendDynamicRequestEvidence(DynamicRequestEvidenceBO evidence) {
+        evidence.setId((long) dynamicRequestEvidence.values().stream().mapToInt(List::size).sum() + 1);
+        dynamicRequestEvidence.computeIfAbsent(evidence.getTaskId(), ignored -> new ArrayList<>()).add(evidence);
+    }
+
+    @Override
+    public void appendDynamicCallEvidence(DynamicCallEvidenceBO evidence) {
+        evidence.setId((long) dynamicCallEvidence.values().stream().mapToInt(List::size).sum() + 1);
+        dynamicCallEvidence.computeIfAbsent(evidence.getTaskId(), ignored -> new ArrayList<>()).add(evidence);
+    }
+
+    @Override
+    public List<DynamicRequestEvidenceBO> listDynamicRequestEvidence(String taskId) {
+        return new ArrayList<>(dynamicRequestEvidence.getOrDefault(taskId, new ArrayList<DynamicRequestEvidenceBO>()));
+    }
+
+    @Override
+    public List<DynamicCallEvidenceBO> listDynamicCallEvidence(String taskId) {
+        return new ArrayList<>(dynamicCallEvidence.getOrDefault(taskId, new ArrayList<DynamicCallEvidenceBO>()));
+    }
+
+    @Override
+    public void replaceStaticDynamicCorroborations(String taskId, List<StaticDynamicCorroborationBO> corroborations) {
+        List<StaticDynamicCorroborationBO> stored = new ArrayList<>(corroborations.size());
+        for (StaticDynamicCorroborationBO corroboration : corroborations) {
+            corroboration.setId((long) staticDynamicCorroborations.values().stream().mapToInt(List::size).sum()
+                    + stored.size() + 1);
+            stored.add(corroboration);
+        }
+        staticDynamicCorroborations.put(taskId, stored);
+    }
+
+    @Override
+    public List<StaticDynamicCorroborationBO> listStaticDynamicCorroborations(String taskId) {
+        return new ArrayList<>(staticDynamicCorroborations.getOrDefault(taskId,
+                new ArrayList<StaticDynamicCorroborationBO>()));
     }
 
     @Override
@@ -130,6 +182,11 @@ public class InMemoryAnalysisTaskRepository implements AnalysisTaskRepository {
         issue.setRawPayload(finding.getRawPayload());
         issues.put(issueKey, issue);
         return issue;
+    }
+
+    @Override
+    public Optional<FindingIssueBO> findIssueByIssueKey(String issueKey) {
+        return Optional.ofNullable(issues.get(issueKey));
     }
 
     @Override

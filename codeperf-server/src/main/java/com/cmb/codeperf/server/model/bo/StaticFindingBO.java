@@ -4,6 +4,7 @@ import lombok.Data;
 
 @Data
 public class StaticFindingBO {
+    private Long id;
     private String taskId;
     private String ruleId;
     private String severity;

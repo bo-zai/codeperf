@@ -50,7 +50,9 @@ public class AgentInstallConfigDefaultTest {
                 .andExpect(jsonPath("$.excludedPackages[2]").value("com.cmb.bee"))
                 .andExpect(jsonPath("$.excludedPackages[3]").value("com.cmbchina.ugw"))
                 .andExpect(jsonPath("$.excludedPackages[4]").value("com.sun"))
-                .andExpect(jsonPath("$.excludedPackages[5]").value("com.tencentcloud"));
+                .andExpect(jsonPath("$.excludedPackages[5]").value("com.tencentcloud"))
+                .andExpect(jsonPath("$.entry.method").value("GET,POST,PUT,DELETE"))
+                .andExpect(jsonPath("$.entry.path").value("/"));
     }
 }
 

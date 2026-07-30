@@ -267,7 +267,7 @@ PY
   ENV_NAME="$(json_get "env" "dev" "$response")"
   TARGET_PACKAGES="$(json_get "targetPackages" "" "$response")"
   EXCLUDED_PACKAGES="$(json_get "excludedPackages" "" "$response")"
-  ENTRY_METHOD="$(json_get "entry.method" "POST" "$response")"
+  ENTRY_METHOD="$(json_get "entry.method" "GET,POST,PUT,DELETE" "$response")"
   ENTRY_PATH="$(json_get "entry.path" "/" "$response")"
   SLOW_SQL_MS="$(json_get "slowSqlMs" "500" "$response")"
   SAMPLE_MS="$(json_get "sampleMs" "10" "$response")"

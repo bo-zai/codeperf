@@ -31,6 +31,19 @@ public class InitCommand {
     private static final String ENV_DEV = "dev";
     private static final String LOCAL_SERVER_URL = "http://localhost:9095";
     private static final String DEV_SERVER_URL = "http://codeperf-server.paas.cmbchina.cn";
+    private static final List<String> CODEPERF_IGNORE_ENTRIES = java.util.Arrays.asList(
+            ".codeperf.yml",
+            ".codeperf/",
+            "target/codeperf/",
+            "agent.yml",
+            "build-info.properties",
+            "Dockerfile.codeperf.bak",
+            "*.codeperf.bak",
+            "perf-data.raw",
+            "perf-data.raw.done",
+            "perf-report.html",
+            "perf-static.html",
+            "perf-static.json");
 
     @Parameter(names = "--env", description = "初始化环境，只允许 local 或 dev")
     private String env = ENV_LOCAL;
@@ -53,7 +66,7 @@ public class InitCommand {
             String projectName = inferProjectName(root);
             List<String> sourceRoots = discoverSourceRoots(root);
             writeConfig(root.resolve(".codeperf.yml"), defaultConfig(projectName, sourceRoots, normalizedEnv));
-            appendCodePerfToGitignore(root);
+            appendCodePerfEntriesToGitignore(root);
             if (force) {
                 System.out.println("[codeperf] init 完成，已按 --force 覆盖配置文件");
             } else {
@@ -92,22 +105,45 @@ public class InitCommand {
         }
     }
 
-    private void appendCodePerfToGitignore(Path root) throws Exception {
+    private void appendCodePerfEntriesToGitignore(Path root) throws Exception {
         Path gitignore = root.resolve(".gitignore");
-        if (!Files.isRegularFile(gitignore)) {
-            return;
-        }
-        List<String> lines = Files.readAllLines(gitignore, StandardCharsets.UTF_8);
-        for (String line : lines) {
-            String trimmed = line.trim();
-            if (".codeperf".equals(trimmed) || ".codeperf/".equals(trimmed)) {
-                return;
+        List<String> lines = Files.isRegularFile(gitignore)
+                ? Files.readAllLines(gitignore, StandardCharsets.UTF_8)
+                : new ArrayList<String>();
+        List<String> missing = new ArrayList<>();
+        for (String entry : CODEPERF_IGNORE_ENTRIES) {
+            if (!containsIgnoreEntry(lines, entry)) {
+                missing.add(entry);
             }
         }
-        String separator = lines.isEmpty() || lines.get(lines.size() - 1).isEmpty() ? "" : "\n";
-        Files.write(gitignore, (separator + ".codeperf/\n").getBytes(StandardCharsets.UTF_8),
-                java.nio.file.StandardOpenOption.APPEND);
-        System.out.println("[codeperf] 已更新 .gitignore: .codeperf/");
+        if (missing.isEmpty()) {
+            return;
+        }
+        StringBuilder content = new StringBuilder();
+        if (!lines.isEmpty() && !lines.get(lines.size() - 1).isEmpty()) {
+            content.append('\n');
+        }
+        for (String entry : missing) {
+            content.append(entry).append('\n');
+        }
+        Files.write(gitignore, content.toString().getBytes(StandardCharsets.UTF_8),
+                Files.isRegularFile(gitignore)
+                        ? java.nio.file.StandardOpenOption.APPEND
+                        : java.nio.file.StandardOpenOption.CREATE);
+        System.out.println("[codeperf] 已更新 .gitignore: CodePerf 本地产物");
+    }
+
+    private boolean containsIgnoreEntry(List<String> lines, String entry) {
+        for (String line : lines) {
+            String trimmed = line.trim();
+            if (entry.equals(trimmed)) {
+                return true;
+            }
+            if (".codeperf/".equals(entry) && ".codeperf".equals(trimmed)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private Path findGitRoot(Path start) throws Exception {

@@ -14,6 +14,7 @@ import com.cmb.codeperf.server.model.vo.report.ReportDynamicEvidenceVO;
 import com.cmb.codeperf.server.model.vo.report.ReportFindingCardVO;
 import com.cmb.codeperf.server.model.vo.report.ReportListItemVO;
 import com.cmb.codeperf.server.model.vo.report.ReportListPageVO;
+import com.cmb.codeperf.server.model.vo.report.RuntimeCorroborationSummaryVO;
 import com.cmb.codeperf.server.service.repository.AnalysisTaskRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -37,11 +38,15 @@ public class ReportPageService {
 
     private final AnalysisTaskRepository repository;
     private final StaticReportSummarizer staticReportSummarizer;
+    private final RuntimeEvidenceAggregator runtimeEvidenceAggregator;
     private final ObjectMapper mapper = new ObjectMapper();
 
-    public ReportPageService(AnalysisTaskRepository repository, StaticReportSummarizer staticReportSummarizer) {
+    public ReportPageService(AnalysisTaskRepository repository,
+                             StaticReportSummarizer staticReportSummarizer,
+                             RuntimeEvidenceAggregator runtimeEvidenceAggregator) {
         this.repository = repository;
         this.staticReportSummarizer = staticReportSummarizer;
+        this.runtimeEvidenceAggregator = runtimeEvidenceAggregator;
     }
 
     /**
@@ -190,15 +195,17 @@ public class ReportPageService {
         page.setFilesScanned(summary.getFilesScanned());
         page.setFindingCount(summary.getFindingCount());
         page.setParseErrorCount(summary.getParseErrorCount());
-        RuntimeEvidenceIndex runtimeEvidenceIndex = buildRuntimeEvidenceIndex(dynamicRecords);
+        Map<String, RuntimeCorroborationSummaryVO> runtimeSummaries =
+                runtimeEvidenceAggregator.aggregate(summary.getFindings(), dynamicRecords);
         List<ReportFindingCardVO> cards = new ArrayList<>(summary.getFindings().size());
         for (StaticFindingSummary finding : summary.getFindings()) {
-            cards.add(toFindingCard(finding, runtimeEvidenceIndex));
+            cards.add(toFindingCard(finding, runtimeSummaries.get(runtimeEvidenceAggregator.findingKey(finding))));
         }
         page.setFindingCards(cards);
+        fillRuntimeSummary(page, cards);
     }
 
-    private ReportFindingCardVO toFindingCard(StaticFindingSummary finding, RuntimeEvidenceIndex runtimeEvidenceIndex) {
+    private ReportFindingCardVO toFindingCard(StaticFindingSummary finding, RuntimeCorroborationSummaryVO runtimeSummary) {
         ReportFindingCardVO card = new ReportFindingCardVO();
         card.setRuleId(finding.getRuleId());
         card.setSeverity(finding.getSeverity());
@@ -215,8 +222,23 @@ public class ReportPageService {
         card.setIoType(finding.getIoType());
         card.setLocation(card.getFileName() + ":" + finding.getLineNumber());
         fillAttribution(card, finding.getAttribution());
-        fillRuntimeCorroboration(card, finding, runtimeEvidenceIndex);
+        fillRuntimeCorroboration(card, runtimeSummary);
         return card;
+    }
+
+    private void fillRuntimeSummary(ReportDetailPageVO page, List<ReportFindingCardVO> cards) {
+        int corroboratedCount = 0;
+        int highAmplificationCount = 0;
+        for (ReportFindingCardVO card : cards) {
+            if (!"未命中".equals(card.getRuntimeCorroborationStatus())) {
+                corroboratedCount++;
+            }
+            if ("高放大命中".equals(card.getRuntimeCorroborationStatus())) {
+                highAmplificationCount++;
+            }
+        }
+        page.setRuntimeCorroboratedFindingCount(corroboratedCount);
+        page.setRuntimeHighAmplificationCount(highAmplificationCount);
     }
 
     private void fillAttribution(ReportFindingCardVO card, RiskAttributionSummary attribution) {
@@ -230,21 +252,40 @@ public class ReportPageService {
         card.setIntroducedCommit(shortCommit(attribution.getIntroducedCommit()));
     }
 
-    private void fillRuntimeCorroboration(ReportFindingCardVO card, StaticFindingSummary finding,
-                                          RuntimeEvidenceIndex runtimeEvidenceIndex) {
-        RuntimeCorroboration corroboration = runtimeEvidenceIndex.match(finding);
-        if (corroboration == null) {
-            card.setRuntimeCorroborationStatus("未佐证");
+    private void fillRuntimeCorroboration(ReportFindingCardVO card, RuntimeCorroborationSummaryVO summary) {
+        if (summary == null || !summary.isMatched()) {
+            card.setRuntimeCorroborationStatus("未命中");
             card.setRuntimeCorroborationText("当前没有找到能够直接对应这条静态风险的运行证据。");
             return;
         }
-        card.setRuntimeCorroborationStatus("已佐证");
-        card.setRuntimeCorroborationText(corroboration.getText());
-        card.setRuntimeEntryKey(corroboration.getEntryKey());
-        card.setRuntimeCallPath(corroboration.getCallPath());
-        card.setRuntimeMatchedMethod(corroboration.getMatchedMethod());
-        card.setRuntimeRepeatCount(corroboration.getRepeatCount());
-        card.setRuntimeMatchedReason(corroboration.getMatchedReason());
+        card.setRuntimeCorroborationStatus(runtimeStatusText(summary.getStatus()));
+        card.setRuntimeCorroborationText(summary.getText());
+        card.setRuntimeEntryKey(summary.getLatestEntryKey());
+        card.setRuntimeCallPath(summary.getLatestCallPath());
+        card.setRuntimeMatchedMethod(summary.getLatestMatchedMethod());
+        card.setRuntimeRepeatCount(summary.getMaxRepeatCount());
+        card.setRuntimeMatchedReason(summary.getMatchedReason());
+        card.setRuntimeHitRequestCount(summary.getHitRequestCount());
+        card.setRuntimeHitEntryCount(summary.getHitEntryCount());
+        card.setRuntimeAvgRepeatCount(summary.getAvgRepeatCount());
+        card.setRuntimeTopEntryKey(summary.getTopEntryKey());
+        card.setRuntimeTopEntries(summary.getTopEntries());
+    }
+
+    private String runtimeStatusText(String status) {
+        if ("HIGH_AMPLIFICATION".equals(status)) {
+            return "高放大命中";
+        }
+        if ("MULTI_ENTRY_HIT".equals(status)) {
+            return "多入口命中";
+        }
+        if ("FREQUENT_HIT".equals(status)) {
+            return "高频命中";
+        }
+        if ("HIT".equals(status)) {
+            return "已命中";
+        }
+        return "未命中";
     }
 
     private void fillDynamicEvidence(ReportDetailPageVO page, List<DynamicEvidenceBO> records) {
@@ -356,7 +397,7 @@ public class ReportPageService {
             return "本次任务未发现静态结构风险；动态运行证据可作为补充验证，不改变当前静态结论。";
         }
         if (!page.getDynamicEvidenceList().isEmpty()) {
-            return "动态运行证据用于补充静态风险判定，帮助确认实际运行路径与调用频次。";
+            return "动态运行证据已聚合到静态风险卡片，重点查看命中入口、命中请求数、最大/平均重复调用和最近运行路径。";
         }
         return "当前仅有静态结构风险，尚未收到动态运行证据；建议优先修复本次变更风险，再补充运行验证。";
     }

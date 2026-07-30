@@ -2,12 +2,18 @@ package com.cmb.codeperf.server.service.impl;
 
 import com.cmb.codeperf.server.model.bo.AnalysisTaskBO;
 import com.cmb.codeperf.server.model.bo.AnalysisTaskCreateBO;
+import com.cmb.codeperf.server.model.bo.DynamicCallEvidenceBO;
 import com.cmb.codeperf.server.model.bo.DynamicEvidenceBO;
+import com.cmb.codeperf.server.model.bo.DynamicRequestEvidenceBO;
 import com.cmb.codeperf.server.model.bo.FindingIssueBO;
 import com.cmb.codeperf.server.model.bo.FindingOccurrenceBO;
 import com.cmb.codeperf.server.model.bo.RiskLevel;
+import com.cmb.codeperf.server.model.bo.StaticDynamicCorroborationBO;
 import com.cmb.codeperf.server.model.bo.StaticFindingBO;
 import com.cmb.codeperf.server.model.bo.TaskStatus;
+import com.cmb.codeperf.server.model.dto.response.StaticFindingSummary;
+import com.cmb.codeperf.server.model.dto.response.StaticReportSummary;
+import com.cmb.codeperf.server.model.vo.report.RuntimeCorroborationSummaryVO;
 import com.cmb.codeperf.server.service.repository.AnalysisTaskRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -29,11 +35,15 @@ public class AnalysisTaskService {
 
     private final AnalysisTaskRepository repository;
     private final StaticReportSummarizer staticReportSummarizer;
+    private final RuntimeEvidenceAggregator runtimeEvidenceAggregator;
     private final ObjectMapper mapper = new ObjectMapper();
 
-    public AnalysisTaskService(AnalysisTaskRepository repository, StaticReportSummarizer staticReportSummarizer) {
+    public AnalysisTaskService(AnalysisTaskRepository repository,
+                               StaticReportSummarizer staticReportSummarizer,
+                               RuntimeEvidenceAggregator runtimeEvidenceAggregator) {
         this.repository = repository;
         this.staticReportSummarizer = staticReportSummarizer;
+        this.runtimeEvidenceAggregator = runtimeEvidenceAggregator;
     }
 
     public AnalysisTaskBO create(String project, String commit, String branch, String env) {
@@ -117,7 +127,8 @@ public class AnalysisTaskService {
         task.setDynamicPayload(payload);
         task.setStatus(TaskStatus.DYNAMIC_RECEIVED);
         AnalysisTaskBO saved = repository.save(task);
-        repository.appendDynamicEvidence(extractDynamicEvidence(task, payload));
+        DynamicEvidenceBO rawEvidence = repository.appendDynamicEvidence(extractDynamicEvidence(task, payload));
+        appendStructuredDynamicEvidence(saved, rawEvidence);
         return saved;
     }
 
@@ -215,6 +226,228 @@ public class AnalysisTaskService {
             record.setAppName("");
         }
         return record;
+    }
+
+    private void appendStructuredDynamicEvidence(AnalysisTaskBO task, DynamicEvidenceBO rawEvidence) {
+        // 动态 raw JSON 只适合审计追溯，企业报告和统计必须落到请求、调用、佐证三个稳定维度。
+        List<DynamicRequestEvidenceBO> requests = extractDynamicRequests(task, rawEvidence);
+        for (DynamicRequestEvidenceBO request : requests) {
+            repository.appendDynamicRequestEvidence(request);
+            for (DynamicCallEvidenceBO call : extractDynamicCalls(request)) {
+                call.setRequestEvidenceId(request.getId());
+                repository.appendDynamicCallEvidence(call);
+            }
+        }
+        refreshStaticDynamicCorroborations(task);
+    }
+
+    private List<DynamicRequestEvidenceBO> extractDynamicRequests(AnalysisTaskBO task, DynamicEvidenceBO rawEvidence) {
+        try {
+            JsonNode root = mapper.readTree(rawEvidence.getRawPayload());
+            JsonNode requests = root.path("evidence").path("requests");
+            if (!requests.isArray()) {
+                return Collections.emptyList();
+            }
+            List<DynamicRequestEvidenceBO> result = new ArrayList<>();
+            for (JsonNode request : requests) {
+                DynamicRequestEvidenceBO evidence = new DynamicRequestEvidenceBO();
+                evidence.setTaskId(task.getAnalysisTaskId());
+                evidence.setRawEvidenceId(rawEvidence.getId());
+                evidence.setEnv(task.getEnv());
+                evidence.setAppName(rawEvidence.getAppName());
+                evidence.setEntryMethod(text(request, "httpMethod"));
+                evidence.setEntryPath(text(request, "path"));
+                evidence.setEntryKey(requestEntryKey(request, rawEvidence.getEntryKey()));
+                evidence.setWallTimeMs(request.path("wallTimeMs").asLong(0L));
+                evidence.setRawPayload(request.toString());
+                result.add(evidence);
+            }
+            return result;
+        } catch (IOException e) {
+            return Collections.emptyList();
+        }
+    }
+
+    private List<DynamicCallEvidenceBO> extractDynamicCalls(DynamicRequestEvidenceBO requestEvidence) {
+        try {
+            JsonNode root = mapper.readTree(requestEvidence.getRawPayload());
+            List<DynamicCallEvidenceBO> result = new ArrayList<>();
+            collectDynamicCalls(root.path("callTree"), requestEvidence, new ArrayList<String>(), result);
+            return result;
+        } catch (IOException e) {
+            return Collections.emptyList();
+        }
+    }
+
+    private void refreshStaticDynamicCorroborations(AnalysisTaskBO task) {
+        // 每次动态证据到达后重算当前任务的佐证摘要，保证多次接口调用能累积为整体判断。
+        List<StaticFindingBO> staticFindings = repository.listStaticFindings(task.getAnalysisTaskId());
+        if (staticFindings.isEmpty() || task.getStaticPayload() == null || task.getStaticPayload().trim().isEmpty()) {
+            repository.replaceStaticDynamicCorroborations(task.getAnalysisTaskId(),
+                    Collections.<StaticDynamicCorroborationBO>emptyList());
+            return;
+        }
+        StaticReportSummary staticReport = staticReportSummarizer.summarize(task.getStaticPayload());
+        List<StaticFindingSummary> summaries = staticReport == null
+                ? Collections.<StaticFindingSummary>emptyList()
+                : staticReport.getFindings();
+        List<DynamicEvidenceBO> dynamicRecords = repository.listDynamicEvidence(task.getAnalysisTaskId());
+        java.util.Map<String, RuntimeCorroborationSummaryVO> summaryMap =
+                runtimeEvidenceAggregator.aggregate(summaries, dynamicRecords);
+        List<StaticDynamicCorroborationBO> records = new ArrayList<>();
+        for (StaticFindingBO staticFinding : staticFindings) {
+            StaticFindingSummary summary = toStaticFindingSummary(staticFinding);
+            RuntimeCorroborationSummaryVO runtimeSummary =
+                    summaryMap.get(runtimeEvidenceAggregator.findingKey(summary));
+            if (runtimeSummary == null) {
+                runtimeSummary = new RuntimeCorroborationSummaryVO();
+                runtimeSummary.setStatus("NOT_HIT");
+                runtimeSummary.setText("当前没有找到能够直接对应这条静态风险的运行证据。");
+            }
+            records.add(toStaticDynamicCorroboration(task, staticFinding, runtimeSummary,
+                    repository.findIssueByIssueKey(issueKey(task, staticFinding)).orElse(null)));
+        }
+        repository.replaceStaticDynamicCorroborations(task.getAnalysisTaskId(), records);
+    }
+
+    private StaticFindingSummary toStaticFindingSummary(StaticFindingBO finding) {
+        try {
+            // 匹配逻辑依赖静态 evidence、loopCallLine、ioLine 等细节，优先从原始 finding 还原完整摘要。
+            JsonNode raw = mapper.readTree(finding.getRawPayload());
+            return new StaticFindingSummary(
+                    text(raw, "ruleId"),
+                    text(raw, "severity"),
+                    text(raw, "confidence"),
+                    text(raw, "sourceFile"),
+                    text(raw, "evidence"),
+                    raw.path("lineNumber").asInt(0),
+                    raw.path("loopStartLine").asInt(0),
+                    raw.path("loopEndLine").asInt(0),
+                    text(raw, "ioType"),
+                    text(raw, "loopMethodName"),
+                    raw.path("loopCallLine").asInt(0),
+                    raw.path("ioLine").asInt(0),
+                    null);
+        } catch (IOException e) {
+            return new StaticFindingSummary(
+                    finding.getRuleId(),
+                    finding.getSeverity(),
+                    finding.getConfidence(),
+                    finding.getSourceFile(),
+                    "",
+                    finding.getLineNumber(),
+                    finding.getLoopStartLine(),
+                    finding.getLoopEndLine(),
+                    finding.getIoType(),
+                    finding.getLoopMethodName(),
+                    0,
+                    0,
+                    null);
+        }
+    }
+
+    private StaticDynamicCorroborationBO toStaticDynamicCorroboration(AnalysisTaskBO task,
+                                                                      StaticFindingBO staticFinding,
+                                                                      RuntimeCorroborationSummaryVO runtimeSummary,
+                                                                      FindingIssueBO findingIssue) {
+        StaticDynamicCorroborationBO record = new StaticDynamicCorroborationBO();
+        record.setTaskId(task.getAnalysisTaskId());
+        record.setStaticFindingId(staticFinding.getId());
+        record.setFindingIssueId(findingIssue == null ? null : findingIssue.getId());
+        record.setStatus(runtimeSummary.getStatus());
+        record.setHitRequestCount(runtimeSummary.getHitRequestCount());
+        record.setHitEntryCount(runtimeSummary.getHitEntryCount());
+        record.setMaxRepeatCount(runtimeSummary.getMaxRepeatCount());
+        record.setAvgRepeatCount(runtimeSummary.getAvgRepeatCount());
+        record.setTopEntryKey(runtimeSummary.getTopEntryKey());
+        record.setReason(runtimeSummary.getText());
+        return record;
+    }
+
+    private void collectDynamicCalls(JsonNode node,
+                                     DynamicRequestEvidenceBO requestEvidence,
+                                     List<String> path,
+                                     List<DynamicCallEvidenceBO> result) {
+        if (node == null || node.isMissingNode() || node.isNull()) {
+            return;
+        }
+        String fullMethodName = text(node, "method");
+        if (!fullMethodName.trim().isEmpty() && !"ROOT".equals(fullMethodName)) {
+            List<String> nextPath = new ArrayList<>(path);
+            nextPath.add(simpleMethodDisplay(fullMethodName));
+            DynamicCallEvidenceBO call = new DynamicCallEvidenceBO();
+            call.setTaskId(requestEvidence.getTaskId());
+            call.setRawEvidenceId(requestEvidence.getRawEvidenceId());
+            call.setEntryKey(requestEvidence.getEntryKey());
+            call.setFullMethodName(fullMethodName);
+            call.setClassName(className(fullMethodName));
+            call.setMethodName(methodName(fullMethodName));
+            call.setCallPath(joinPath(nextPath));
+            call.setCallCount(node.path("count").asInt(0));
+            call.setTotalTimeMs(node.path("totalTimeMs").asLong(node.path("totalMs").asLong(0L)));
+            call.setRawPayload(node.toString());
+            result.add(call);
+            collectChildren(node, requestEvidence, nextPath, result);
+            return;
+        }
+        collectChildren(node, requestEvidence, path, result);
+    }
+
+    private void collectChildren(JsonNode node,
+                                 DynamicRequestEvidenceBO requestEvidence,
+                                 List<String> path,
+                                 List<DynamicCallEvidenceBO> result) {
+        JsonNode children = node.path("children");
+        if (!children.isArray()) {
+            return;
+        }
+        for (JsonNode child : children) {
+            collectDynamicCalls(child, requestEvidence, path, result);
+        }
+    }
+
+    private String requestEntryKey(JsonNode request, String fallback) {
+        String method = text(request, "httpMethod");
+        String path = text(request, "path");
+        String entryKey = (method + " " + path).trim();
+        return entryKey.trim().isEmpty() ? fallback : entryKey;
+    }
+
+    private String simpleMethodDisplay(String fullMethod) {
+        String className = className(fullMethod);
+        String methodName = methodName(fullMethod);
+        return className.trim().isEmpty() ? methodName : className + "." + methodName;
+    }
+
+    private String className(String fullMethod) {
+        if (fullMethod == null) {
+            return "";
+        }
+        int lastDot = fullMethod.lastIndexOf('.');
+        if (lastDot < 0) {
+            return "";
+        }
+        int classStart = fullMethod.lastIndexOf('.', lastDot - 1);
+        return classStart >= 0 ? fullMethod.substring(classStart + 1, lastDot) : fullMethod.substring(0, lastDot);
+    }
+
+    private String methodName(String fullMethod) {
+        if (fullMethod == null) {
+            return "";
+        }
+        int lastDot = fullMethod.lastIndexOf('.');
+        return lastDot >= 0 ? fullMethod.substring(lastDot + 1) : fullMethod;
+    }
+
+    private String joinPath(List<String> path) {
+        StringBuilder builder = new StringBuilder();
+        for (int i = 0; i < path.size(); i++) {
+            if (i > 0) {
+                builder.append(" -> ");
+            }
+            builder.append(path.get(i));
+        }
+        return builder.toString();
     }
 
     private DynamicEvidenceIdentity parseDynamicEvidenceIdentity(String payload) {

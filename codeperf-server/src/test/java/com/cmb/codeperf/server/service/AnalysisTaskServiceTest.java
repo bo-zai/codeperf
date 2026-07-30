@@ -4,6 +4,7 @@ import com.cmb.codeperf.server.model.bo.AnalysisTaskBO;
 import com.cmb.codeperf.server.model.bo.AnalysisTaskCreateBO;
 import com.cmb.codeperf.server.model.bo.RiskLevel;
 import com.cmb.codeperf.server.service.impl.AnalysisTaskService;
+import com.cmb.codeperf.server.service.impl.RuntimeEvidenceAggregator;
 import com.cmb.codeperf.server.service.impl.StaticReportSummarizer;
 import com.cmb.codeperf.server.service.repository.memory.InMemoryAnalysisTaskRepository;
 import org.junit.jupiter.api.Test;
@@ -16,7 +17,7 @@ public class AnalysisTaskServiceTest {
     @Test
     public void should_PersistTaskState_When_StaticAndDynamicEvidenceAccepted() {
         AnalysisTaskService service = new AnalysisTaskService(
-                new InMemoryAnalysisTaskRepository(), new StaticReportSummarizer());
+                new InMemoryAnalysisTaskRepository(), new StaticReportSummarizer(), new RuntimeEvidenceAggregator());
 
         AnalysisTaskBO created = service.create("order-service", "abc", "main", "local");
         service.acceptStaticResult(created.getAnalysisTaskId(),
@@ -32,7 +33,7 @@ public class AnalysisTaskServiceTest {
     @Test
     public void should_LinkDynamicEvidenceToStaticTask_When_CommitIdentityMatches() {
         AnalysisTaskService service = new AnalysisTaskService(
-                new InMemoryAnalysisTaskRepository(), new StaticReportSummarizer());
+                new InMemoryAnalysisTaskRepository(), new StaticReportSummarizer(), new RuntimeEvidenceAggregator());
 
         AnalysisTaskCreateBO command = new AnalysisTaskCreateBO();
         command.setProject("order-service");
@@ -65,7 +66,7 @@ public class AnalysisTaskServiceTest {
     @Test
     public void should_LinkDynamicEvidenceToLatestTask_When_SameCommitScannedMultipleTimes() {
         AnalysisTaskService service = new AnalysisTaskService(
-                new InMemoryAnalysisTaskRepository(), new StaticReportSummarizer());
+                new InMemoryAnalysisTaskRepository(), new StaticReportSummarizer(), new RuntimeEvidenceAggregator());
 
         AnalysisTaskCreateBO firstCommand = sameCommitCommand();
         AnalysisTaskBO first = service.create(firstCommand);

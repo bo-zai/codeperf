@@ -39,5 +39,5 @@ report:
     enabled: true
     path: .codeperf/report/source-report.json
   upload:
-    enabled: false
+    enabled: true
     serverUrl: http://127.0.0.1:9095

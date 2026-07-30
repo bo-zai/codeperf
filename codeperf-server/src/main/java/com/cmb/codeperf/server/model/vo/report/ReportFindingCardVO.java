@@ -2,6 +2,9 @@ package com.cmb.codeperf.server.model.vo.report;
 
 import lombok.Data;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * 综合报告中的静态风险卡片。
  */
@@ -82,4 +85,19 @@ public class ReportFindingCardVO {
 
     /** 动态匹配依据 */
     private String runtimeMatchedReason;
+
+    /** 动态佐证命中请求数 */
+    private int runtimeHitRequestCount;
+
+    /** 动态佐证命中入口数 */
+    private int runtimeHitEntryCount;
+
+    /** 动态佐证平均重复调用次数 */
+    private int runtimeAvgRepeatCount;
+
+    /** 动态佐证主要入口 */
+    private String runtimeTopEntryKey;
+
+    /** 动态佐证入口分布 */
+    private List<RuntimeCorroborationEntryVO> runtimeTopEntries = new ArrayList<>();
 }

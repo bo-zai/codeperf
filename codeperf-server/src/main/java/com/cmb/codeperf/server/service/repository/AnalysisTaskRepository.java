@@ -1,9 +1,12 @@
 package com.cmb.codeperf.server.service.repository;
 
 import com.cmb.codeperf.server.model.bo.AnalysisTaskBO;
+import com.cmb.codeperf.server.model.bo.DynamicCallEvidenceBO;
 import com.cmb.codeperf.server.model.bo.DynamicEvidenceBO;
+import com.cmb.codeperf.server.model.bo.DynamicRequestEvidenceBO;
 import com.cmb.codeperf.server.model.bo.FindingIssueBO;
 import com.cmb.codeperf.server.model.bo.FindingOccurrenceBO;
+import com.cmb.codeperf.server.model.bo.StaticDynamicCorroborationBO;
 import com.cmb.codeperf.server.model.bo.StaticFindingBO;
 
 import java.util.List;
@@ -69,11 +72,25 @@ public interface AnalysisTaskRepository {
 
     void replaceStaticFindings(String taskId, List<StaticFindingBO> findings);
 
-    void appendDynamicEvidence(DynamicEvidenceBO evidence);
+    DynamicEvidenceBO appendDynamicEvidence(DynamicEvidenceBO evidence);
+
+    void appendDynamicRequestEvidence(DynamicRequestEvidenceBO evidence);
+
+    void appendDynamicCallEvidence(DynamicCallEvidenceBO evidence);
+
+    List<DynamicRequestEvidenceBO> listDynamicRequestEvidence(String taskId);
+
+    List<DynamicCallEvidenceBO> listDynamicCallEvidence(String taskId);
+
+    void replaceStaticDynamicCorroborations(String taskId, List<StaticDynamicCorroborationBO> corroborations);
+
+    List<StaticDynamicCorroborationBO> listStaticDynamicCorroborations(String taskId);
 
     boolean isRuleDefined(String ruleId);
 
     FindingIssueBO saveOrUpdateIssue(AnalysisTaskBO task, StaticFindingBO finding, String issueKey);
+
+    Optional<FindingIssueBO> findIssueByIssueKey(String issueKey);
 
     void appendFindingOccurrence(FindingOccurrenceBO occurrence);
 

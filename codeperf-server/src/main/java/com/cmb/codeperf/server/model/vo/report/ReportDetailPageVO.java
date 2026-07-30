@@ -65,6 +65,12 @@ public class ReportDetailPageVO {
     /** 动态证据列表 */
     private List<ReportDynamicEvidenceVO> dynamicEvidenceList = new ArrayList<>();
 
+    /** 已被动态证据命中的静态风险数 */
+    private int runtimeCorroboratedFindingCount;
+
+    /** 高放大动态命中的静态风险数 */
+    private int runtimeHighAmplificationCount;
+
     /** 综合判断文案 */
     private String conclusion;
 }

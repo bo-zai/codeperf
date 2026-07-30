@@ -57,7 +57,7 @@ public class ReportPageControllerTest {
                 .andExpect(content().string(containsString("AppOrderPreviewService.java")))
                 .andExpect(content().string(containsString("LOOP_IO_AMPLIFICATION")))
                 .andExpect(content().string(containsString("POST /api/orders/report")))
-                .andExpect(content().string(containsString("动态运行证据用于补充静态风险判定")))
+                .andExpect(content().string(containsString("动态运行证据已聚合到静态风险卡片")))
                 .andExpect(content().string(containsString("运行证据明细")));
     }
 
@@ -67,10 +67,11 @@ public class ReportPageControllerTest {
 
         mvc.perform(get("/reports/" + taskId))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("静态风险佐证")))
+                .andExpect(content().string(containsString("动态佐证")))
                 .andExpect(content().string(containsString("DemoOrderController.preview -&gt; AppOrderPreviewService.preview -&gt; DemoOrderMapper.selectByUserId")))
-                .andExpect(content().string(containsString("重复调用 3 次")))
-                .andExpect(content().string(containsString("已佐证")));
+                .andExpect(content().string(containsString("命中请求 1 次")))
+                .andExpect(content().string(containsString("最大重复调用 3 次")))
+                .andExpect(content().string(containsString("已命中")));
     }
 
     private String createTaskWithStaticAndDynamicEvidence() throws Exception {

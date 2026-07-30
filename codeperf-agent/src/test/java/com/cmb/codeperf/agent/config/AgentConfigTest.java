@@ -93,5 +93,20 @@ public class AgentConfigTest {
         assertEquals("developer@example.com", loaded.getAuthorEmail());
         assertEquals("initial commit", loaded.getCommitMessage());
     }
+
+    @Test
+    public void should_DefaultToCommonHttpMethods_When_EntryMethodMissing() throws Exception {
+        Path config = tempDir.resolve("agent.yml");
+        Files.write(config, (
+                "targetPackages:\n"
+                        + "  - com.demo\n"
+                        + "entry:\n"
+                        + "  path: /\n").getBytes(StandardCharsets.UTF_8));
+
+        AgentConfig loaded = AgentConfig.load(config.toString());
+
+        assertEquals("GET,POST,PUT,DELETE", loaded.getEntryMethod());
+        assertEquals("/", loaded.getEntryPath());
+    }
 }
 

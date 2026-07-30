@@ -27,7 +27,7 @@ public class CodePerfCliConfigTest {
                         + "  sourceRoots:\n"
                         + "    - src/main/java\n"
                         + "  includeTests: false\n"
-                        + "  baseRef: origin/master\n"
+                        + "  baseRef: release/base\n"
                         + "  headRef: HEAD\n"
                         + "  failOn: WARN\n"
                         + "  callChain:\n"
@@ -56,7 +56,7 @@ public class CodePerfCliConfigTest {
         assertEquals("changed", loaded.getStaticScan().getMode());
         assertEquals("src/main/java", loaded.getStaticScan().getSourceRoots().get(0));
         assertFalse(loaded.getStaticScan().isIncludeTests());
-        assertEquals("origin/master", loaded.getStaticScan().getBaseRef());
+        assertEquals("release/base", loaded.getStaticScan().getBaseRef());
         assertEquals("HEAD", loaded.getHeadRef());
         assertEquals("HEAD", loaded.getStaticScan().getHeadRef());
         assertEquals("WARN", loaded.getStaticScan().getFailOn());
@@ -84,7 +84,7 @@ public class CodePerfCliConfigTest {
         assertTrue(loaded.getStaticScan().isEnabled());
         assertEquals("changed", loaded.getStaticScan().getMode());
         assertEquals("src/main/java", loaded.getStaticScan().getSourceRoots().get(0));
-        assertEquals("origin/master", loaded.getStaticScan().getBaseRef());
+        assertEquals("", loaded.getStaticScan().getBaseRef());
         assertEquals("HEAD", loaded.getStaticScan().getHeadRef());
         assertEquals("WARN", loaded.getFailOn());
         assertTrue(loaded.getStaticScan().getCallChain().isEnabled());

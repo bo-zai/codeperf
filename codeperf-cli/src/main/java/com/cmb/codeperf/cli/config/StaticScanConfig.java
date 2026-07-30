@@ -22,7 +22,7 @@ public class StaticScanConfig {
     private String mode = "changed";
     private List<String> sourceRoots = new ArrayList<>();
     private boolean includeTests = false;
-    private String baseRef = "origin/master";
+    private String baseRef = "";
     private String headRef = "HEAD";
     private String failOn = "WARN";
     private CallChainConfig callChain = new CallChainConfig();

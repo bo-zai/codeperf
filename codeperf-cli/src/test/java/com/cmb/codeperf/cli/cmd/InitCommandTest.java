@@ -39,6 +39,8 @@ public class InitCommandTest {
         assertTrue(config.contains("    serverUrl: http://localhost:9095\n"));
         assertTrue(config.contains("    connectTimeoutMs: 5000\n"));
         assertTrue(config.contains("    readTimeoutMs: 60000\n"));
+        assertTrue(config.contains("  baseRef:\n"));
+        assertFalse(config.contains("origin/master"));
         assertFalse(config.contains("agent:\n"));
     }
 
@@ -209,6 +211,50 @@ public class InitCommandTest {
     }
 
     @Test
+    public void should_AppendCodePerfDirectoryToGitignore_When_GitignoreExists() throws Exception {
+        Files.createDirectories(tempDir.resolve(".git"));
+        Files.write(tempDir.resolve(".gitignore"), "target/\n".getBytes(StandardCharsets.UTF_8));
+
+        InitCommand command = new InitCommand();
+        command.setWorkingDirectoryForTest(tempDir);
+
+        int exitCode = command.execute();
+
+        String gitignore = new String(Files.readAllBytes(tempDir.resolve(".gitignore")), StandardCharsets.UTF_8);
+        assertEquals(0, exitCode);
+        assertTrue(gitignore.contains("target/\n"));
+        assertTrue(gitignore.contains(".codeperf/\n"));
+    }
+
+    @Test
+    public void should_NotDuplicateCodePerfDirectory_When_GitignoreAlreadyContainsIt() throws Exception {
+        Files.createDirectories(tempDir.resolve(".git"));
+        Files.write(tempDir.resolve(".gitignore"), "target/\n.codeperf/\n".getBytes(StandardCharsets.UTF_8));
+
+        InitCommand command = new InitCommand();
+        command.setWorkingDirectoryForTest(tempDir);
+
+        int exitCode = command.execute();
+
+        String gitignore = new String(Files.readAllBytes(tempDir.resolve(".gitignore")), StandardCharsets.UTF_8);
+        assertEquals(0, exitCode);
+        assertEquals(1, countOccurrences(gitignore, ".codeperf/"));
+    }
+
+    @Test
+    public void should_NotCreateGitignore_When_GitignoreMissing() throws Exception {
+        Files.createDirectories(tempDir.resolve(".git"));
+
+        InitCommand command = new InitCommand();
+        command.setWorkingDirectoryForTest(tempDir);
+
+        int exitCode = command.execute();
+
+        assertEquals(0, exitCode);
+        assertFalse(Files.exists(tempDir.resolve(".gitignore")));
+    }
+
+    @Test
     public void should_NotOverwriteExistingConfig_When_InitRunsAgain() throws Exception {
         Files.createDirectories(tempDir.resolve(".git"));
         Files.write(tempDir.resolve(".codeperf.yml"), "project: existing\n".getBytes(StandardCharsets.UTF_8));
@@ -276,6 +322,16 @@ public class InitCommandTest {
             System.setOut(original);
         }
         return output.toString(StandardCharsets.UTF_8.name());
+    }
+
+    private int countOccurrences(String value, String target) {
+        int count = 0;
+        int index = value.indexOf(target);
+        while (index >= 0) {
+            count++;
+            index = value.indexOf(target, index + target.length());
+        }
+        return count;
     }
 
     private interface CommandAction {

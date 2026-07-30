@@ -53,6 +53,7 @@ public class InitCommand {
             String projectName = inferProjectName(root);
             List<String> sourceRoots = discoverSourceRoots(root);
             writeConfig(root.resolve(".codeperf.yml"), defaultConfig(projectName, sourceRoots, normalizedEnv));
+            appendCodePerfToGitignore(root);
             if (force) {
                 System.out.println("[codeperf] init 完成，已按 --force 覆盖配置文件");
             } else {
@@ -89,6 +90,24 @@ public class InitCommand {
         } else {
             System.out.println("[codeperf] 已生成: " + path);
         }
+    }
+
+    private void appendCodePerfToGitignore(Path root) throws Exception {
+        Path gitignore = root.resolve(".gitignore");
+        if (!Files.isRegularFile(gitignore)) {
+            return;
+        }
+        List<String> lines = Files.readAllLines(gitignore, StandardCharsets.UTF_8);
+        for (String line : lines) {
+            String trimmed = line.trim();
+            if (".codeperf".equals(trimmed) || ".codeperf/".equals(trimmed)) {
+                return;
+            }
+        }
+        String separator = lines.isEmpty() || lines.get(lines.size() - 1).isEmpty() ? "" : "\n";
+        Files.write(gitignore, (separator + ".codeperf/\n").getBytes(StandardCharsets.UTF_8),
+                java.nio.file.StandardOpenOption.APPEND);
+        System.out.println("[codeperf] 已更新 .gitignore: .codeperf/");
     }
 
     private Path findGitRoot(Path start) throws Exception {
@@ -217,7 +236,7 @@ public class InitCommand {
             builder.append("    - ").append(sourceRoot).append("\n");
         }
         builder.append("  includeTests: false\n")
-                .append("  baseRef: origin/master\n")
+                .append("  baseRef:\n")
                 .append("  headRef: HEAD\n")
                 .append("  failOn: WARN\n")
                 .append("  callChain:\n")

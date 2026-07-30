@@ -93,7 +93,9 @@ codeperf scan --all --upload
 
 `codeperf init` 会自动生成 `.codeperf.yml`。生成逻辑会优先从 `remote.origin.url` 截取项目名，解析失败时回退到 Git 根目录文件夹名；同时会自动发现 `src/main/java` 源码目录，单模块项目生成一个 `sourceRoots`，多模块项目生成所有模块的 `sourceRoots` 和 `modules` 配置。
 
-初始化环境通过 `--env` 指定，只允许 `local` 或 `dev`，省略时默认 `local`。`local` 会生成 `http://localhost:9095`，`dev` 会生成 `http://codeperf-server.paas.cmbchina.cn`。真实项目接入后通常只需要确认 Git 基准分支和是否启用上传。
+初始化环境通过 `--env` 指定，只允许 `local` 或 `dev`，省略时默认 `local`。`local` 会生成 `http://localhost:9095`，`dev` 会生成 `http://codeperf-server.paas.cmbchina.cn`。真实项目接入后通常只需要确认是否需要显式兜底基线和是否启用上传。
+
+如果 Git 根目录已存在 `.gitignore`，`codeperf init` 会自动追加 `.codeperf/`，用于忽略本地 JSON/HTML 报告等运行产物；如果 `.gitignore` 不存在，CLI 不会主动创建该文件。
 
 如果需要重新生成配置，可以执行 `codeperf init --force`。该命令会覆盖 Git 根目录下已有的 `.codeperf.yml`，适合模板升级或重新选择初始化环境；已有手工配置会被替换，执行前应确认没有需要保留的定制项。
 
@@ -109,7 +111,7 @@ staticScan:
   sourceRoots:
     - src/main/java
   includeTests: false
-  baseRef: origin/master
+  baseRef:
   headRef: HEAD
   failOn: WARN
   callChain:
@@ -149,7 +151,7 @@ staticScan:
     - mall-search/src/main/java
     - mall-security/src/main/java
   includeTests: false
-  baseRef: origin/master
+  baseRef:
   headRef: HEAD
   failOn: WARN
   callChain:
@@ -202,7 +204,7 @@ report:
     readTimeoutMs: 60000
 ```
 
-`mode: changed` 使用 Git diff 选择变更 Java 文件；`scan --all` 会忽略 changed 模式，直接扫描全部 `sourceRoots`。
+`mode: changed` 使用 Git diff 选择变更 Java 文件；`scan --all` 会忽略 changed 模式，直接扫描全部 `sourceRoots`。普通 `codeperf scan` 不是全量扫描，但会对“发生变更的 Java 文件”做整文件 AST 分析，因此同一个变更文件里未改动行上的历史风险也可能出现在报告中。门禁会结合归因信息处理：新增/修改风险参与阻断，历史风险主要用于提示和报告排查。
 
 `.codeperf.yml` 字段说明：
 
@@ -214,7 +216,7 @@ report:
 | `staticScan.mode` | 是 | 通常不用 | 默认扫描模式。`changed` 表示普通 `codeperf scan` 扫描 Git 变更 Java 文件；`codeperf scan --all` 会扫描全部 `sourceRoots`。 |
 | `staticScan.sourceRoots` | 是 | 通常不用 | Java 源码根目录。`codeperf init` 会自动发现单模块或多模块下的 `src/main/java`；只有特殊目录结构才需要手工调整。 |
 | `staticScan.includeTests` | 是 | 通常不用 | 是否扫描测试代码的意图配置。当前实际扫描范围主要由 `sourceRoots` 决定，不建议第一阶段扫描 `src/test/java`。 |
-| `staticScan.baseRef` | 是 | 视分支模型调整 | Git 变更扫描基准分支。默认 `origin/master`；如果公司主干是 `origin/main`、`origin/develop` 或其他分支，需要手工修改。 |
+| `staticScan.baseRef` | 是 | 视场景调整 | Git 变更扫描基准引用。新模板默认留空，由 pre-push hook、upstream 或本地临时检查场景决定；只有在需要显式兜底时才手工填写。 |
 | `staticScan.headRef` | 是 | 通常不用 | Git 变更扫描目标引用。默认 `HEAD`，表示当前提交/工作区对应的头引用。 |
 | `staticScan.failOn` | 是 | 视门禁策略调整 | 失败阈值。默认 `WARN`，发现 WARN 及以上风险时 CLI 返回 `1`；如果只想先观察报告，可后续改成更宽松策略。 |
 | `staticScan.callChain.enabled` | 是 | 通常不用 | 是否启用同类方法调用链追踪。开启后可识别“循环里调用本类方法，本类方法内部访问 DB/Redis/HTTP”的风险。 |
@@ -302,6 +304,8 @@ excludedPackages:
   - com.cmb.checkerframework
   - com.cmb.bee
   - com.cmbchina.ugw
+  - com.sun
+  - com.tencentcloud
 entry:
   method: POST
   path: /api/orders/report
@@ -309,6 +313,8 @@ sampleMs: 10
 mode: session
 output: build/codeperf/perf-data.raw
 ```
+
+`targetPackages` 会优先由安装脚本在当前仓库本地推断。脚本只分析 `src/main/java` 之后的目录结构和 Java 文件名，不读取 Java 文件内容；当能够得到至少 4 段的可信公共包名前缀时，会覆盖服务端默认值，例如 `com.cmb.music.education`。如果目录结构无法推断出可信前缀，则继续使用服务端 `/api/agent/install-config` 返回的 `targetPackages`。
 
 Agent 支持 `config=/path/to/agent.yml` 或直接传入 yml/yaml 文件路径。没有配置文件时仍保留分号参数解析作为本地调试兼容，但推荐使用 YAML。
 

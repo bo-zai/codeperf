@@ -29,6 +29,8 @@ public class AgentInstallScriptControllerTest {
         assertTrue(response.getBody().startsWith("#!/usr/bin/env bash"));
         assertTrue(response.getBody().contains("CODEPERF_INSTALL_CONFIG_URL=\"${CODEPERF_INSTALL_CONFIG_URL:-"
                 + "http://codeperf-server:9095/api/agent/install-config}\""));
+        assertTrue(response.getBody().contains("infer_target_packages_from_sources()"));
+        assertTrue(response.getBody().contains("TARGET_PACKAGES=\"$inferred_target_packages\""));
         assertFalse(response.getBody().contains("__CODEPERF_INSTALL_CONFIG_URL__"));
         assertEquals("attachment; filename=\"codeperf-install.sh\"",
                 response.getHeaders().getFirst("Content-Disposition"));

@@ -11,8 +11,10 @@ import com.cmb.codeperf.cli.attribution.GitRiskAttributionEnricher;
 import com.cmb.codeperf.cli.config.StaticScanConfig;
 import com.cmb.codeperf.cli.module.SourceModuleResolver;
 import com.cmb.codeperf.cli.config.UploadReportConfig;
-import com.cmb.codeperf.cli.git.GitPushRange;
 import com.cmb.codeperf.cli.git.GitDiffResolver;
+import com.cmb.codeperf.cli.git.GitPushRange;
+import com.cmb.codeperf.cli.git.GitScanRange;
+import com.cmb.codeperf.cli.git.GitScanRangeResolver;
 import com.cmb.codeperf.cli.project.ProjectContext;
 import com.cmb.codeperf.cli.project.ProjectContextResolver;
 import com.cmb.codeperf.cli.report.SourceScanHtmlReportWriter;
@@ -72,6 +74,7 @@ public class ScanCommand {
     private boolean upload;
 
     private Path workingDirectory;
+    private GitPushRange.EnvironmentReader pushRangeReaderForTest;
 
     public int execute() {
         try {
@@ -80,12 +83,21 @@ public class ScanCommand {
             ProjectContext context = new ProjectContextResolver().resolve(cwd);
             StaticScanConfig config = context.getConfig().getStaticScan();
             SourceModuleResolver moduleResolver = new SourceModuleResolver(context.getConfig().getModules());
-            GitPushRange pushRange = GitPushRange.current();
+            GitPushRange.EnvironmentReader pushRangeReader = pushRangeReaderForTest == null
+                    ? new GitPushRange.EnvironmentReader() {
+                        @Override
+                        public String get(String name) {
+                            return System.getenv(name);
+                        }
+                    }
+                    : pushRangeReaderForTest;
+            GitPushRange pushRange = GitPushRange.fromEnvironment(pushRangeReader);
+            GitScanRange scanRange = new GitScanRangeResolver().resolve(context.getRootDirectory(), config, pushRangeReader);
 
             // 获取变更文件：变更模式使用 git diff，全量模式遍历 sourceRoots 目录
             List<Path> files = scanAll
                     ? resolveAllSourceFiles(context, config)
-                    : resolveChangedSourceFiles(context, config, pushRange);
+                    : resolveChangedSourceFiles(context, scanRange);
 
             // 执行源码扫描：先构建类索引再执行规则，支持跨方法调用链追踪
             SourceScanResult result = new SourceScanner().scan(new SourceScanRequest(
@@ -96,9 +108,9 @@ public class ScanCommand {
                 result = new GitRiskAttributionEnricher().enrich(
                         result,
                         context.getRootDirectory(),
-                        resolveBaseRef(config, pushRange),
-                        resolveHeadRef(config, pushRange),
-                        config.getMode());
+                        scanRange.getBaseRef(),
+                        scanRange.getHeadRef(),
+                        scanRange.getDiffMode());
             }
 
             // 生成报告：JSON 用于机器读取和上传，HTML 用于人工审查
@@ -117,7 +129,7 @@ public class ScanCommand {
             if (localReportEnabled) {
                 new SourceScanHtmlReportWriter().write(htmlReportPath, result, context.getRootDirectory(), context.getConfig().getModules());
             }
-            printSummary(result, gateDecision, moduleResolver);
+            printSummary(result, gateDecision, moduleResolver, scanRange);
             if (jsonReportWritten) {
                 System.out.println("[codeperf] jsonReport=" + displayPath(context, reportPath));
             }
@@ -139,7 +151,10 @@ public class ScanCommand {
         }
     }
 
-    private void printSummary(SourceScanResult result, StaticGateDecision gateDecision, SourceModuleResolver moduleResolver) {
+    private void printSummary(SourceScanResult result, StaticGateDecision gateDecision,
+                              SourceModuleResolver moduleResolver, GitScanRange scanRange) {
+        System.out.println("[codeperf] 扫描基线=" + scanRange.getSource()
+                + "，范围=" + describeScanRange(scanRange));
         System.out.println("[codeperf] 扫描文件=" + result.getFilesScanned()
                 + "，风险总数=" + result.getFindings().size()
                 + "，阻断风险=" + gateDecision.getBlocking()
@@ -147,6 +162,16 @@ public class ScanCommand {
                 + "，解析错误=" + result.getParseErrors().size());
         System.out.println(gateDecision.summary());
         printModuleSummary(result, moduleResolver);
+    }
+
+    private String describeScanRange(GitScanRange scanRange) {
+        if (GitDiffResolver.MODE_WORKTREE.equalsIgnoreCase(scanRange.getDiffMode())) {
+            return "worktree";
+        }
+        if (scanRange.getBaseRef().isEmpty() && scanRange.getHeadRef().isEmpty()) {
+            return "unknown";
+        }
+        return scanRange.getBaseRef() + ".." + scanRange.getHeadRef();
     }
 
     private void printModuleSummary(SourceScanResult result, SourceModuleResolver moduleResolver) {
@@ -254,6 +279,10 @@ public class ScanCommand {
         this.output = output;
     }
 
+    void setPushRangeReaderForTest(GitPushRange.EnvironmentReader pushRangeReaderForTest) {
+        this.pushRangeReaderForTest = pushRangeReaderForTest;
+    }
+
     private List<Path> resolveAllSourceFiles(ProjectContext context, StaticScanConfig config) throws Exception {
         List<Path> files = new ArrayList<>();
         for (String sourceRoot : SourceModuleResolver.effectiveSourceRoots(config, context.getConfig().getModules())) {
@@ -271,18 +300,9 @@ public class ScanCommand {
         return files;
     }
 
-    private List<Path> resolveChangedSourceFiles(ProjectContext context, StaticScanConfig config,
-                                                 GitPushRange pushRange) throws Exception {
+    private List<Path> resolveChangedSourceFiles(ProjectContext context, GitScanRange scanRange) throws Exception {
         return GitDiffResolver.changedJavaFilePaths(context.getRootDirectory(),
-                resolveBaseRef(config, pushRange), resolveHeadRef(config, pushRange), config.getMode());
-    }
-
-    private String resolveBaseRef(StaticScanConfig config, GitPushRange pushRange) {
-        return pushRange.isPresent() ? pushRange.getBaseRef() : config.getBaseRef();
-    }
-
-    private String resolveHeadRef(StaticScanConfig config, GitPushRange pushRange) {
-        return pushRange.isPresent() ? pushRange.getHeadRef() : config.getHeadRef();
+                scanRange.getBaseRef(), scanRange.getHeadRef(), scanRange.getDiffMode());
     }
 
     private List<Path> filterConfiguredSourceFiles(ProjectContext context, StaticScanConfig config, List<Path> files) {
@@ -340,12 +360,17 @@ public class ScanCommand {
                 metadata.getCommitterEmail(),
                 metadata.getCommitMessage(),
                 new String(Files.readAllBytes(reportPath), StandardCharsets.UTF_8));
+        long uploadStartNanos = System.nanoTime();
         String taskId = new StaticReportUploader().upload(
                 trimTrailingSlash(serverUrl),
                 request,
                 uploadConfig.getConnectTimeoutMs(),
                 uploadConfig.getReadTimeoutMs());
-        System.out.println("[codeperf] static report uploaded, taskId=" + taskId);
+        System.out.println("[codeperf] static report uploaded, taskId="
+                + taskId
+                + ", 耗时="
+                + elapsedMs(uploadStartNanos)
+                + "ms");
     }
 
     private String uploadBranch(GitMetadata metadata, GitPushRange pushRange) {
@@ -362,6 +387,10 @@ public class ScanCommand {
             trimmed = trimmed.substring(0, trimmed.length() - 1);
         }
         return trimmed;
+    }
+
+    private long elapsedMs(long startNanos) {
+        return (System.nanoTime() - startNanos) / 1_000_000L;
     }
 }
 

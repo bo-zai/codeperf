@@ -30,7 +30,9 @@ public class AgentConfig {
             "com.cmb.cjtz",
             "com.cmb.checkerframework",
             "com.cmb.bee",
-            "com.cmbchina.ugw");
+            "com.cmbchina.ugw",
+            "com.sun",
+            "com.tencentcloud");
 
     private List<String> targetPackages = new ArrayList<>();
     private List<String> excludedPackages = defaultExcludedPackages();

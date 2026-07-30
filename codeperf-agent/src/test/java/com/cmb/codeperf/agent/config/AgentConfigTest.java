@@ -44,6 +44,8 @@ public class AgentConfigTest {
         assertTrue(loaded.getExcludedPackages().contains("com.cmb.checkerframework"));
         assertTrue(loaded.getExcludedPackages().contains("com.cmb.bee"));
         assertTrue(loaded.getExcludedPackages().contains("com.cmbchina.ugw"));
+        assertTrue(loaded.getExcludedPackages().contains("com.sun"));
+        assertTrue(loaded.getExcludedPackages().contains("com.tencentcloud"));
         assertTrue(loaded.getExcludedPackages().contains("com.acme.order.infrastructure"));
         assertEquals("POST", loaded.getEntryMethod());
         assertEquals("/api/orders/report", loaded.getEntryPath());

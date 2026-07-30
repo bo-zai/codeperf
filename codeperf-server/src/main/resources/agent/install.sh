@@ -279,6 +279,104 @@ PY
   [ -n "$TARGET_PACKAGES" ] || fail "配置接口缺少 targetPackages"
 }
 
+infer_target_packages_from_sources() {
+  python - <<'PY'
+# -*- coding: utf-8 -*-
+import os
+
+MIN_TRUSTED_DEPTH = 4
+MAX_PACKAGE_DEPTH = 6
+EXCLUDED_DIRS = {".git", ".idea", ".gradle", "target", "build", "node_modules"}
+
+
+def is_excluded(path):
+    parts = set(path.replace("\\", "/").split("/"))
+    return bool(parts.intersection(EXCLUDED_DIRS))
+
+
+def source_roots():
+    roots = []
+    for current, dirs, _ in os.walk("."):
+        dirs[:] = [item for item in dirs if item not in EXCLUDED_DIRS]
+        normalized = current.replace("\\", "/").lstrip("./")
+        if normalized.endswith("src/main/java"):
+            roots.append(current)
+            dirs[:] = []
+    return sorted(roots)
+
+
+def package_dirs(root):
+    packages = []
+    for current, dirs, files in os.walk(root):
+        dirs[:] = [item for item in dirs if item not in EXCLUDED_DIRS]
+        if not any(item.endswith(".java") for item in files):
+            continue
+        relative = os.path.relpath(current, root)
+        if relative == "." or is_excluded(relative):
+            continue
+        segments = [item for item in relative.replace("\\", "/").split("/") if item]
+        if segments:
+            packages.append(segments[:MAX_PACKAGE_DEPTH])
+    return packages
+
+
+def common_prefix(packages):
+    if not packages:
+        return []
+    prefix = list(packages[0])
+    for package in packages[1:]:
+        length = 0
+        for left, right in zip(prefix, package):
+            if left != right:
+                break
+            length += 1
+        prefix = prefix[:length]
+        if not prefix:
+            break
+    return prefix
+
+
+def trusted(prefix):
+    return len(prefix) >= MIN_TRUSTED_DEPTH
+
+
+all_packages = []
+packages_by_root = []
+for root in source_roots():
+    packages = package_dirs(root)
+    if packages:
+        packages_by_root.append(packages)
+        all_packages.extend(packages)
+
+result = []
+global_prefix = common_prefix(all_packages)
+if trusted(global_prefix):
+    result.append(".".join(global_prefix))
+else:
+    for packages in packages_by_root:
+        prefix = common_prefix(packages)
+        if trusted(prefix):
+            value = ".".join(prefix)
+            if value not in result:
+                result.append(value)
+
+print(",".join(result))
+PY
+}
+
+apply_inferred_target_packages() {
+  # Server 无法看到流水线工作区源码；targetPackages 必须在脚本本地基于 src/main/java 目录推断。
+  # 这里只读取目录和文件名，不读取 Java 文件内容，避免大仓库初始化阶段产生额外 I/O 压力。
+  local inferred_target_packages
+  inferred_target_packages="$(infer_target_packages_from_sources | tr -d '\r')"
+  if [ -n "$inferred_target_packages" ]; then
+    TARGET_PACKAGES="$inferred_target_packages"
+    log "已根据 src/main/java 目录推断 targetPackages=${TARGET_PACKAGES}"
+  else
+    log "未能从目录结构推断 targetPackages，继续使用服务端配置: ${TARGET_PACKAGES}"
+  fi
+}
+
 property_value() {
   printf '%s' "$1" | tr '\r\n' '  '
 }
@@ -402,6 +500,7 @@ main() {
 
   collect_git_identity
   fetch_install_config
+  apply_inferred_target_packages
   download_agent
   write_agent_config
   write_build_info

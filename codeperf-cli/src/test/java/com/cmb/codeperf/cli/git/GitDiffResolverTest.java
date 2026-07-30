@@ -61,7 +61,7 @@ public class GitDiffResolverTest {
         runGit("add", "src/main/java/com/acme/OrderService.java");
 
         List<String> files = GitDiffResolver.changedJavaFiles(
-                tempDir, "origin/master", "HEAD", GitDiffResolver.MODE_STAGED);
+                tempDir, "release/base", "HEAD", GitDiffResolver.MODE_STAGED);
 
         assertEquals(Arrays.asList("src/main/java/com/acme/OrderService.java"), files);
     }

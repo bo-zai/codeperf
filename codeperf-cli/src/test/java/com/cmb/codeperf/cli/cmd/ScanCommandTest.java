@@ -3,6 +3,7 @@ package com.cmb.codeperf.cli.cmd;
 import com.beust.jcommander.JCommander;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
+import com.cmb.codeperf.cli.git.GitPushRange;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -147,20 +148,21 @@ public class ScanCommandTest {
             JCommander.newBuilder().addObject(command).build().parse("--all", "--upload");
             command.setWorkingDirectoryForTest(tempDir);
 
-            int exitCode = command.execute();
+            CapturedRun capturedRun = captureStdout(command::execute);
 
-            assertEquals(1, exitCode);
+            assertEquals(1, capturedRun.exitCode);
             assertEquals(2, requests.size());
-        assertEquals("POST", requests.get(0).method);
-        assertEquals("/api/tasks", requests.get(0).path);
-        assertTrue(requests.get(0).body.contains("\"project\":\"demo\""));
-        assertTrue(requests.get(0).body.contains("\"remoteUrl\""));
-        assertTrue(requests.get(0).body.contains("\"authorEmail\""));
-        assertTrue(requests.get(0).body.contains("\"commitMessage\""));
-        assertEquals("POST", requests.get(1).method);
+            assertEquals("POST", requests.get(0).method);
+            assertEquals("/api/tasks", requests.get(0).path);
+            assertTrue(requests.get(0).body.contains("\"project\":\"demo\""));
+            assertTrue(requests.get(0).body.contains("\"remoteUrl\""));
+            assertTrue(requests.get(0).body.contains("\"authorEmail\""));
+            assertTrue(requests.get(0).body.contains("\"commitMessage\""));
+            assertEquals("POST", requests.get(1).method);
             assertEquals("/api/tasks/task-1/static-results", requests.get(1).path);
             assertTrue(requests.get(1).body.contains("\"filesScanned\""));
             assertTrue(requests.get(1).body.contains("\"findings\""));
+            assertTrue(capturedRun.output.matches("(?s).*\\[codeperf] static report uploaded, taskId=task-1, 耗时=\\d+ms.*"));
         } finally {
             server.stop(0);
         }
@@ -296,6 +298,59 @@ public class ScanCommandTest {
         assertTrue(report.contains("\"introducedCommitMessage\" : \"add existing risky report\""));
         assertTrue(capturedRun.output.contains("[codeperf] 历史风险数量=1，请查看 HTML 报告详情。"));
         assertTrue(!capturedRun.output.contains("阻断风险 LOOP_IO_AMPLIFICATION"));
+    }
+
+    @Test
+    public void should_UsePrePushBaseline_When_PushRangeProvided() throws Exception {
+        initGitRepo();
+        String baseCommit = runGitOutput("rev-parse", "HEAD");
+        write(".codeperf.yml",
+                "project: demo\n"
+                        + "staticScan:\n"
+                        + "  sourceRoots:\n"
+                        + "    - src/main/java\n"
+                        + "  baseRef: release/base\n"
+                        + "  headRef: HEAD\n"
+                        + "  failOn: WARN\n");
+        write("src/main/java/com/acme/OrderService.java",
+                "package com.acme;\n"
+                        + "class OrderService {\n"
+                        + "  private OrderMapper orderMapper;\n"
+                        + "  void buildReport(java.util.List<Long> ids) {\n"
+                        + "    for (Long id : ids) {\n"
+                        + "      orderMapper.selectById(id);\n"
+                        + "    }\n"
+                        + "  }\n"
+                        + "}\n");
+        runGit("add", ".codeperf.yml", "src/main/java/com/acme/OrderService.java");
+        runGit("commit", "-m", "add risky report");
+        String headCommit = runGitOutput("rev-parse", "HEAD");
+
+        ScanCommand command = new ScanCommand();
+        command.setWorkingDirectoryForTest(tempDir);
+        command.setOutputForTest(".codeperf/report/source-report.json");
+        command.setPushRangeReaderForTest(new GitPushRange.EnvironmentReader() {
+            @Override
+            public String get(String name) {
+                if ("CODEPERF_PUSH_OLD_SHA".equals(name)) {
+                    return baseCommit;
+                }
+                if ("CODEPERF_PUSH_NEW_SHA".equals(name)) {
+                    return headCommit;
+                }
+                if ("CODEPERF_PUSH_REMOTE_BRANCH".equals(name)) {
+                    return "feature/demo";
+                }
+                return "";
+            }
+        });
+
+        CapturedRun capturedRun = captureStdout(command::execute);
+
+        assertEquals(1, capturedRun.exitCode);
+        assertTrue(capturedRun.output.contains("[codeperf] 扫描基线=pre-push"));
+        assertTrue(capturedRun.output.contains(baseCommit + ".." + headCommit));
+        assertTrue(capturedRun.output.contains("阻断风险 LOOP_IO_AMPLIFICATION"));
     }
 
     private String riskyService(String className, String ioCall) {

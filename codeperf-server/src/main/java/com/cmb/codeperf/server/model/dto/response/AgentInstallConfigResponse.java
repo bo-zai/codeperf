@@ -10,7 +10,6 @@ public class AgentInstallConfigResponse {
     private String serverUrl;
     private String agentUrl;
     private String agentSha256;
-    private String appName;
     private String env;
     private List<String> targetPackages;
     private List<String> excludedPackages;

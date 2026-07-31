@@ -196,8 +196,6 @@ public class AgentConfig {
         cfg.readTimeoutMs = intValue(yaml.get("readTimeoutMs"), cfg.readTimeoutMs);
         cfg.output = stringValue(yaml.get("output"), cfg.output);
         cfg.serverUrl = stringValue(yaml.get("serverUrl"), cfg.serverUrl);
-        cfg.appName = stringValue(yaml.get("appName"), cfg.appName);
-        cfg.env = stringValue(yaml.get("env"), cfg.env);
         cfg.buildInfoPath = stringValue(yaml.get("buildInfoPath"), cfg.buildInfoPath);
         cfg.analysisTaskId = stringValue(yaml.get("analysisTaskId"), cfg.analysisTaskId);
         cfg.uploadEnabled = booleanValue(yaml.get("uploadEnabled"), cfg.uploadEnabled);
@@ -219,7 +217,7 @@ public class AgentConfig {
             commit = trimToNull(properties.getProperty("commit"));
             branch = trimToNull(properties.getProperty("branch"));
             project = trimToNull(properties.getProperty("project"));
-            appName = firstNonBlank(appName, properties.getProperty("appName"));
+            appName = firstNonBlank(appName, properties.getProperty("project"));
             env = firstNonBlank(env, properties.getProperty("env"));
             authorName = trimToNull(properties.getProperty("authorName"));
             authorEmail = trimToNull(properties.getProperty("authorEmail"));

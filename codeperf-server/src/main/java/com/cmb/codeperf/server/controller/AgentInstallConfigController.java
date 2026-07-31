@@ -39,7 +39,6 @@ public class AgentInstallConfigController {
         response.setServerUrl(properties.getServerUrl());
         response.setAgentUrl(properties.getAgentUrl());
         response.setAgentSha256(properties.getAgentSha256());
-        response.setAppName(valueOrDefault(request.getProject(), repoName(request.getRemoteUrl())));
         response.setEnv(valueOrDefault(request.getEnv(), "dev"));
         response.setTargetPackages(splitPackages(properties.getTargetPackages()));
         response.setExcludedPackages(splitPackages(properties.getExcludedPackages()));
@@ -49,8 +48,8 @@ public class AgentInstallConfigController {
         response.setConnectTimeoutMs(properties.getConnectTimeoutMs());
         response.setReadTimeoutMs(properties.getReadTimeoutMs());
         response.setMode(properties.getMode());
-        log.info("event=codeperf.agent.install_config.response enabled={} appName={} env={} targetPackages={} excludedPackages={} entryMethod={} entryPath={} mode={} connectTimeoutMs={} readTimeoutMs={}",
-                response.isEnabled(), response.getAppName(), response.getEnv(), response.getTargetPackages(),
+        log.info("event=codeperf.agent.install_config.response enabled={} env={} targetPackages={} excludedPackages={} entryMethod={} entryPath={} mode={} connectTimeoutMs={} readTimeoutMs={}",
+                response.isEnabled(), response.getEnv(), response.getTargetPackages(),
                 response.getExcludedPackages(), response.getEntry().getMethod(), response.getEntry().getPath(),
                 response.getMode(), response.getConnectTimeoutMs(), response.getReadTimeoutMs());
         return response;
@@ -75,16 +74,6 @@ public class AgentInstallConfigController {
             }
         }
         return values;
-    }
-
-    private String repoName(String remoteUrl) {
-        if (remoteUrl == null || remoteUrl.trim().isEmpty()) {
-            return "";
-        }
-        String normalized = remoteUrl.trim().replace(':', '/').replace('\\', '/');
-        int slash = normalized.lastIndexOf('/');
-        String name = slash >= 0 ? normalized.substring(slash + 1) : normalized;
-        return name.endsWith(".git") ? name.substring(0, name.length() - 4) : name;
     }
 
     private String valueOrDefault(String value, String defaultValue) {

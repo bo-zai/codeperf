@@ -68,7 +68,6 @@ public class AgentConfigTest {
                         + "branch=master\n"
                         + "env=dev\n"
                         + "project=demo-app\n"
-                        + "appName=demo-app\n"
                         + "authorName=Developer\n"
                         + "authorEmail=developer@example.com\n"
                         + "commitTime=2026-07-17T15:00:00+08:00\n"
@@ -76,8 +75,6 @@ public class AgentConfigTest {
         Path config = tempDir.resolve("agent.yml");
         Files.write(config, (
                 "serverUrl: http://127.0.0.1:9095\n"
-                        + "appName: demo-app\n"
-                        + "env: dev\n"
                         + "uploadEnabled: true\n"
                         + "buildInfoPath: " + buildInfo.toString().replace("\\", "/") + "\n"
                         + "targetPackages:\n"

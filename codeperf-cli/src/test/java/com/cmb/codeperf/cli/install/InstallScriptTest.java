@@ -70,8 +70,6 @@ public class InstallScriptTest {
 
         String agentConfig = readUtf8(codeperfDir.resolve("agent.yml"));
         assertTrue(agentConfig.contains("serverUrl: http://codeperf-server:9095"));
-        assertTrue(agentConfig.contains("appName: demo-app"));
-        assertTrue(agentConfig.contains("env: dev"));
         assertTrue(agentConfig.contains("  - com.demo.app"));
         assertTrue(agentConfig.contains("  - com.demo.common"));
         assertTrue(agentConfig.contains("excludedPackages:"));
@@ -349,7 +347,6 @@ public class InstallScriptTest {
                 + "\"serverUrl\":\"http://codeperf-server:9095\","
                 + "\"agentUrl\":\"" + baseUrl + "/codeperf-agent.jar\","
                 + "\"agentSha256\":\"" + checksum + "\","
-                + "\"appName\":\"demo-app\","
                 + "\"env\":\"dev\","
                 + "\"targetPackages\":[" + targetPackages + "],"
                 + "\"excludedPackages\":[\"com.cmb.cjtz\",\"com.cmb.checkerframework\",\"com.cmb.bee\",\"com.cmbchina.ugw\"],"

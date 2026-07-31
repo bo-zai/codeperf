@@ -22,7 +22,6 @@ INSTALL_ENABLED=""
 SERVER_URL=""
 AGENT_URL=""
 AGENT_SHA256=""
-APP_NAME=""
 ENV_NAME=""
 TARGET_PACKAGES=""
 EXCLUDED_PACKAGES=""
@@ -263,7 +262,6 @@ PY
   SERVER_URL="$(json_get "serverUrl" "" "$response")"
   AGENT_URL="$(json_get "agentUrl" "" "$response")"
   AGENT_SHA256="$(json_get "agentSha256" "" "$response")"
-  APP_NAME="$(json_get "appName" "" "$response")"
   ENV_NAME="$(json_get "env" "dev" "$response")"
   TARGET_PACKAGES="$(json_get "targetPackages" "" "$response")"
   EXCLUDED_PACKAGES="$(json_get "excludedPackages" "" "$response")"
@@ -277,7 +275,6 @@ PY
 
   [ -n "$SERVER_URL" ] || fail "配置接口缺少 serverUrl"
   [ -n "$AGENT_URL" ] || fail "配置接口缺少 agentUrl"
-  [ -n "$APP_NAME" ] || fail "配置接口缺少 appName"
 }
 
 infer_target_packages_from_sources() {
@@ -426,8 +423,6 @@ write_agent_config() {
 
   cat > "$AGENT_CONFIG_FILE" <<EOF
 serverUrl: $(yaml_scalar "$SERVER_URL")
-appName: $(yaml_scalar "$APP_NAME")
-env: $(yaml_scalar "$ENV_NAME")
 uploadEnabled: true
 buildInfoPath: ${IMAGE_AGENT_DIR}/build-info.properties
 targetPackages:
@@ -450,8 +445,7 @@ remoteUrl=$(property_value "$REMOTE_URL")
 commit=$(property_value "$COMMIT_SHA")
 branch=$(property_value "$BRANCH_NAME")
 env=$(property_value "$ENV_NAME")
-project=$(property_value "${CODEPERF_PROJECT:-$APP_NAME}")
-appName=$(property_value "$APP_NAME")
+project=$(property_value "$PROJECT_NAME")
 authorName=$(property_value "$AUTHOR_NAME")
 authorEmail=$(property_value "$AUTHOR_EMAIL")
 commitTime=$(property_value "$COMMIT_TIME")

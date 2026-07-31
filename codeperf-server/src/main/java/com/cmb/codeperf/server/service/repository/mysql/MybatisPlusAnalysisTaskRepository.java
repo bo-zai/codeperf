@@ -34,6 +34,7 @@ import com.cmb.codeperf.server.mapper.GitCommitMapper;
 import com.cmb.codeperf.server.mapper.RuleDefinitionMapper;
 import com.cmb.codeperf.server.mapper.StaticDynamicCorroborationMapper;
 import com.cmb.codeperf.server.mapper.StaticFindingMapper;
+import com.cmb.codeperf.server.util.RepositoryUrlNormalizer;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Repository;
@@ -370,8 +371,10 @@ public class MybatisPlusAnalysisTaskRepository implements AnalysisTaskRepository
     @Override
     public List<DynamicEvidenceBO> listLatestDynamicEvidence(String remoteUrl, String branch, String env) {
         List<AnalysisTaskBO> tasks = listRecentTasks(100);
+        String normalizedRepoKey = repoKey(remoteUrl);
         for (AnalysisTaskBO task : tasks) {
-            if (same(task.getRemoteUrl(), remoteUrl) && same(task.getBranch(), branch) && same(task.getEnv(), env)) {
+            if (same(repoKey(task.getRemoteUrl()), normalizedRepoKey) && same(task.getBranch(), branch)
+                    && same(task.getEnv(), env)) {
                 List<DynamicEvidenceBO> records = listDynamicEvidence(task.getAnalysisTaskId());
                 if (!records.isEmpty()) {
                     return records;
@@ -742,18 +745,15 @@ public class MybatisPlusAnalysisTaskRepository implements AnalysisTaskRepository
     }
 
     private String repoKey(AnalysisTaskBO task) {
-        String remoteUrl = task.getRemoteUrl();
-        if (remoteUrl != null && !remoteUrl.trim().isEmpty() && !"UNKNOWN".equals(remoteUrl)) {
-            return remoteUrl.trim().toLowerCase();
+        String repoKey = RepositoryUrlNormalizer.toRepoKey(task.getRemoteUrl());
+        if (!repoKey.isEmpty()) {
+            return repoKey;
         }
         return ("project:" + task.getProject()).toLowerCase();
     }
 
     private String repoKey(String remoteUrl) {
-        if (remoteUrl == null || remoteUrl.trim().isEmpty() || "UNKNOWN".equals(remoteUrl)) {
-            return "";
-        }
-        return remoteUrl.trim().toLowerCase();
+        return RepositoryUrlNormalizer.toRepoKey(remoteUrl);
     }
 
     private String provider(String remoteUrl) {
@@ -794,10 +794,7 @@ public class MybatisPlusAnalysisTaskRepository implements AnalysisTaskRepository
     }
 
     private String normalizeRemote(String remoteUrl) {
-        if (remoteUrl == null || remoteUrl.trim().isEmpty()) {
-            return "";
-        }
-        return remoteUrl.trim().replace(':', '/').replace('\\', '/');
+        return RepositoryUrlNormalizer.toNormalizedPath(remoteUrl);
     }
 
     private LocalDateTime parseAuthorTime(String authorTime) {

@@ -9,6 +9,7 @@ import com.cmb.codeperf.server.model.bo.FindingOccurrenceBO;
 import com.cmb.codeperf.server.model.bo.StaticDynamicCorroborationBO;
 import com.cmb.codeperf.server.model.bo.StaticFindingBO;
 import com.cmb.codeperf.server.service.repository.AnalysisTaskRepository;
+import com.cmb.codeperf.server.util.RepositoryUrlNormalizer;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Repository;
 
@@ -63,7 +64,7 @@ public class InMemoryAnalysisTaskRepository implements AnalysisTaskRepository {
             if (task == null) {
                 continue;
             }
-            if (same(task.getRemoteUrl(), remoteUrl)
+            if (same(repoKey(task.getRemoteUrl()), repoKey(remoteUrl))
                     && same(task.getCommit(), commit)
                     && same(task.getBranch(), branch)
                     && same(task.getEnv(), env)) {
@@ -214,7 +215,7 @@ public class InMemoryAnalysisTaskRepository implements AnalysisTaskRepository {
         AnalysisTaskBO latest = null;
         for (int i = taskOrder.size() - 1; i >= 0; i--) {
             AnalysisTaskBO task = tasks.get(taskOrder.get(i));
-            if (task != null && same(task.getRemoteUrl(), remoteUrl) && same(task.getBranch(), branch)
+            if (task != null && same(repoKey(task.getRemoteUrl()), repoKey(remoteUrl)) && same(task.getBranch(), branch)
                     && same(task.getEnv(), env) && !listDynamicEvidence(task.getAnalysisTaskId()).isEmpty()) {
                 latest = task;
                 break;
@@ -265,10 +266,7 @@ public class InMemoryAnalysisTaskRepository implements AnalysisTaskRepository {
     }
 
     private String repoKey(String remoteUrl) {
-        if (remoteUrl == null || remoteUrl.trim().isEmpty() || "UNKNOWN".equals(remoteUrl)) {
-            return "";
-        }
-        return remoteUrl.trim().toLowerCase();
+        return RepositoryUrlNormalizer.toRepoKey(remoteUrl);
     }
 
     private String firstNonBlank(String value) {

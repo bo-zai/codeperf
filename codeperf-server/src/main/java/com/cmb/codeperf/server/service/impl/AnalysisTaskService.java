@@ -15,6 +15,7 @@ import com.cmb.codeperf.server.model.dto.response.StaticFindingSummary;
 import com.cmb.codeperf.server.model.dto.response.StaticReportSummary;
 import com.cmb.codeperf.server.model.vo.report.RuntimeCorroborationSummaryVO;
 import com.cmb.codeperf.server.service.repository.AnalysisTaskRepository;
+import com.cmb.codeperf.server.util.RepositoryUrlNormalizer;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -546,7 +547,7 @@ public class AnalysisTaskService {
     }
 
     private String issueKey(AnalysisTaskBO task, StaticFindingBO finding) {
-        return sha256(valueOrEmpty(task.getRemoteUrl()).toLowerCase()
+        return sha256(RepositoryUrlNormalizer.toRepoKey(task.getRemoteUrl())
                 + "|" + valueOrEmpty(task.getBranch())
                 + "|" + valueOrEmpty(finding.getRuleId())
                 + "|" + valueOrEmpty(finding.getSourceFile()).replace('\\', '/')

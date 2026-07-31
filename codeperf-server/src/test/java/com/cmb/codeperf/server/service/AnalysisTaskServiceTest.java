@@ -86,6 +86,29 @@ public class AnalysisTaskServiceTest {
         assertEquals(payload, service.get(latest.getAnalysisTaskId()).getDynamicPayload());
     }
 
+    @Test
+    public void should_LinkDynamicEvidenceToStaticTask_When_RemoteUrlProtocolDiffers() {
+        AnalysisTaskService service = new AnalysisTaskService(
+                new InMemoryAnalysisTaskRepository(), new StaticReportSummarizer(), new RuntimeEvidenceAggregator());
+
+        AnalysisTaskCreateBO command = sameCommitCommand();
+        command.setRemoteUrl("git@gitee.itc.cmbchina.cn:S992391/LQ13.10_demand-impact-analysis.git");
+        AnalysisTaskBO created = service.create(command);
+        String payload = "{"
+                + "\"remoteUrl\":\"https://gitee.itc.cmbchina.cn/S992391/LQ13.10_demand-impact-analysis.git\","
+                + "\"commit\":\"abc\","
+                + "\"branch\":\"main\","
+                + "\"env\":\"dev\","
+                + "\"appName\":\"order-service\","
+                + "\"evidence\":{\"entryMethod\":\"POST\",\"entryPath\":\"/api/orders/report\"}"
+                + "}";
+
+        service.acceptDynamicEvidenceByIdentity(payload);
+
+        AnalysisTaskBO loaded = service.get(created.getAnalysisTaskId());
+        assertEquals(payload, loaded.getDynamicPayload());
+    }
+
     private AnalysisTaskCreateBO sameCommitCommand() {
         AnalysisTaskCreateBO command = new AnalysisTaskCreateBO();
         command.setProject("order-service");

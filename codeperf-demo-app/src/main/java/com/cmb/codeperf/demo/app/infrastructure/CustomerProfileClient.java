@@ -1,6 +1,5 @@
 package com.cmb.codeperf.demo.app.infrastructure;
 
-import com.cmb.codeperf.demo.common.client.CustomerProfileClient;
 import org.springframework.stereotype.Component;
 
 import java.util.LinkedHashMap;
@@ -11,7 +10,7 @@ import java.util.Map;
  * 真实项目中这里通常是 HTTP/RPC/SDK 客户端，demo 用固定返回值模拟远程调用。
  */
 @Component
-public class LocalCustomerProfileClient implements CustomerProfileClient {
+public class CustomerProfileClient implements com.cmb.codeperf.demo.common.client.CustomerProfileClient {
 
     /**
      * 获取用户画像。

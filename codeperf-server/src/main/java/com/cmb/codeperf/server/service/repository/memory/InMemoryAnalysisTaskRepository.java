@@ -75,12 +75,12 @@ public class InMemoryAnalysisTaskRepository implements AnalysisTaskRepository {
     }
 
     @Override
-    public List<AnalysisTaskBO> listRecentTasks(int limit) {
+    public List<AnalysisTaskBO> listRecentRiskTasks(int limit) {
         List<AnalysisTaskBO> result = new ArrayList<>();
         int max = Math.max(limit, 0);
         for (int i = taskOrder.size() - 1; i >= 0 && result.size() < max; i--) {
             AnalysisTaskBO task = tasks.get(taskOrder.get(i));
-            if (task != null) {
+            if (task != null && hasRisk(task)) {
                 result.add(task);
             }
         }
@@ -259,6 +259,10 @@ public class InMemoryAnalysisTaskRepository implements AnalysisTaskRepository {
 
     private boolean same(String left, String right) {
         return value(left).equals(value(right));
+    }
+
+    private boolean hasRisk(AnalysisTaskBO task) {
+        return task.getRiskLevel() != null && !"NONE".equals(task.getRiskLevel().name());
     }
 
     private String repoKey(AnalysisTaskBO task) {

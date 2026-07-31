@@ -1,8 +1,8 @@
 package com.cmb.codeperf.demo.app.controller;
 
 import com.cmb.codeperf.demo.app.service.OrderFulfillmentService;
-import com.cmb.codeperf.demo.app.support.audit.BusinessAuditAspect;
-import com.cmb.codeperf.demo.app.support.mybatis.SqlAuditInterceptor;
+import com.cmb.codeperf.demo.app.config.BusinessAuditAspect;
+import com.cmb.codeperf.demo.app.config.SqlAuditInterceptor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;

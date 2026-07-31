@@ -428,7 +428,6 @@ public final class Recorder {
         }
         try {
             reporter.report(currentSession);
-            AgentLogger.info("dynamic evidence upload succeeded");
         } catch (Throwable t) {
             AgentLogger.error("dynamic evidence upload failed: "
                     + t.getClass().getSimpleName() + ": " + t.getMessage());

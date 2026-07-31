@@ -1,4 +1,4 @@
-package com.cmb.codeperf.demo.app.support.mybatis;
+package com.cmb.codeperf.demo.app.config;
 
 import org.apache.ibatis.cache.CacheKey;
 import org.apache.ibatis.executor.Executor;

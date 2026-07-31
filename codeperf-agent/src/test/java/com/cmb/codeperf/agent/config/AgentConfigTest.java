@@ -109,5 +109,26 @@ public class AgentConfigTest {
         assertEquals("GET,POST,PUT,DELETE", loaded.getEntryMethod());
         assertEquals("/", loaded.getEntryPath());
     }
+
+    @Test
+    public void should_UseBuildInfoEnvOverDefault_When_BuildInfoContainsEnv() throws Exception {
+        Path buildInfo = tempDir.resolve("build-info.properties");
+        Files.write(buildInfo, (
+                "remoteUrl=git@gitlab.example.com:demo/demo-app.git\n"
+                        + "commit=abc123\n"
+                        + "branch=master\n"
+                        + "env=local\n"
+                        + "project=demo-app\n").getBytes(StandardCharsets.UTF_8));
+        Path config = tempDir.resolve("agent.yml");
+        Files.write(config, (
+                "serverUrl: http://127.0.0.1:9095\n"
+                        + "buildInfoPath: " + buildInfo.toString().replace("\\", "/") + "\n"
+                        + "targetPackages:\n"
+                        + "  - com.demo\n").getBytes(StandardCharsets.UTF_8));
+
+        AgentConfig loaded = AgentConfig.load(config.toString());
+
+        assertEquals("local", loaded.getEnv(), "build-info.properties 的 env 应该覆盖默认值 dev");
+    }
 }
 

@@ -9,6 +9,9 @@ import com.cmb.codeperf.cli.cmd.InstallHooksCommand;
 import com.cmb.codeperf.cli.cmd.PreScanCommand;
 import com.cmb.codeperf.cli.cmd.ScanCommand;
 
+import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
+
 /**
  * CLI 入口：JCommander 装配子命令并分发。
  * 见 docs/03-cli.md 第 7 节。
@@ -16,7 +19,20 @@ import com.cmb.codeperf.cli.cmd.ScanCommand;
 public class Main {
 
     public static void main(String[] args) {
+        setConsoleEncoding();
         System.exit(run(args));
+    }
+
+    /**
+     * 设置控制台输出编码为 UTF-8，解决 Windows 下中文乱码问题。
+     * Git Bash/IDEA Terminal 默认使用 UTF-8，但 Java 在 Windows 上默认使用 GBK。
+     */
+    private static void setConsoleEncoding() {
+        try {
+            System.setOut(new PrintStream(System.out, true, StandardCharsets.UTF_8));
+            System.setErr(new PrintStream(System.err, true, StandardCharsets.UTF_8));
+        } catch (Exception ignored) {
+        }
     }
 
     /**

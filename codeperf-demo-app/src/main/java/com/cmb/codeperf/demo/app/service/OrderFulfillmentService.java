@@ -1,7 +1,7 @@
 package com.cmb.codeperf.demo.app.service;
 
 import com.cmb.codeperf.demo.app.repository.OrderQueryMapper;
-import com.cmb.codeperf.demo.app.support.audit.BusinessAudit;
+import com.cmb.codeperf.demo.app.config.BusinessAudit;
 import com.cmb.codeperf.demo.common.domain.OrderDetail;
 import org.springframework.stereotype.Service;
 

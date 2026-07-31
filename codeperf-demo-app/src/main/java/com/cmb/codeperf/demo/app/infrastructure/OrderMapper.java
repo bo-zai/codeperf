@@ -1,7 +1,6 @@
 package com.cmb.codeperf.demo.app.infrastructure;
 
 import com.cmb.codeperf.demo.common.domain.OrderDetail;
-import com.cmb.codeperf.demo.common.repo.OrderMapper;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
@@ -13,7 +12,7 @@ import java.util.List;
  * 真实项目中这里通常由 MyBatis 代理生成，demo 中用内存数据模拟数据库访问。
  */
 @Repository
-public class LocalOrderMapper implements OrderMapper {
+public class OrderMapper implements com.cmb.codeperf.demo.common.repo.OrderMapper {
 
     /**
      * 按订单 ID 查询订单详情。

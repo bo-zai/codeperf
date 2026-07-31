@@ -1,6 +1,5 @@
 package com.cmb.codeperf.demo.app.infrastructure;
 
-import com.cmb.codeperf.demo.common.client.DeliveryClient;
 import org.springframework.stereotype.Component;
 
 /**
@@ -8,7 +7,7 @@ import org.springframework.stereotype.Component;
  * 真实项目通常会通过 HTTP 或 RPC 查询物流系统，demo 使用本地返回值保持场景可重复。
  */
 @Component
-public class LocalDeliveryClient implements DeliveryClient {
+public class DeliveryClient implements com.cmb.codeperf.demo.common.client.DeliveryClient {
 
     /**
      * 查询物流状态。

@@ -1,4 +1,4 @@
-package com.cmb.codeperf.demo.app.support.audit;
+package com.cmb.codeperf.demo.app.config;
 
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
@@ -24,7 +24,7 @@ public class BusinessAuditAspect {
      * @return 原业务方法返回值
      * @throws Throwable 原业务异常
      */
-    @Around("@annotation(com.cmb.codeperf.demo.app.support.audit.BusinessAudit)")
+    @Around("@annotation(com.cmb.codeperf.demo.app.config.BusinessAudit)")
     public Object audit(ProceedingJoinPoint joinPoint) throws Throwable {
         auditCount.incrementAndGet();
         return joinPoint.proceed();

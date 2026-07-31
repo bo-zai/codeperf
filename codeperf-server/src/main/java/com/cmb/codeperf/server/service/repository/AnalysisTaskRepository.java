@@ -52,7 +52,13 @@ public interface AnalysisTaskRepository {
      * @param limit 返回数量上限
      * @return 最近任务列表，按创建顺序倒序
      */
-    List<AnalysisTaskBO> listRecentTasks(int limit);
+    /**
+     * 查询最近有风险的分析任务。
+     *
+     * @param limit 返回数量上限
+     * @return 最近风险任务列表，按创建顺序倒序
+     */
+    List<AnalysisTaskBO> listRecentRiskTasks(int limit);
 
     /**
      * 查询任务下的静态风险明细。

@@ -217,8 +217,8 @@ public class AgentConfig {
             commit = trimToNull(properties.getProperty("commit"));
             branch = trimToNull(properties.getProperty("branch"));
             project = trimToNull(properties.getProperty("project"));
-            appName = firstNonBlank(appName, properties.getProperty("project"));
-            env = firstNonBlank(env, properties.getProperty("env"));
+            appName = firstNonBlank(trimToNull(properties.getProperty("project")), appName);
+            env = firstNonBlank(trimToNull(properties.getProperty("env")), env);
             authorName = trimToNull(properties.getProperty("authorName"));
             authorEmail = trimToNull(properties.getProperty("authorEmail"));
             commitTime = trimToNull(properties.getProperty("commitTime"));

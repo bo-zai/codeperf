@@ -1,10 +1,10 @@
 package com.cmb.codeperf.demo.app;
 
 import com.cmb.codeperf.demo.app.course.LocalLearningCourseClient;
-import com.cmb.codeperf.demo.app.infrastructure.LocalCustomerProfileClient;
-import com.cmb.codeperf.demo.app.infrastructure.LocalDeliveryClient;
-import com.cmb.codeperf.demo.app.infrastructure.LocalOrderMapper;
-import com.cmb.codeperf.demo.app.infrastructure.LocalUserRepository;
+import com.cmb.codeperf.demo.app.infrastructure.CustomerProfileClient;
+import com.cmb.codeperf.demo.app.infrastructure.DeliveryClient;
+import com.cmb.codeperf.demo.app.infrastructure.OrderMapper;
+import com.cmb.codeperf.demo.app.infrastructure.UserRepository;
 import com.cmb.codeperf.demo.app.service.CheckoutSnapshotService;
 import com.cmb.codeperf.demo.app.service.OrderPreviewService;
 import com.cmb.codeperf.demo.app.service.UserService;
@@ -35,10 +35,10 @@ public class LocalDemoApplication {
      * @return 场景执行摘要
      */
     public static ScenarioResult runScenario() {
-        LocalOrderMapper orderMapper = new LocalOrderMapper();
-        LocalCustomerProfileClient customerProfileClient = new LocalCustomerProfileClient();
-        LocalDeliveryClient deliveryClient = new LocalDeliveryClient();
-        LocalUserRepository userRepository = new LocalUserRepository();
+        OrderMapper orderMapper = new OrderMapper();
+        CustomerProfileClient customerProfileClient = new CustomerProfileClient();
+        DeliveryClient deliveryClient = new DeliveryClient();
+        UserRepository userRepository = new UserRepository();
         OrderPreviewService previewService = new OrderPreviewService(orderMapper, customerProfileClient);
         CheckoutSnapshotService checkoutService = new CheckoutSnapshotService(orderMapper, deliveryClient, userRepository);
         UserService userService = new UserService(new LocalLearningCourseClient());

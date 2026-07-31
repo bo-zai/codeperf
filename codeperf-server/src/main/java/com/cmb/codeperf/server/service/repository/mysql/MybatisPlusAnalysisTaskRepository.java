@@ -146,8 +146,9 @@ public class MybatisPlusAnalysisTaskRepository implements AnalysisTaskRepository
     }
 
     @Override
-    public List<AnalysisTaskBO> listRecentTasks(int limit) {
+    public List<AnalysisTaskBO> listRecentRiskTasks(int limit) {
         LambdaQueryWrapper<AnalysisTask> query = new LambdaQueryWrapper<>();
+        query.ne(AnalysisTask::getRiskLevel, "NONE");
         query.orderByDesc(AnalysisTask::getId);
         query.last("LIMIT " + Math.max(limit, 0));
         List<AnalysisTask> entities = mapper.selectList(query);
@@ -369,7 +370,7 @@ public class MybatisPlusAnalysisTaskRepository implements AnalysisTaskRepository
 
     @Override
     public List<DynamicEvidenceBO> listLatestDynamicEvidence(String remoteUrl, String branch, String env) {
-        List<AnalysisTaskBO> tasks = listRecentTasks(100);
+        List<AnalysisTaskBO> tasks = listRecentRiskTasks(100);
         String normalizedRepoKey = repoKey(remoteUrl);
         for (AnalysisTaskBO task : tasks) {
             if (same(repoKey(task.getRemoteUrl()), normalizedRepoKey) && same(task.getBranch(), branch)

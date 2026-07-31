@@ -1,4 +1,4 @@
-package com.cmb.codeperf.demo.app.support.audit;
+package com.cmb.codeperf.demo.app.config;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

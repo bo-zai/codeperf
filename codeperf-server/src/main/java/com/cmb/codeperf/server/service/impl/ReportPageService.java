@@ -55,7 +55,7 @@ public class ReportPageService {
      * @return 最近任务列表页模型
      */
     public ReportListPageVO getListPage() {
-        List<AnalysisTaskBO> tasks = repository.listRecentTasks(DEFAULT_TASK_LIMIT);
+        List<AnalysisTaskBO> tasks = repository.listRecentRiskTasks(DEFAULT_TASK_LIMIT);
         ReportListPageVO page = new ReportListPageVO();
         List<ReportListItemVO> items = new ArrayList<>(tasks.size());
         for (AnalysisTaskBO task : tasks) {

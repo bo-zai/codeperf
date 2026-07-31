@@ -44,8 +44,4 @@ public class OrderPreviewController {
         return response;
     }
 
-    @GetMapping("/preview1")
-    public Map<String, Object> preview1() {
-        return null;
-    }
 }

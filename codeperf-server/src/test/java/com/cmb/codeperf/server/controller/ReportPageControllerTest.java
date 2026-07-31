@@ -52,6 +52,35 @@ public class ReportPageControllerTest {
     }
 
     @Test
+    public void should_RenderOnlyRiskTasks_When_ReportListRequested() throws Exception {
+        String safeTaskId = createTaskWithStaticReport("safe-service", "safe-commit", "{\"filesScanned\":3,\"findings\":[],\"parseErrors\":[]}");
+        String riskTaskId = createTaskWithStaticReport("risk-service", "risk-commit", "{"
+                + "\"filesScanned\":3,"
+                + "\"findings\":[{"
+                + "\"ruleId\":\"LOOP_IO_AMPLIFICATION\","
+                + "\"severity\":\"WARN\","
+                + "\"confidence\":\"HIGH\","
+                + "\"sourceFile\":\"src/main/java/com/acme/RiskService.java\","
+                + "\"evidence\":\"mapper.selectById(id)\","
+                + "\"lineNumber\":18,"
+                + "\"loopStartLine\":17,"
+                + "\"loopEndLine\":20,"
+                + "\"ioType\":\"DB\","
+                + "\"loopMethodName\":\"load\","
+                + "\"attribution\":{\"riskScope\":\"NEW\"}"
+                + "}],"
+                + "\"parseErrors\":[]"
+                + "}");
+
+        mvc.perform(get("/reports"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString(riskTaskId)))
+                .andExpect(content().string(containsString("risk-service")))
+                .andExpect(content().string(not(containsString(safeTaskId))))
+                .andExpect(content().string(not(containsString("safe-service"))));
+    }
+
+    @Test
     public void should_RenderReportDetail_When_TaskExists() throws Exception {
         String taskId = createTaskWithStaticAndDynamicEvidence();
 
@@ -156,6 +185,27 @@ public class ReportPageControllerTest {
                                 + "}]"
                                 + "}"
                                 + "}"))
+                .andExpect(status().isOk());
+        return taskId;
+    }
+
+    private String createTaskWithStaticReport(String project, String commit, String staticPayload) throws Exception {
+        MvcResult created = mvc.perform(post("/api/tasks")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{"
+                                + "\"project\":\"" + project + "\","
+                                + "\"remoteUrl\":\"git@gitlab.company.com:mall/" + project + ".git\","
+                                + "\"commit\":\"" + commit + "\","
+                                + "\"branch\":\"v1\","
+                                + "\"env\":\"dev\""
+                                + "}"))
+                .andExpect(status().isOk())
+                .andReturn();
+        String taskId = extractTaskId(created);
+
+        mvc.perform(post("/api/tasks/" + taskId + "/static-results")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(staticPayload))
                 .andExpect(status().isOk());
         return taskId;
     }

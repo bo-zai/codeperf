@@ -35,6 +35,7 @@ public class OrderPreviewService {
         for (Long userId : userIds) {
             List<OrderDetail> orders = orderMapper.selectByUserId(userId);
             Map<String, Object> profile = customerProfileClient.getProfile(userId);
+            Map<String, Object> profile1 = customerProfileClient.getProfile(userId);
             Map<String, Object> row = new LinkedHashMap<String, Object>();
             row.put("orders", orders);
             row.put("profile", profile);

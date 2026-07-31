@@ -43,4 +43,9 @@ public class OrderPreviewController {
         response.put("local", LocalDemoApplication.runScenario());
         return response;
     }
+
+    @GetMapping("/preview1")
+    public Map<String, Object> preview1() {
+        return null;
+    }
 }

@@ -248,12 +248,18 @@
                         <div class="small text-muted" th:if="${finding.runtimeEntryKey != null && !finding.runtimeEntryKey.isEmpty()}">
                             最近入口：<span th:text="${finding.runtimeEntryKey}">POST /demo/orders/preview</span>
                         </div>
-                        <div class="small text-muted" th:if="${finding.runtimeCallPath != null && !finding.runtimeCallPath.isEmpty()}">
-                            最近调用路径：<span class="mono break-text" th:text="${finding.runtimeCallPath}">DemoOrderController.preview -> AppOrderPreviewService.preview -> DemoOrderMapper.selectByUserId</span>
+                        <div class="small text-muted" th:if="${finding.runtimeKeyCallPath != null && !finding.runtimeKeyCallPath.isEmpty()}">
+                            运行命中路径：<span class="mono break-text" th:text="${finding.runtimeKeyCallPath}">DemoOrderController.preview -> AppOrderPreviewService.preview -> DemoOrderMapper.selectByUserId</span>
                         </div>
                         <div class="small text-muted" th:if="${finding.runtimeMatchedReason != null && !finding.runtimeMatchedReason.isEmpty()}">
                             匹配依据：<span th:text="${finding.runtimeMatchedReason}">selectByUserId</span>
                         </div>
+                        <details class="mt-2" th:if="${finding.runtimeCallPath != null && !finding.runtimeCallPath.isEmpty()}">
+                            <summary class="small text-muted">查看完整采集路径</summary>
+                            <div class="mono break-text small text-muted mt-2" th:text="${finding.runtimeCallPath}">
+                                DemoOrderController.preview -> AppOrderPreviewService.preview -> DemoOrderMapper.selectByUserId
+                            </div>
+                        </details>
                         <div class="mt-3" th:if="${!#lists.isEmpty(finding.runtimeTopEntries)}">
                             <div class="text-muted small mb-2">入口分布</div>
                             <div class="border rounded-3 p-2 mb-2 bg-white" th:each="entry : ${finding.runtimeTopEntries}">

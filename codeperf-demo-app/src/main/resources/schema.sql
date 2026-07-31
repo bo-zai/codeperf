@@ -1,4 +1,4 @@
-create table if not exists agent_order (
+create table if not exists app_order (
     order_id bigint primary key,
     user_id bigint not null,
     delivery_no varchar(64) not null,

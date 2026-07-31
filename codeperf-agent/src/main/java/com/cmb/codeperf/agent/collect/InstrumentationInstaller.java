@@ -7,6 +7,7 @@ import com.cmb.codeperf.agent.collect.advice.JdbcPreparedExecAdvice;
 import com.cmb.codeperf.agent.collect.advice.JdbcStatementAdvice;
 import com.cmb.codeperf.agent.collect.advice.MethodTraceAdvice;
 import com.cmb.codeperf.agent.collect.advice.MybatisExecutorAdvice;
+import com.cmb.codeperf.agent.collect.advice.MybatisMapperProxyAdvice;
 import com.cmb.codeperf.agent.collect.advice.SpringRestTemplateAdvice;
 import com.cmb.codeperf.agent.config.AgentConfig;
 import net.bytebuddy.agent.builder.AgentBuilder;
@@ -91,12 +92,19 @@ public class InstrumentationInstaller {
                 .transform((b, td, cl, module, pd) ->
                         b.visit(Advice.to(MybatisExecutorAdvice.class).on(namedOneOf("query", "update"))));
 
-        // 7) HTTP：Spring RestTemplate 公共调用方法，保留静态 evidence 可匹配的方法名。
+        // 7) MyBatis Mapper 代理：直接记录 Mapper 接口方法，避免插件链遮挡 Executor 或业务调用树。
+        builder = builder.type(namedOneOf("org.apache.ibatis.binding.MapperProxy",
+                        "com.baomidou.mybatisplus.core.override.MybatisMapperProxy"))
+                .transform((b, td, cl, module, pd) ->
+                        b.visit(Advice.to(MybatisMapperProxyAdvice.class).on(
+                                named("invoke").and(takesArguments(3)))));
+
+        // 8) HTTP：Spring RestTemplate 公共调用方法，保留静态 evidence 可匹配的方法名。
         builder = builder.type(named("org.springframework.web.client.RestTemplate"))
                 .transform((b, td, cl, module, pd) ->
                         b.visit(Advice.to(SpringRestTemplateAdvice.class).on(restTemplateMethodMatcher())));
 
-        // 8) RPC：Dubbo Invoker#invoke，兼容 Apache Dubbo 和 Alibaba Dubbo。
+        // 9) RPC：Dubbo Invoker#invoke，兼容 Apache Dubbo 和 Alibaba Dubbo。
         builder = builder.type(not(isInterface()).and(dubboInvokerMatcher()))
                 .transform((b, td, cl, module, pd) ->
                         b.visit(Advice.to(DubboInvokerAdvice.class).on(named("invoke"))));

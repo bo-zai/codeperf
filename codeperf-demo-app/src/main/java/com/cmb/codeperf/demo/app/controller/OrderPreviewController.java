@@ -1,8 +1,8 @@
 package com.cmb.codeperf.demo.app.controller;
 
 import com.cmb.codeperf.demo.app.LocalDemoApplication;
-import com.cmb.codeperf.demo.app.service.AppOrderPreviewService;
-import com.cmb.codeperf.demo.app.service.DemoCheckoutService;
+import com.cmb.codeperf.demo.app.service.CheckoutSnapshotService;
+import com.cmb.codeperf.demo.app.service.OrderPreviewService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -13,17 +13,17 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * demo 订单接口。
+ * 订单预览接口。
  * 接口写法贴近真实项目：Controller 组装入参后调用多个业务服务完成页面聚合。
  */
 @RestController
 @RequestMapping("/demo/orders")
-public class DemoOrderController {
+public class OrderPreviewController {
 
-    private final AppOrderPreviewService previewService;
-    private final DemoCheckoutService checkoutService;
+    private final OrderPreviewService previewService;
+    private final CheckoutSnapshotService checkoutService;
 
-    public DemoOrderController(AppOrderPreviewService previewService, DemoCheckoutService checkoutService) {
+    public OrderPreviewController(OrderPreviewService previewService, CheckoutSnapshotService checkoutService) {
         this.previewService = previewService;
         this.checkoutService = checkoutService;
     }
@@ -44,4 +44,3 @@ public class DemoOrderController {
         return response;
     }
 }
-

@@ -9,11 +9,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * demo 订单 Mapper 实现。
+ * 本地订单 Mapper 实现。
  * 真实项目中这里通常由 MyBatis 代理生成，demo 中用内存数据模拟数据库访问。
  */
 @Repository
-public class DemoOrderMapper implements OrderMapper {
+public class LocalOrderMapper implements OrderMapper {
 
     /**
      * 按订单 ID 查询订单详情。
@@ -49,4 +49,3 @@ public class DemoOrderMapper implements OrderMapper {
         return detail;
     }
 }
-

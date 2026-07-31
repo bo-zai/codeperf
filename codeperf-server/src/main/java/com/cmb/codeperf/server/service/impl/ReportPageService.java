@@ -261,6 +261,7 @@ public class ReportPageService {
         card.setRuntimeCorroborationStatus(runtimeStatusText(summary.getStatus()));
         card.setRuntimeCorroborationText(summary.getText());
         card.setRuntimeEntryKey(summary.getLatestEntryKey());
+        card.setRuntimeKeyCallPath(summary.getLatestKeyCallPath());
         card.setRuntimeCallPath(summary.getLatestCallPath());
         card.setRuntimeMatchedMethod(summary.getLatestMatchedMethod());
         card.setRuntimeRepeatCount(summary.getMaxRepeatCount());

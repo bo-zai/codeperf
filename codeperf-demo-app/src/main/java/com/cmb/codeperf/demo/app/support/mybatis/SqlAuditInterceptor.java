@@ -1,5 +1,6 @@
-package com.cmb.codeperf.demo.app.agentverify;
+package com.cmb.codeperf.demo.app.support.mybatis;
 
+import org.apache.ibatis.cache.CacheKey;
 import org.apache.ibatis.executor.Executor;
 import org.apache.ibatis.mapping.BoundSql;
 import org.apache.ibatis.mapping.MappedStatement;
@@ -14,19 +15,19 @@ import java.util.Properties;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Agent 验证用 MyBatis Interceptor。
- * 企业项目常在这里接入分页、审计、数据权限等逻辑，本类用于复现这些拦截器遮挡业务调用树的场景。
+ * SQL 审计拦截器。
+ * 企业项目常在 MyBatis 插件链中接入分页、审计、数据权限等逻辑；该类用于复现插件代理对调用链的影响。
  */
 @Intercepts({
         @Signature(type = Executor.class, method = "query",
                 args = {MappedStatement.class, Object.class, RowBounds.class, ResultHandler.class}),
         @Signature(type = Executor.class, method = "query",
                 args = {MappedStatement.class, Object.class, RowBounds.class, ResultHandler.class,
-                        org.apache.ibatis.cache.CacheKey.class, BoundSql.class})
+                        CacheKey.class, BoundSql.class})
 })
-public class AgentMybatisTraceInterceptor implements Interceptor {
+public class SqlAuditInterceptor implements Interceptor {
 
-    private final AtomicInteger interceptCount = new AtomicInteger();
+    private final AtomicInteger queryCount = new AtomicInteger();
 
     /**
      * 拦截 MyBatis 查询执行。
@@ -37,7 +38,7 @@ public class AgentMybatisTraceInterceptor implements Interceptor {
      */
     @Override
     public Object intercept(Invocation invocation) throws Throwable {
-        interceptCount.incrementAndGet();
+        queryCount.incrementAndGet();
         return invocation.proceed();
     }
 
@@ -59,15 +60,15 @@ public class AgentMybatisTraceInterceptor implements Interceptor {
      */
     @Override
     public void setProperties(Properties properties) {
-        // demo 不需要外部属性；保留该方法是为了贴近企业项目 Interceptor 标准结构。
+        // 本地演示应用不需要外部插件属性；保留该方法是为了符合 MyBatis Interceptor 标准结构。
     }
 
     /**
-     * 获取 MyBatis Interceptor 命中次数，方便确认查询确实进入 MyBatis 插件链。
+     * 获取查询拦截次数。
      *
-     * @return 拦截次数
+     * @return 查询拦截次数
      */
-    public int getInterceptCount() {
-        return interceptCount.get();
+    public int getQueryCount() {
+        return queryCount.get();
     }
 }

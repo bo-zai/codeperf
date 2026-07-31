@@ -1,5 +1,6 @@
 package com.cmb.codeperf.agent.collect;
 
+import com.cmb.codeperf.agent.collect.advice.MybatisMapperProxyAdvice;
 import com.cmb.codeperf.agent.config.AgentConfig;
 import com.cmb.codeperf.agent.session.SessionData;
 import com.cmb.codeperf.agent.upload.DynamicEvidenceReporter;
@@ -7,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -119,6 +121,24 @@ public class RecorderTest {
         assertEquals(26L, reporter.getLastIoEventElapsedMs());
     }
 
+    @Test
+    public void should_RecordMybatisMapperMethod_When_MapperProxyInvokeAdviceRuns() throws NoSuchMethodException {
+        AgentConfig config = new AgentConfig();
+        config.setEntryMethod("GET");
+        config.setEntryPath("/api");
+        config.setMode("continuous");
+        CountingEvidenceReporter reporter = new CountingEvidenceReporter();
+        Recorder.init(config, null, null, reporter);
+        Method method = DemoOrderMapper.class.getMethod("selectByUserId", Long.class);
+
+        assertTrue(Recorder.tryStartRequest(new MockRequest("GET", "/api/orders")));
+        MybatisMapperProxyAdvice.exit(method, System.nanoTime());
+        Recorder.finishRequest();
+
+        assertEquals(1, reporter.getLastIoEventCount());
+        assertEquals("selectByUserId", reporter.getLastIoEventMethodName());
+    }
+
     public static class MockRequest {
         private final String method;
         private final String uri;
@@ -135,6 +155,10 @@ public class RecorderTest {
         public String getRequestURI() {
             return uri;
         }
+    }
+
+    public interface DemoOrderMapper {
+        Object selectByUserId(Long userId);
     }
 
     private static class CountingSessionWriter extends SessionWriter {
@@ -162,6 +186,7 @@ public class RecorderTest {
         private int lastIoEventCount;
         private int lastIoEventRepeatCount;
         private long lastIoEventElapsedMs;
+        private String lastIoEventMethodName;
         private String lastHttpMethodName;
 
         CountingEvidenceReporter() {
@@ -181,6 +206,8 @@ public class RecorderTest {
                         .getIoEvents().get(0).getCount();
                 lastIoEventElapsedMs = session.getRequests().get(session.getRequests().size() - 1)
                         .getIoEvents().get(0).getElapsedMs();
+                lastIoEventMethodName = session.getRequests().get(session.getRequests().size() - 1)
+                        .getIoEvents().get(0).getMethodName();
                 for (int i = 0; i < session.getRequests().get(session.getRequests().size() - 1).getIoEvents().size(); i++) {
                     if ("HTTP".equals(session.getRequests().get(session.getRequests().size() - 1)
                             .getIoEvents().get(i).getIoType())) {
@@ -209,6 +236,10 @@ public class RecorderTest {
 
         long getLastIoEventElapsedMs() {
             return lastIoEventElapsedMs;
+        }
+
+        String getLastIoEventMethodName() {
+            return lastIoEventMethodName;
         }
 
         String getLastHttpMethodName() {

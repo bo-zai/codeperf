@@ -35,7 +35,10 @@ public class RuntimeCorroborationSummaryVO {
     /** 最近命中的入口 */
     private String latestEntryKey;
 
-    /** 最近命中的调用路径 */
+    /** 最近命中的精简关键路径 */
+    private String latestKeyCallPath;
+
+    /** 最近命中的完整采集路径 */
     private String latestCallPath;
 
     /** 最近命中的方法 */

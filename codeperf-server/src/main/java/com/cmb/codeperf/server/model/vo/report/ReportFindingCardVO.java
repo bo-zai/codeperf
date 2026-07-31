@@ -74,7 +74,10 @@ public class ReportFindingCardVO {
     /** 动态命中的入口请求 */
     private String runtimeEntryKey;
 
-    /** 动态命中的调用路径 */
+    /** 动态命中的精简关键路径 */
+    private String runtimeKeyCallPath;
+
+    /** 动态命中的完整采集路径 */
     private String runtimeCallPath;
 
     /** 动态命中的方法 */

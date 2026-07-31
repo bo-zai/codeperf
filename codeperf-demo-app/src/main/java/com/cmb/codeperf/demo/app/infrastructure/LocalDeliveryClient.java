@@ -4,10 +4,11 @@ import com.cmb.codeperf.demo.common.client.DeliveryClient;
 import org.springframework.stereotype.Component;
 
 /**
- * demo 物流客户端。
+ * 本地物流客户端。
+ * 真实项目通常会通过 HTTP 或 RPC 查询物流系统，demo 使用本地返回值保持场景可重复。
  */
 @Component
-public class DemoDeliveryClient implements DeliveryClient {
+public class LocalDeliveryClient implements DeliveryClient {
 
     /**
      * 查询物流状态。
@@ -20,4 +21,3 @@ public class DemoDeliveryClient implements DeliveryClient {
         return "SIGNED:" + deliveryNo;
     }
 }
-

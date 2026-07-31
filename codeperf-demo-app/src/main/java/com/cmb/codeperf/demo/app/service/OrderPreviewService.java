@@ -14,12 +14,12 @@ import java.util.Map;
  * 用户端订单预览服务。
  */
 @Service
-public class AppOrderPreviewService {
+public class OrderPreviewService {
 
     private final OrderMapper orderMapper;
     private final CustomerProfileClient customerProfileClient;
 
-    public AppOrderPreviewService(OrderMapper orderMapper, CustomerProfileClient customerProfileClient) {
+    public OrderPreviewService(OrderMapper orderMapper, CustomerProfileClient customerProfileClient) {
         this.orderMapper = orderMapper;
         this.customerProfileClient = customerProfileClient;
     }
@@ -43,4 +43,3 @@ public class AppOrderPreviewService {
         return rows;
     }
 }
-

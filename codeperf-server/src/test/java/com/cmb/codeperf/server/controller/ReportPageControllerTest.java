@@ -9,6 +9,8 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -29,6 +31,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         })
 @AutoConfigureMockMvc
 public class ReportPageControllerTest {
+
+    private static final AtomicInteger COMMIT_SEQUENCE = new AtomicInteger();
 
     @Autowired
     private MockMvc mvc;
@@ -68,6 +72,9 @@ public class ReportPageControllerTest {
         mvc.perform(get("/reports/" + taskId))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("动态佐证")))
+                .andExpect(content().string(containsString("运行命中路径")))
+                .andExpect(content().string(containsString("查看完整采集路径")))
+                .andExpect(content().string(not(containsString("最近调用路径"))))
                 .andExpect(content().string(containsString("DemoOrderController.preview -&gt; AppOrderPreviewService.preview -&gt; DemoOrderMapper.selectByUserId")))
                 .andExpect(content().string(containsString("命中请求 1 次")))
                 .andExpect(content().string(containsString("最大重复调用 3 次")))
@@ -75,12 +82,13 @@ public class ReportPageControllerTest {
     }
 
     private String createTaskWithStaticAndDynamicEvidence() throws Exception {
+        String commit = "abc123-" + COMMIT_SEQUENCE.incrementAndGet();
         MvcResult created = mvc.perform(post("/api/tasks")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{"
                                 + "\"project\":\"order-service\","
                                 + "\"remoteUrl\":\"git@gitlab.company.com:mall/order-service.git\","
-                                + "\"commit\":\"abc123\","
+                                + "\"commit\":\"" + commit + "\","
                                 + "\"branch\":\"v1\","
                                 + "\"env\":\"dev\","
                                 + "\"authorName\":\"Alice Dev\","
@@ -118,7 +126,7 @@ public class ReportPageControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{"
                                 + "\"remoteUrl\":\"git@gitlab.company.com:mall/order-service.git\","
-                                + "\"commit\":\"abc123\","
+                                + "\"commit\":\"" + commit + "\","
                                 + "\"branch\":\"v1\","
                                 + "\"env\":\"dev\","
                                 + "\"appName\":\"order-service\","

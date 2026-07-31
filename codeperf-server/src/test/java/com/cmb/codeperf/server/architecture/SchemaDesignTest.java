@@ -50,6 +50,8 @@ public class SchemaDesignTest {
 
         assertTrue(schema.contains("repository_id bigint not null"), "analysis_task must require repository_id");
         assertTrue(schema.contains("git_commit_id bigint not null"), "analysis_task must require git_commit_id");
+        assertTrue(schema.contains("unique key uk_analysis_task_repo_commit_env (repository_id, git_commit_id, env_name)"),
+                "analysis_task must be idempotent by repository, commit and env");
         assertTrue(schema.contains("create table if not exists static_finding"));
         assertTrue(schema.contains("create table if not exists dynamic_evidence"));
         assertTableColumn(schema, "static_finding", "task_id varchar(64) not null");

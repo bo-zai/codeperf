@@ -31,6 +31,7 @@ public class RuntimeEvidenceAggregator {
     private static final String STATUS_HIGH_AMPLIFICATION = "HIGH_AMPLIFICATION";
     private static final int FREQUENT_HIT_THRESHOLD = 5;
     private static final int HIGH_AMPLIFICATION_THRESHOLD = 20;
+    private static final int MAX_KEY_PATH_NODES = 4;
 
     private final ObjectMapper mapper = new ObjectMapper();
 
@@ -113,6 +114,8 @@ public class RuntimeEvidenceAggregator {
         summary.setAvgRepeatCount(totalRepeat / hits.size());
         summary.setTopEntryKey(topEntry == null ? "" : topEntry.entryKey);
         summary.setLatestEntryKey(latest.request.entryKey);
+        summary.setLatestKeyCallPath(simplifyCallPath(latest.call.getCallPath(), latest.call.getSimpleMethodName(),
+                latest.matchedReason));
         summary.setLatestCallPath(latest.call.getCallPath());
         summary.setLatestMatchedMethod(latest.call.getSimpleMethodName());
         summary.setMatchedReason(latest.matchedReason);
@@ -224,6 +227,7 @@ public class RuntimeEvidenceAggregator {
                 List<RuntimeCallSnapshot> calls = new ArrayList<>();
                 collectRuntimeCalls(request.path("callTree"), new ArrayList<String>(), calls);
                 collectIoEvents(request.path("ioEvents"), calls);
+                collectStackSamples(request.path("samples"), calls, maxSqlRepeatCount(request.path("sqls")));
                 snapshots.add(new RuntimeRequestSnapshot(entryKey, calls));
             }
             return snapshots;
@@ -273,6 +277,40 @@ public class RuntimeEvidenceAggregator {
             boolean exact = "MYBATIS".equalsIgnoreCase(framework) && hasText(mappedStatementId);
             calls.add(new RuntimeCallSnapshot(fullMethodName, methodName, callPath, count, exact));
         }
+    }
+
+    private void collectStackSamples(JsonNode samples, List<RuntimeCallSnapshot> calls, int repeatCount) {
+        if (samples == null || !samples.isArray()) {
+            return;
+        }
+        for (JsonNode sample : samples) {
+            JsonNode frames = sample.path("frames");
+            if (!frames.isArray()) {
+                continue;
+            }
+            List<String> callPath = new ArrayList<>();
+            for (int i = frames.size() - 1; i >= 0; i--) {
+                String frame = frames.get(i).asText();
+                if (!hasText(frame)) {
+                    continue;
+                }
+                String display = simpleMethodDisplay(frame);
+                callPath.add(display);
+                // 栈采样是兜底证据：当框架代理遮挡调用树且语义 I/O 缺失时，仍可证明方法在请求链路中执行过。
+                calls.add(new RuntimeCallSnapshot(frame, display, joinPath(callPath), repeatCount));
+            }
+        }
+    }
+
+    private int maxSqlRepeatCount(JsonNode sqls) {
+        if (sqls == null || !sqls.isArray()) {
+            return 1;
+        }
+        int max = 1;
+        for (JsonNode sql : sqls) {
+            max = Math.max(max, sql.path("count").asInt(1));
+        }
+        return max;
     }
 
     private String ioCallPath(JsonNode event, String fullMethodName) {
@@ -357,7 +395,128 @@ public class RuntimeEvidenceAggregator {
         }
         int classStart = fullMethod.lastIndexOf('.', lastDot - 1);
         String className = classStart >= 0 ? fullMethod.substring(classStart + 1, lastDot) : fullMethod.substring(0, lastDot);
-        return className + "." + fullMethod.substring(lastDot + 1);
+        String normalizedClass = normalizeRuntimeClassName(className);
+        String methodName = fullMethod.substring(lastDot + 1);
+        if (!hasText(normalizedClass)) {
+            return methodName;
+        }
+        return normalizedClass + "." + methodName;
+    }
+
+    private String normalizeRuntimeClassName(String className) {
+        if (!hasText(className)) {
+            return "";
+        }
+        String value = className;
+        int cglibIndex = value.indexOf("$$");
+        if (cglibIndex > 0) {
+            value = value.substring(0, cglibIndex);
+        }
+        if (value.startsWith("$Proxy")) {
+            return "";
+        }
+        return value;
+    }
+
+    private String simplifyCallPath(String fullCallPath, String matchedMethod, String matchedReason) {
+        List<String> nodes = splitCallPath(fullCallPath);
+        List<String> businessNodes = new ArrayList<>();
+        for (String node : nodes) {
+            String normalized = normalizePathNode(node);
+            if (!hasText(normalized) || isFrameworkPathNode(normalized)) {
+                continue;
+            }
+            addIfAbsent(businessNodes, normalized);
+        }
+        String matchedNode = preferredMatchedNode(matchedMethod, matchedReason);
+        if (hasText(matchedNode)) {
+            addIfAbsent(businessNodes, matchedNode);
+        }
+        List<String> compact = tail(businessNodes, MAX_KEY_PATH_NODES);
+        return compact.isEmpty() ? value(matchedNode) : joinPath(compact);
+    }
+
+    private List<String> splitCallPath(String callPath) {
+        if (!hasText(callPath)) {
+            return Collections.emptyList();
+        }
+        String[] parts = callPath.split("\\s*->\\s*");
+        List<String> result = new ArrayList<>(parts.length);
+        for (String part : parts) {
+            if (hasText(part)) {
+                result.add(part.trim());
+            }
+        }
+        return result;
+    }
+
+    private String normalizePathNode(String node) {
+        if (!hasText(node)) {
+            return "";
+        }
+        int dot = node.lastIndexOf('.');
+        if (dot < 0) {
+            return node.trim();
+        }
+        String className = normalizeRuntimeClassName(node.substring(0, dot));
+        String methodName = node.substring(dot + 1);
+        if (!hasText(className)) {
+            return methodName;
+        }
+        return className + "." + methodName;
+    }
+
+    private boolean isFrameworkPathNode(String node) {
+        String value = node.trim();
+        return value.startsWith("DispatcherServlet.")
+                || value.startsWith("FrameworkServlet.")
+                || value.startsWith("RequestMappingHandlerAdapter.")
+                || value.startsWith("ServletInvocableHandlerMethod.")
+                || value.startsWith("InvocableHandlerMethod.")
+                || value.startsWith("ApplicationFilterChain.")
+                || value.startsWith("OncePerRequestFilter.")
+                || value.startsWith("Standard")
+                || value.startsWith("Coyote")
+                || value.startsWith("NioEndpoint.")
+                || value.startsWith("Thread.")
+                || value.startsWith("Method.")
+                || value.startsWith("NativeMethodAccessorImpl.")
+                || value.startsWith("DelegatingMethodAccessorImpl.")
+                || value.startsWith("Plugin.")
+                || value.startsWith("SqlSession")
+                || value.startsWith("DefaultSqlSession.")
+                || value.startsWith("MybatisMapper")
+                || value.startsWith("MapperProxy.")
+                || value.startsWith("CglibAopProxy.")
+                || value.startsWith("ReflectiveMethodInvocation.")
+                || value.startsWith("MethodProxy.")
+                || value.startsWith("ExposeInvocationInterceptor.")
+                || value.startsWith("AspectJ")
+                || value.startsWith("AbstractAspectJAdvice.")
+                || value.startsWith("AspectJAroundAdvice.");
+    }
+
+    private String preferredMatchedNode(String matchedMethod, String matchedReason) {
+        if (hasText(matchedMethod) && !isFrameworkPathNode(matchedMethod)) {
+            return normalizePathNode(matchedMethod);
+        }
+        return value(matchedReason);
+    }
+
+    private void addIfAbsent(List<String> values, String value) {
+        if (!hasText(value)) {
+            return;
+        }
+        if (values.isEmpty() || !value.equals(values.get(values.size() - 1))) {
+            values.add(value);
+        }
+    }
+
+    private List<String> tail(List<String> values, int maxSize) {
+        if (values.size() <= maxSize) {
+            return values;
+        }
+        return new ArrayList<>(values.subList(values.size() - maxSize, values.size()));
     }
 
     private String joinPath(List<String> path) {

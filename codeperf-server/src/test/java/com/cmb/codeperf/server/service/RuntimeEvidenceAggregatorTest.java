@@ -144,6 +144,80 @@ public class RuntimeEvidenceAggregatorTest {
         assertEquals("queryStock", summary.getMatchedReason());
     }
 
+    @Test
+    public void should_CorroborateByStackSample_When_MybatisIoEventIsMissing() {
+        StaticFindingSummary finding = finding("agentOrderMapper.selectByUserId(userId)");
+        DynamicEvidenceBO evidence = new DynamicEvidenceBO();
+        evidence.setTaskId("task-1");
+        evidence.setAppName("codeperf-demo-app");
+        evidence.setEnv("local");
+        evidence.setEntryKey("GET /demo/agent/aop-mybatis/orders");
+        evidence.setRawPayload("{"
+                + "\"evidence\":{\"requests\":[{"
+                + "\"httpMethod\":\"GET\","
+                + "\"path\":\"/demo/agent/aop-mybatis/orders\","
+                + "\"sqls\":[{"
+                + "\"count\":15,"
+                + "\"sampleSql\":\"select order_id from agent_order where user_id = ?\","
+                + "\"fingerprint\":\"select order_id from agent_order where user_id = ?\""
+                + "}],"
+                + "\"callTree\":{\"method\":\"ROOT\",\"count\":0,\"children\":[{"
+                + "\"method\":\"com.cmb.demo.AgentMybatisTraceInterceptor.intercept\","
+                + "\"count\":3,\"children\":[]"
+                + "}]},"
+                + "\"samples\":[{\"frames\":["
+                + "\"com.sun.proxy.$Proxy113.selectByUserId\","
+                + "\"com.cmb.demo.AgentVerificationService.buildAopMybatisRows\""
+                + "]}],"
+                + "\"ioEvents\":[]"
+                + "}]}}");
+
+        Map<String, RuntimeCorroborationSummaryVO> summaries = aggregator.aggregate(Arrays.asList(finding),
+                Arrays.asList(evidence));
+        RuntimeCorroborationSummaryVO summary = summaries.get(aggregator.findingKey(finding));
+
+        assertEquals("HIT", summary.getStatus());
+        assertEquals(1, summary.getHitRequestCount());
+        assertEquals(15, summary.getMaxRepeatCount());
+        assertEquals("selectByUserId", summary.getMatchedReason());
+        assertEquals("AgentVerificationService.buildAopMybatisRows -> selectByUserId", summary.getLatestKeyCallPath());
+        assertTrue(summary.getLatestCallPath().contains("selectByUserId"));
+    }
+
+    @Test
+    public void should_SimplifyRuntimePath_When_FrameworkProxyFramesExist() {
+        StaticFindingSummary finding = finding("agentOrderMapper.selectByUserId(userId)");
+        DynamicEvidenceBO evidence = new DynamicEvidenceBO();
+        evidence.setTaskId("task-1");
+        evidence.setAppName("codeperf-demo-app");
+        evidence.setEnv("local");
+        evidence.setEntryKey("GET /demo/agent/aop-mybatis/orders");
+        evidence.setRawPayload("{"
+                + "\"evidence\":{\"requests\":[{"
+                + "\"httpMethod\":\"GET\","
+                + "\"path\":\"/demo/agent/aop-mybatis/orders\","
+                + "\"sqls\":[{\"count\":5}],"
+                + "\"callTree\":{\"method\":\"ROOT\",\"count\":0,\"children\":[]},"
+                + "\"samples\":[{\"frames\":["
+                + "\"com.sun.proxy.$Proxy113.selectByUserId\","
+                + "\"org.apache.ibatis.plugin.Plugin.invoke\","
+                + "\"com.cmb.demo.AgentVerificationService$$EnhancerBySpringCGLIB$$94cb6088.buildAopMybatisRows\","
+                + "\"org.springframework.web.servlet.DispatcherServlet.doDispatch\","
+                + "\"com.cmb.demo.AgentVerificationController.aopMybatisOrders\","
+                + "\"java.lang.Thread.run\""
+                + "]}],"
+                + "\"ioEvents\":[]"
+                + "}]}}");
+
+        Map<String, RuntimeCorroborationSummaryVO> summaries = aggregator.aggregate(Arrays.asList(finding),
+                Arrays.asList(evidence));
+        RuntimeCorroborationSummaryVO summary = summaries.get(aggregator.findingKey(finding));
+
+        assertEquals("AgentVerificationController.aopMybatisOrders -> "
+                + "AgentVerificationService.buildAopMybatisRows -> selectByUserId", summary.getLatestKeyCallPath());
+        assertTrue(summary.getLatestCallPath().contains("DispatcherServlet.doDispatch"));
+    }
+
     private StaticFindingSummary finding(String evidence) {
         StaticFindingSummary finding = new StaticFindingSummary();
         finding.setRuleId("LOOP_IO_AMPLIFICATION");

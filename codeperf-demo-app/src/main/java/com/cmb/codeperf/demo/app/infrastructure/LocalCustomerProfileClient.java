@@ -7,11 +7,11 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * demo 用户画像客户端。
+ * 本地用户画像客户端。
  * 真实项目中这里通常是 HTTP/RPC/SDK 客户端，demo 用固定返回值模拟远程调用。
  */
 @Component
-public class DemoCustomerProfileClient implements CustomerProfileClient {
+public class LocalCustomerProfileClient implements CustomerProfileClient {
 
     /**
      * 获取用户画像。
@@ -27,4 +27,3 @@ public class DemoCustomerProfileClient implements CustomerProfileClient {
         return profile;
     }
 }
-

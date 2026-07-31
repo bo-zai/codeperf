@@ -1,4 +1,4 @@
-package com.cmb.codeperf.demo.app.agentverify;
+package com.cmb.codeperf.demo.app.repository;
 
 import com.cmb.codeperf.demo.common.domain.OrderDetail;
 import org.apache.ibatis.annotations.Mapper;
@@ -7,11 +7,11 @@ import org.apache.ibatis.annotations.Select;
 import java.util.List;
 
 /**
- * Agent 验证 Mapper。
- * 使用真实 MyBatis Mapper 执行 SQL，确保 agent 能命中 Executor#query 并拿到 MappedStatement.id。
+ * 订单查询 Mapper。
+ * 使用真实 MyBatis Mapper 执行 SQL，便于本地应用完整覆盖 Controller、AOP、Service、Mapper、SQL 链路。
  */
 @Mapper
-public interface AgentOrderMapper {
+public interface OrderQueryMapper {
 
     /**
      * 按用户 ID 查询订单。
@@ -19,6 +19,6 @@ public interface AgentOrderMapper {
      * @param userId 用户 ID
      * @return 订单列表
      */
-    @Select("select order_id, user_id, delivery_no, amount from agent_order where user_id = #{userId}")
+    @Select("select order_id, user_id, delivery_no, amount from app_order where user_id = #{userId}")
     List<OrderDetail> selectByUserId(Long userId);
 }

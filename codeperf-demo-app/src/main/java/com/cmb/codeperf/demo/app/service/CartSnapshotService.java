@@ -11,26 +11,25 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 未提交购物车风险服务。
- * <p>
- * 用于验证开发者只改工作区文件、尚未 commit 时，手动执行 CodePerf scan 的识别效果。
+ * 购物车快照服务。
+ * 该服务模拟购物车页面批量补齐用户和订单信息的业务流程。
  */
 @Service
-public class UncommittedCartRiskService {
+public class CartSnapshotService {
 
     private final UserRepository userRepository;
     private final OrderMapper orderMapper;
 
-    public UncommittedCartRiskService(UserRepository userRepository, OrderMapper orderMapper) {
+    public CartSnapshotService(UserRepository userRepository, OrderMapper orderMapper) {
         this.userRepository = userRepository;
         this.orderMapper = orderMapper;
     }
 
     /**
-     * 批量构建购物车风险快照。
+     * 批量构建购物车快照。
      *
      * @param userIds 用户 ID 列表
-     * @return 购物车风险快照
+     * @return 购物车快照
      */
     public List<Map<String, Object>> buildCartSnapshots(List<Long> userIds) {
         List<Map<String, Object>> snapshots = new ArrayList<Map<String, Object>>();
@@ -40,7 +39,7 @@ public class UncommittedCartRiskService {
             Map<String, Object> row = new LinkedHashMap<String, Object>();
             row.put("user", user);
             row.put("orders", orders);
-            row.put("source", "uncommitted-worktree");
+            row.put("source", "cart-page");
             snapshots.add(row);
         }
         return snapshots;

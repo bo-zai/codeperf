@@ -7,11 +7,11 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * demo 用户仓储。
- * 真实项目中这里通常由 JPA/MyBatis 或内部 DAO 实现，demo 用内存数据模拟数据库访问。
+ * 本地用户仓储。
+ * 真实项目中这里通常由 JPA、MyBatis 或内部 DAO 实现，demo 用内存数据模拟数据库访问。
  */
 @Repository
-public class DemoUserRepository implements UserRepository {
+public class LocalUserRepository implements UserRepository {
 
     /**
      * 按用户 ID 查询用户基础信息。
@@ -27,4 +27,3 @@ public class DemoUserRepository implements UserRepository {
         return user;
     }
 }
-

@@ -114,7 +114,7 @@ public class MybatisPlusAnalysisTaskRepository implements AnalysisTaskRepository
     }
 
     @Override
-    public Optional<AnalysisTaskBO> findLatestByCommitIdentity(String remoteUrl, String commit, String branch, String env) {
+    public Optional<AnalysisTaskBO> findByCommitIdentity(String remoteUrl, String commit, String branch, String env) {
         String normalizedRepoKey = repoKey(remoteUrl);
         log.info("动态证据查询静态任务 remoteUrl={} repoKey={} commit={} branch={} env={}",
                 remoteUrl, normalizedRepoKey, commit, branch, env);
@@ -133,7 +133,6 @@ public class MybatisPlusAnalysisTaskRepository implements AnalysisTaskRepository
         query.eq(AnalysisTask::getRepositoryId, repository.getId());
         query.eq(AnalysisTask::getGitCommitId, gitCommit.getId());
         query.eq(AnalysisTask::getEnvName, env);
-        query.orderByDesc(AnalysisTask::getId);
         query.last("LIMIT 1");
         AnalysisTask task = mapper.selectOne(query);
         if (task == null) {

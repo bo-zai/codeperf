@@ -1,13 +1,13 @@
 package com.cmb.codeperf.demo.app;
 
-import com.cmb.codeperf.demo.app.infrastructure.DemoCustomerProfileClient;
-import com.cmb.codeperf.demo.app.infrastructure.DemoDeliveryClient;
-import com.cmb.codeperf.demo.app.infrastructure.DemoOrderMapper;
-import com.cmb.codeperf.demo.app.infrastructure.DemoUserRepository;
-import com.cmb.codeperf.demo.app.service.AppOrderPreviewService;
-import com.cmb.codeperf.demo.app.service.DemoCheckoutService;
+import com.cmb.codeperf.demo.app.course.LocalLearningCourseClient;
+import com.cmb.codeperf.demo.app.infrastructure.LocalCustomerProfileClient;
+import com.cmb.codeperf.demo.app.infrastructure.LocalDeliveryClient;
+import com.cmb.codeperf.demo.app.infrastructure.LocalOrderMapper;
+import com.cmb.codeperf.demo.app.infrastructure.LocalUserRepository;
+import com.cmb.codeperf.demo.app.service.CheckoutSnapshotService;
+import com.cmb.codeperf.demo.app.service.OrderPreviewService;
 import com.cmb.codeperf.demo.app.service.UserService;
-import com.cmb.codeperf.demo.app.service.service1.BbkServiceImpl;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import org.springframework.boot.SpringApplication;
@@ -30,23 +30,23 @@ public class LocalDemoApplication {
 
     /**
      * 运行一组本地业务场景。
-     * 测试和手工验证共用该入口，避免同一业务流程在不同入口中重复实现。
+     * 测试和本地启动入口共用该流程，避免同一业务场景在不同入口中重复实现。
      *
      * @return 场景执行摘要
      */
     public static ScenarioResult runScenario() {
-        DemoOrderMapper orderMapper = new DemoOrderMapper();
-        DemoCustomerProfileClient customerProfileClient = new DemoCustomerProfileClient();
-        DemoDeliveryClient deliveryClient = new DemoDeliveryClient();
-        DemoUserRepository userRepository = new DemoUserRepository();
-        AppOrderPreviewService previewService = new AppOrderPreviewService(orderMapper, customerProfileClient);
-        DemoCheckoutService checkoutService = new DemoCheckoutService(orderMapper, deliveryClient, userRepository);
-        UserService userService = new UserService(new BbkServiceImpl());
+        LocalOrderMapper orderMapper = new LocalOrderMapper();
+        LocalCustomerProfileClient customerProfileClient = new LocalCustomerProfileClient();
+        LocalDeliveryClient deliveryClient = new LocalDeliveryClient();
+        LocalUserRepository userRepository = new LocalUserRepository();
+        OrderPreviewService previewService = new OrderPreviewService(orderMapper, customerProfileClient);
+        CheckoutSnapshotService checkoutService = new CheckoutSnapshotService(orderMapper, deliveryClient, userRepository);
+        UserService userService = new UserService(new LocalLearningCourseClient());
 
         List<Long> userIds = Arrays.asList(1001L, 1002L, 1003L);
         List<Map<String, Object>> previewRows = previewService.preview(userIds);
         checkoutService.loadCheckoutSnapshot(userIds);
-        int lookupCount = userService.getBbkIds(Arrays.asList("B001", "B002", "B003", "B004")).size();
+        int lookupCount = userService.getCourseCodes(Arrays.asList("C001", "C002", "C003", "C004")).size();
         return new ScenarioResult(previewRows.size(), lookupCount);
     }
 
@@ -60,7 +60,7 @@ public class LocalDemoApplication {
         /** 订单预览行数 */
         private final int previewCount;
 
-        /** 结算页补全信息数量 */
+        /** 课程补全信息数量 */
         private final int lookupCount;
     }
 }

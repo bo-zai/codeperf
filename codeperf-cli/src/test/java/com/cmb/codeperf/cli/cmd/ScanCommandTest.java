@@ -169,6 +169,41 @@ public class ScanCommandTest {
     }
 
     @Test
+    public void should_SkipUpload_When_NoChangedJavaFiles() throws Exception {
+        initGitRepo();
+        List<CapturedRequest> requests = new ArrayList<>();
+        HttpServer server = startServer(requests);
+        try {
+            write(".codeperf.yml",
+                    "project: demo\n"
+                            + "env: local\n"
+                            + "staticScan:\n"
+                            + "  sourceRoots:\n"
+                            + "    - src/main/java\n"
+                            + "  failOn: NONE\n"
+                            + "report:\n"
+                            + "  local:\n"
+                            + "    enabled: false\n"
+                            + "  upload:\n"
+                            + "    serverUrl: http://127.0.0.1:" + server.getAddress().getPort() + "\n");
+            runGit("add", ".codeperf.yml");
+            runGit("commit", "-m", "add codeperf config");
+
+            ScanCommand command = new ScanCommand();
+            JCommander.newBuilder().addObject(command).build().parse("--upload");
+            command.setWorkingDirectoryForTest(tempDir);
+
+            CapturedRun capturedRun = captureStdout(command::execute);
+
+            assertEquals(0, capturedRun.exitCode);
+            assertEquals(0, requests.size());
+            assertTrue(capturedRun.output.contains("未发现本次范围内的 Java 源码变更"));
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
     public void should_ReturnError_When_UploadRequestedWithoutReportServerUrl() throws Exception {
         initGitRepo();
         write(".codeperf.yml",

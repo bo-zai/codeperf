@@ -16,13 +16,14 @@ import java.util.Map;
  * 结算页需要聚合用户、订单和物流信息，用于模拟真实业务中的多数据源补全流程。
  */
 @Service
-public class DemoCheckoutService {
+public class CheckoutSnapshotService {
 
     private final OrderMapper orderMapper;
     private final DeliveryClient deliveryClient;
     private final UserRepository userRepository;
 
-    public DemoCheckoutService(OrderMapper orderMapper, DeliveryClient deliveryClient, UserRepository userRepository) {
+    public CheckoutSnapshotService(OrderMapper orderMapper, DeliveryClient deliveryClient,
+                                   UserRepository userRepository) {
         this.orderMapper = orderMapper;
         this.deliveryClient = deliveryClient;
         this.userRepository = userRepository;
@@ -53,4 +54,3 @@ public class DemoCheckoutService {
         return row;
     }
 }
-

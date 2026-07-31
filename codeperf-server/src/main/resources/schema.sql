@@ -70,7 +70,7 @@ CREATE TABLE IF NOT EXISTS analysis_task (
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   UNIQUE KEY uk_analysis_task_id (task_id),
-  INDEX idx_analysis_task_repo_commit_env (repository_id, git_commit_id, env_name),
+  UNIQUE KEY uk_analysis_task_repo_commit_env (repository_id, git_commit_id, env_name),
   INDEX idx_analysis_task_status (status)
 ) COMMENT='分析任务表';
 

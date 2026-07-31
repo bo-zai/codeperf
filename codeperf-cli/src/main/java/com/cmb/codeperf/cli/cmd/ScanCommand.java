@@ -98,10 +98,15 @@ public class ScanCommand {
             List<Path> files = scanAll
                     ? resolveAllSourceFiles(context, config)
                     : resolveChangedSourceFiles(context, scanRange);
+            List<Path> scanFiles = filterConfiguredSourceFiles(context, config, files);
+            if (!scanAll && scanFiles.isEmpty()) {
+                printNoChangedSourceFiles(scanRange);
+                return 0;
+            }
 
             // 执行源码扫描：先构建类索引再执行规则，支持跨方法调用链追踪
             SourceScanResult result = new SourceScanner().scan(new SourceScanRequest(
-                    context.getRootDirectory(), filterConfiguredSourceFiles(context, config, files), config));
+                    context.getRootDirectory(), scanFiles, config));
 
             // 风险归因：仅变更模式执行，通过 git blame 区分新增/历史风险，门禁仅阻断新增风险
             if (!scanAll) {
@@ -163,6 +168,13 @@ public class ScanCommand {
                 + "，解析错误=" + result.getParseErrors().size());
         System.out.println(gateDecision.summary());
         printModuleSummary(result, moduleResolver);
+    }
+
+    private void printNoChangedSourceFiles(GitScanRange scanRange) {
+        System.out.println("[codeperf] 命令=scan，用途=Git 推送门禁，范围=pre-push 推送提交范围");
+        System.out.println("[codeperf] 扫描基线=" + scanRange.getSource()
+                + "，范围=" + describeScanRange(scanRange));
+        System.out.println("[codeperf] 未发现本次范围内的 Java 源码变更，跳过静态扫描、报告生成和上报。");
     }
 
     private String describeScanRange(GitScanRange scanRange) {

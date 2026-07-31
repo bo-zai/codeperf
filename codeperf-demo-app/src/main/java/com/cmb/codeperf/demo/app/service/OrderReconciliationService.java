@@ -12,19 +12,19 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 流水线联调验证服务。
- * 该服务保留真实项目中常见的批量聚合写法，便于验证 CodePerf 对循环内 I/O 放大的识别和动态佐证。
+ * 订单对账服务。
+ * 该服务保留真实项目中常见的批量聚合写法，用于展示循环内 I/O 被数据规模放大的业务风险。
  */
 @Service
-public class PipelineVerificationService {
+public class OrderReconciliationService {
 
     private final UserRepository userRepository;
     private final OrderMapper orderMapper;
     private final CustomerProfileClient customerProfileClient;
 
-    public PipelineVerificationService(UserRepository userRepository,
-                                       OrderMapper orderMapper,
-                                       CustomerProfileClient customerProfileClient) {
+    public OrderReconciliationService(UserRepository userRepository,
+                                      OrderMapper orderMapper,
+                                      CustomerProfileClient customerProfileClient) {
         this.userRepository = userRepository;
         this.orderMapper = orderMapper;
         this.customerProfileClient = customerProfileClient;
@@ -32,7 +32,6 @@ public class PipelineVerificationService {
 
     /**
      * 构建对账明细。
-     * 这里故意保留循环内访问 Mapper、Repository、外部 Client 的真实风险形态，用于完整联调静态和动态结果关联。
      *
      * @param userIds 用户 ID 列表
      * @return 对账明细列表
@@ -48,9 +47,6 @@ public class PipelineVerificationService {
             row.put("order", order);
             row.put("profile", profile);
             row.put("reconciliationStatus", "WAIT_CONFIRM");
-            row.put("reconciliationStatus1", "WAIT_CONFIRM");
-            row.put("reconciliationStatus2", "WAIT_CONFIRM");
-            row.put("reconciliationStatus3", "WAIT_CONFIRM");
             rows.add(row);
         }
         return rows;

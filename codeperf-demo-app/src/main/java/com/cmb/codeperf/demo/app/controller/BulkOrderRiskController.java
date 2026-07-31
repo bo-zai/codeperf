@@ -13,8 +13,7 @@ import java.util.Map;
 
 /**
  * 批量订单风险接口。
- * <p>
- * 用于模拟业务里的批量查询和导出场景，便于 CodePerf 在真实项目代码上验证循环内 I/O 风险。
+ * 用于模拟业务里的批量查询和导出场景。
  */
 @RestController
 @RequestMapping("/demo/orders/risk")

@@ -10,7 +10,6 @@ import com.cmb.codeperf.server.service.repository.memory.InMemoryAnalysisTaskRep
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
 
 public class AnalysisTaskServiceTest {
 
@@ -64,13 +63,24 @@ public class AnalysisTaskServiceTest {
     }
 
     @Test
-    public void should_LinkDynamicEvidenceToLatestTask_When_SameCommitScannedMultipleTimes() {
+    public void should_ReuseTask_When_SameCommitIdentityCreatedMultipleTimes() {
         AnalysisTaskService service = new AnalysisTaskService(
                 new InMemoryAnalysisTaskRepository(), new StaticReportSummarizer(), new RuntimeEvidenceAggregator());
 
         AnalysisTaskCreateBO firstCommand = sameCommitCommand();
         AnalysisTaskBO first = service.create(firstCommand);
-        AnalysisTaskBO latest = service.create(sameCommitCommand());
+        AnalysisTaskBO second = service.create(sameCommitCommand());
+
+        assertEquals(first.getAnalysisTaskId(), second.getAnalysisTaskId());
+    }
+
+    @Test
+    public void should_LinkDynamicEvidenceToReusedTask_When_SameCommitScannedMultipleTimes() {
+        AnalysisTaskService service = new AnalysisTaskService(
+                new InMemoryAnalysisTaskRepository(), new StaticReportSummarizer(), new RuntimeEvidenceAggregator());
+
+        AnalysisTaskBO first = service.create(sameCommitCommand());
+        AnalysisTaskBO reused = service.create(sameCommitCommand());
         String payload = "{"
                 + "\"remoteUrl\":\"git@gitlab.company.com:mall/order-service.git\","
                 + "\"commit\":\"abc\","
@@ -82,8 +92,8 @@ public class AnalysisTaskServiceTest {
 
         service.acceptDynamicEvidenceByIdentity(payload);
 
-        assertNull(service.get(first.getAnalysisTaskId()).getDynamicPayload());
-        assertEquals(payload, service.get(latest.getAnalysisTaskId()).getDynamicPayload());
+        assertEquals(first.getAnalysisTaskId(), reused.getAnalysisTaskId());
+        assertEquals(payload, service.get(first.getAnalysisTaskId()).getDynamicPayload());
     }
 
     @Test

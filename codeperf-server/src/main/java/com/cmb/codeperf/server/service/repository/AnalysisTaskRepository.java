@@ -35,16 +35,16 @@ public interface AnalysisTaskRepository {
     Optional<AnalysisTaskBO> findByTaskId(String taskId);
 
     /**
-     * 按 Git 构建身份查询最新分析任务。
-     * 同一提交可能被开发者多次本地扫描或重复提测，动态证据必须挂到最新任务，避免污染历史报告。
+     * 按 Git 构建身份查询唯一分析任务。
+     * 静态扫描与动态证据通过同一仓库、提交、分支、环境形成稳定关联，重复扫描应复用同一个任务。
      *
      * @param remoteUrl 远程仓库地址
      * @param commit 提交 SHA
      * @param branch 分支名称
      * @param env 环境名称
-     * @return 最新匹配任务
+     * @return 匹配任务
      */
-    Optional<AnalysisTaskBO> findLatestByCommitIdentity(String remoteUrl, String commit, String branch, String env);
+    Optional<AnalysisTaskBO> findByCommitIdentity(String remoteUrl, String commit, String branch, String env);
 
     /**
      * 查询最近创建的分析任务。

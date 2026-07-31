@@ -1,6 +1,6 @@
 package com.cmb.codeperf.demo.app.controller;
 
-import com.cmb.codeperf.demo.app.service.ManualBatchExportService;
+import com.cmb.codeperf.demo.app.service.OrderExportService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -12,18 +12,17 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 批量导出接口。
- * <p>
- * 用于模拟业务中“导出用户 + 订单 + 物流补齐”的常见场景，方便在本地手动运行 CodePerf scan 验证。
+ * 订单导出接口。
+ * 用于模拟业务中“导出用户 + 订单 + 物流补齐”的常见场景。
  */
 @RestController
 @RequestMapping("/demo/export")
-public class ManualBatchExportController {
+public class OrderExportController {
 
-    private final ManualBatchExportService manualBatchExportService;
+    private final OrderExportService orderExportService;
 
-    public ManualBatchExportController(ManualBatchExportService manualBatchExportService) {
-        this.manualBatchExportService = manualBatchExportService;
+    public OrderExportController(OrderExportService orderExportService) {
+        this.orderExportService = orderExportService;
     }
 
     /**
@@ -39,7 +38,7 @@ public class ManualBatchExportController {
                 : userIds;
         Map<String, Object> response = new LinkedHashMap<String, Object>();
         response.put("userIds", effectiveUserIds);
-        response.put("rows", manualBatchExportService.exportRows(effectiveUserIds));
+        response.put("rows", orderExportService.exportRows(effectiveUserIds));
         return response;
     }
 }

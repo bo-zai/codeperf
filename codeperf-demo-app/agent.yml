@@ -1,5 +1,5 @@
 serverUrl: http://127.0.0.1:9095
-appName: codeperf-demo-app
+appName: codeperf-demo-multi-module
 env: local
 uploadEnabled: true
 buildInfoPath: D:/workspace/codeperf/codeperf-demo-app/build-info.properties

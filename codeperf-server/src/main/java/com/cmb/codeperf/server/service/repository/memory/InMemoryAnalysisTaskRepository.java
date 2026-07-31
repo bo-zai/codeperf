@@ -58,7 +58,7 @@ public class InMemoryAnalysisTaskRepository implements AnalysisTaskRepository {
     }
 
     @Override
-    public Optional<AnalysisTaskBO> findLatestByCommitIdentity(String remoteUrl, String commit, String branch, String env) {
+    public Optional<AnalysisTaskBO> findByCommitIdentity(String remoteUrl, String commit, String branch, String env) {
         for (int i = taskOrder.size() - 1; i >= 0; i--) {
             AnalysisTaskBO task = tasks.get(taskOrder.get(i));
             if (task == null) {

@@ -57,6 +57,21 @@ public class AnalysisTaskService {
     }
 
     public AnalysisTaskBO create(AnalysisTaskCreateBO command) {
+        if (hasStableTaskIdentity(command)) {
+            java.util.Optional<AnalysisTaskBO> existing = repository.findByCommitIdentity(
+                    command.getRemoteUrl(), command.getCommit(), command.getBranch(), command.getEnv());
+            if (existing.isPresent()) {
+                AnalysisTaskBO task = existing.get();
+                log.info("静态任务已存在，复用已有任务 taskId={} project={} remoteUrl={} commit={} branch={} env={}",
+                        task.getAnalysisTaskId(),
+                        task.getProject(),
+                        task.getRemoteUrl(),
+                        task.getCommit(),
+                        task.getBranch(),
+                        task.getEnv());
+                return task;
+            }
+        }
         String id = UUID.randomUUID().toString();
         AnalysisTaskBO task = new AnalysisTaskBO(
                 id,
@@ -140,6 +155,14 @@ public class AnalysisTaskService {
         return saved;
     }
 
+    private boolean hasStableTaskIdentity(AnalysisTaskCreateBO command) {
+        return command != null
+                && !isBlank(command.getRemoteUrl())
+                && !isBlank(command.getCommit())
+                && !isBlank(command.getBranch())
+                && !isBlank(command.getEnv());
+    }
+
     public AnalysisTaskBO acceptDynamicEvidence(String taskId, String payload) {
         AnalysisTaskBO task = get(taskId);
         task.setDynamicPayload(payload);
@@ -162,7 +185,7 @@ public class AnalysisTaskService {
                 identity.commit,
                 identity.branch,
                 identity.env);
-        java.util.Optional<AnalysisTaskBO> matched = repository.findLatestByCommitIdentity(
+        java.util.Optional<AnalysisTaskBO> matched = repository.findByCommitIdentity(
                 identity.remoteUrl, identity.commit, identity.branch, identity.env);
         if (!matched.isPresent()) {
             log.warn("动态证据未匹配到静态任务 appName={} remoteUrl={} commit={} branch={} env={}",
@@ -213,6 +236,10 @@ public class AnalysisTaskService {
 
     private String valueOrEmpty(String value) {
         return value == null ? "" : value;
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.trim().isEmpty();
     }
 
     private List<StaticFindingBO> extractStaticFindings(String taskId, String payload) {

@@ -347,8 +347,26 @@ public class ScanCommand {
         return context.getConfig().getReport().getLocal().getPath();
     }
 
+    /**
+     * 判断是否需要上传扫描报告。
+     * <ul>
+     *   <li>pre-push hook 场景：根据配置文件 report.upload.enabled 决定</li>
+     *   <li>手动执行场景：只有 --upload 参数才上传</li>
+     * </ul>
+     */
     private boolean shouldUpload(ProjectContext context) {
-        return upload || context.getConfig().getReport().getUpload().isEnabled();
+        if (isPrePushHook()) {
+            return context.getConfig().getReport().getUpload().isEnabled();
+        }
+        return upload;
+    }
+
+    /**
+     * 检测是否运行在 pre-push hook 环境。
+     * pre-push hook 会注入 CODEPERF_PUSH_* 系列环境变量，Windows 和 Linux 均支持。
+     */
+    private boolean isPrePushHook() {
+        return System.getenv("CODEPERF_PUSH_NEW_SHA") != null;
     }
 
     private void uploadReport(ProjectContext context, Path reportPath, GitPushRange pushRange) throws Exception {

@@ -1,7 +1,6 @@
 package com.cmb.codeperf.agent.collect;
 
 import com.cmb.codeperf.agent.config.AgentConfig;
-import com.cmb.codeperf.agent.logging.AgentLogger;
 import com.cmb.codeperf.agent.session.CallNode;
 import com.cmb.codeperf.agent.session.IoEvent;
 import com.cmb.codeperf.agent.session.RequestData;
@@ -33,8 +32,7 @@ public final class Recorder {
     private static volatile AgentConfig config;
     private static volatile SessionData session;
     private static volatile Profiler sampler;
-    private static volatile SessionWriter writer;
-    private static volatile DynamicEvidenceReporter reporter;
+    private static volatile AsyncSessionPublisher publisher;
     private static final AtomicBoolean completed = new AtomicBoolean(false);
 
     /** 当前线程正在测量的请求；为 null 表示本线程不在采集窗口内。 */
@@ -58,8 +56,8 @@ public final class Recorder {
     public static void init(AgentConfig cfg, Profiler s, SessionWriter w, DynamicEvidenceReporter r) {
         config = cfg;
         sampler = s;
-        writer = w;
-        reporter = r;
+        closePublisher();
+        publisher = new AsyncSessionPublisher(w, r);
         completed.set(false);
         SessionData sd = new SessionData();
         sd.setEntryMethod(cfg.getEntryMethod());
@@ -69,6 +67,18 @@ public final class Recorder {
         sd.setStartTimeEpochMs(System.currentTimeMillis());
         sd.setJavaVersion(System.getProperty("java.version"));
         session = sd;
+    }
+
+    private static void closePublisher() {
+        AsyncSessionPublisher currentPublisher = publisher;
+        if (currentPublisher == null) {
+            return;
+        }
+        try {
+            currentPublisher.close();
+        } catch (Throwable ignore) {
+            // 重新初始化时关闭旧后台线程失败不能阻断 agent 启动。
+        }
     }
 
     public static AgentConfig config() {
@@ -196,7 +206,7 @@ public final class Recorder {
             PREPARED_SQL.clear();
 
             if (shouldWriteAndReport) {
-                writeAndReport(session);
+                publisher.publish(session);
             }
         } catch (Throwable ignore) {
             // 绝不影响业务
@@ -416,22 +426,6 @@ public final class Recorder {
         } catch (Throwable ignore) {
         }
         return 0L;
-    }
-
-    private static void writeAndReport(SessionData currentSession) {
-        if (writer != null) {
-            writer.write(currentSession); // 写数据 + .done 标记
-        }
-        if (reporter == null) {
-            AgentLogger.info("dynamic evidence upload skipped, uploadEnabled=false");
-            return;
-        }
-        try {
-            reporter.report(currentSession);
-        } catch (Throwable t) {
-            AgentLogger.error("dynamic evidence upload failed: "
-                    + t.getClass().getSimpleName() + ": " + t.getMessage());
-        }
     }
 
     /** 调用栈帧。 */

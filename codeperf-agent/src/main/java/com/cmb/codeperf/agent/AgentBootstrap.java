@@ -7,7 +7,6 @@ import com.cmb.codeperf.agent.collect.Recorder;
 import com.cmb.codeperf.agent.collect.SessionWriter;
 import com.cmb.codeperf.agent.config.AgentConfig;
 import com.cmb.codeperf.agent.logging.AgentLogger;
-import com.cmb.codeperf.agent.upload.AsyncDynamicEvidenceReporter;
 import com.cmb.codeperf.agent.upload.DynamicEvidenceReporter;
 import com.cmb.codeperf.agent.upload.DynamicEvidenceUploader;
 
@@ -50,7 +49,7 @@ public final class AgentBootstrap {
             throw new IllegalArgumentException("uploadEnabled=true requires serverUrl");
         }
         validateUploadIdentity(cfg);
-        return new AsyncDynamicEvidenceReporter(new DynamicEvidenceUploader(
+        return new DynamicEvidenceReporter(new DynamicEvidenceUploader(
                 cfg.getServerUrl(), cfg.getAnalysisTaskId(), cfg.getConnectTimeoutMs(), cfg.getReadTimeoutMs(),
                 cfg.getAppName(), cfg.getEnv(),
                 cfg.getRemoteUrl(), cfg.getCommit(), cfg.getBranch()));

@@ -24,15 +24,38 @@ public class Main {
     }
 
     /**
-     * 设置控制台输出编码为 UTF-8，解决 Windows 下中文乱码问题。
-     * Git Bash/IDEA Terminal 默认使用 UTF-8，但 Java 在 Windows 上默认使用 GBK。
+     * 设置控制台输出编码，解决 Windows 下中文乱码问题。
+     * <ul>
+     *   <li>Git Bash / IDEA Terminal：期望 UTF-8，需要强制设置</li>
+     *   <li>PowerShell / CMD：使用系统默认编码（GBK），不应强制 UTF-8</li>
+     * </ul>
      */
     private static void setConsoleEncoding() {
-        try {
-            System.setOut(new PrintStream(System.out, true, StandardCharsets.UTF_8));
-            System.setErr(new PrintStream(System.err, true, StandardCharsets.UTF_8));
-        } catch (Exception ignored) {
+        if (isWindows() && isGitBashOrCygwin()) {
+            try {
+                System.setOut(new PrintStream(System.out, true, StandardCharsets.UTF_8));
+                System.setErr(new PrintStream(System.err, true, StandardCharsets.UTF_8));
+            } catch (Exception ignored) {
+            }
         }
+    }
+
+    private static boolean isWindows() {
+        return System.getProperty("os.name", "").toLowerCase().contains("windows");
+    }
+
+    /**
+     * 检测是否运行在 Git Bash 或 Cygwin 环境。
+     * 这些终端会设置特定的环境变量。
+     */
+    private static boolean isGitBashOrCygwin() {
+        String term = System.getenv("TERM");
+        String msystem = System.getenv("MSYSTEM");
+        String cygwin = System.getenv("CYGWIN");
+
+        return (term != null && term.contains("xterm"))
+            || msystem != null
+            || cygwin != null;
     }
 
     /**

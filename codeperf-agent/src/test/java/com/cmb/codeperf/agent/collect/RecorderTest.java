@@ -7,9 +7,16 @@ import com.cmb.codeperf.agent.upload.DynamicEvidenceReporter;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.lang.reflect.Method;
 import java.nio.file.Path;
+import java.nio.charset.StandardCharsets;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BooleanSupplier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -75,9 +82,86 @@ public class RecorderTest {
 
         assertTrue(firstStarted);
         assertTrue(secondStarted);
-        assertEquals(2, writer.getWriteCount());
-        assertEquals(2, reporter.getReportCount());
+        assertTrue(waitUntil(() -> writer.getWriteCount() == 2));
+        assertTrue(waitUntil(() -> reporter.getReportCount() == 2));
         assertEquals(2, reporter.getLastRequestCount());
+    }
+
+    @Test
+    public void should_ReturnImmediately_When_SessionWriterIsBlocked() throws Exception {
+        AgentConfig config = new AgentConfig();
+        config.setEntryMethod("GET");
+        config.setEntryPath("/api");
+        config.setMode("continuous");
+        BlockingSessionWriter writer = new BlockingSessionWriter(tempDir.resolve("perf-data.raw").toString());
+        Recorder.init(config, null, writer, null);
+
+        assertTrue(Recorder.tryStartRequest(new MockRequest("GET", "/api/orders/1")));
+        long startNanos = System.nanoTime();
+        Recorder.finishRequest();
+        long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startNanos);
+
+        assertTrue(elapsedMs < 200, "finishRequest must not wait for local file writing");
+        assertTrue(writer.awaitWriteStarted(), "background writer should receive session");
+        assertEquals(0, writer.getWriteCount());
+
+        writer.release();
+        assertTrue(writer.awaitWriteCompleted(), "background writer should finish after release");
+        assertEquals(1, writer.getWriteCount());
+    }
+
+    @Test
+    public void should_ReturnImmediately_When_DynamicReporterIsBlocked() throws Exception {
+        AgentConfig config = new AgentConfig();
+        config.setEntryMethod("GET");
+        config.setEntryPath("/api");
+        config.setMode("continuous");
+        BlockingEvidenceReporter reporter = new BlockingEvidenceReporter();
+        Recorder.init(config, null, null, reporter);
+
+        assertTrue(Recorder.tryStartRequest(new MockRequest("GET", "/api/orders/1")));
+        long startNanos = System.nanoTime();
+        Recorder.finishRequest();
+        long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startNanos);
+
+        assertTrue(elapsedMs < 200, "finishRequest must not wait for dynamic evidence upload");
+        assertTrue(reporter.awaitReportStarted(), "background reporter should receive session");
+        assertEquals(0, reporter.getReportCount());
+
+        reporter.release();
+        assertTrue(reporter.awaitReportCompleted(), "background reporter should finish after release");
+        assertEquals(1, reporter.getReportCount());
+    }
+
+    @Test
+    public void should_WriteCompletionLog_When_AsyncSessionPublishSucceeded() throws Exception {
+        PrintStream originalOut = System.out;
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        System.setOut(new PrintStream(output, true, StandardCharsets.UTF_8.name()));
+        try {
+            AgentConfig config = new AgentConfig();
+            config.setEntryMethod("GET");
+            config.setEntryPath("/api");
+            config.setMode("continuous");
+            CountingSessionWriter writer = new CountingSessionWriter(tempDir.resolve("perf-data.raw").toString());
+            CountingEvidenceReporter reporter = new CountingEvidenceReporter();
+            Recorder.init(config, null, writer, reporter);
+
+            assertTrue(Recorder.tryStartRequest(new MockRequest("GET", "/api/orders/1")));
+            Recorder.recordMybatis("com.cmb.demo.OrderMapper.selectById", "SELECT", 5L);
+            Recorder.finishRequest();
+
+            assertTrue(waitUntil(() -> logs(output)
+                    .contains("session async publish completed")));
+            String logs = logs(output);
+            assertTrue(logs.contains("requests=1"));
+            assertTrue(logs.contains("ioEvents=1"));
+            assertTrue(logs.contains("localWritten=true"));
+            assertTrue(logs.contains("uploaded=true"));
+            assertTrue(logs.contains("queueRemaining="));
+        } finally {
+            System.setOut(originalOut);
+        }
     }
 
     @Test
@@ -96,7 +180,7 @@ public class RecorderTest {
         Recorder.recordRpc("DUBBO", "com.cmb.demo.InventoryFacade", "queryStock", 13L);
         Recorder.finishRequest();
 
-        assertEquals(3, reporter.getLastIoEventCount());
+        assertTrue(waitUntil(() -> reporter.getLastIoEventCount() == 3));
         assertEquals("getForObject", reporter.getLastHttpMethodName());
     }
 
@@ -116,7 +200,7 @@ public class RecorderTest {
         Recorder.recordMybatis("com.cmb.demo.OrderMapper.selectById", "SELECT", 13L);
         Recorder.finishRequest();
 
-        assertEquals(1, reporter.getLastIoEventCount());
+        assertTrue(waitUntil(() -> reporter.getLastIoEventCount() == 1));
         assertEquals(3, reporter.getLastIoEventRepeatCount());
         assertEquals(26L, reporter.getLastIoEventElapsedMs());
     }
@@ -135,8 +219,28 @@ public class RecorderTest {
         MybatisMapperProxyAdvice.exit(method, System.nanoTime());
         Recorder.finishRequest();
 
-        assertEquals(1, reporter.getLastIoEventCount());
+        assertTrue(waitUntil(() -> reporter.getLastIoEventCount() == 1));
         assertEquals("selectByUserId", reporter.getLastIoEventMethodName());
+    }
+
+    private static boolean waitUntil(BooleanSupplier condition) {
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2);
+        while (System.nanoTime() < deadline) {
+            if (condition.getAsBoolean()) {
+                return true;
+            }
+            try {
+                Thread.sleep(20L);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return false;
+            }
+        }
+        return condition.getAsBoolean();
+    }
+
+    private static String logs(ByteArrayOutputStream output) {
+        return new String(output.toByteArray(), StandardCharsets.UTF_8);
     }
 
     public static class MockRequest {
@@ -163,31 +267,73 @@ public class RecorderTest {
 
     private static class CountingSessionWriter extends SessionWriter {
 
-        private int writeCount;
+        private final AtomicInteger writeCount = new AtomicInteger();
 
         CountingSessionWriter(String outputPath) {
             super(outputPath);
         }
 
         @Override
-        public synchronized void write(SessionData session) {
-            writeCount++;
+        public synchronized boolean write(SessionData session) {
+            writeCount.incrementAndGet();
+            return true;
         }
 
         int getWriteCount() {
-            return writeCount;
+            return writeCount.get();
+        }
+    }
+
+    private static class BlockingSessionWriter extends SessionWriter {
+
+        private final CountDownLatch writeStarted = new CountDownLatch(1);
+        private final CountDownLatch release = new CountDownLatch(1);
+        private final CountDownLatch writeCompleted = new CountDownLatch(1);
+        private final AtomicInteger writeCount = new AtomicInteger();
+
+        BlockingSessionWriter(String outputPath) {
+            super(outputPath);
+        }
+
+        @Override
+        public synchronized boolean write(SessionData session) {
+            writeStarted.countDown();
+            try {
+                release.await(5, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            writeCount.incrementAndGet();
+            writeCompleted.countDown();
+            return true;
+        }
+
+        boolean awaitWriteStarted() throws InterruptedException {
+            return writeStarted.await(2, TimeUnit.SECONDS);
+        }
+
+        void release() {
+            release.countDown();
+        }
+
+        boolean awaitWriteCompleted() throws InterruptedException {
+            return writeCompleted.await(2, TimeUnit.SECONDS);
+        }
+
+        int getWriteCount() {
+            return writeCount.get();
         }
     }
 
     private static class CountingEvidenceReporter extends DynamicEvidenceReporter {
 
-        private int reportCount;
-        private int lastRequestCount;
-        private int lastIoEventCount;
-        private int lastIoEventRepeatCount;
-        private long lastIoEventElapsedMs;
-        private String lastIoEventMethodName;
-        private String lastHttpMethodName;
+        private final AtomicInteger reportCount = new AtomicInteger();
+        private volatile int lastRequestCount;
+        private volatile int lastIoEventCount;
+        private volatile int lastIoEventRepeatCount;
+        private volatile long lastIoEventElapsedMs;
+        private volatile String lastIoEventMethodName;
+        private volatile String lastHttpMethodName;
 
         CountingEvidenceReporter() {
             super(null);
@@ -195,7 +341,7 @@ public class RecorderTest {
 
         @Override
         public void report(SessionData session) throws IOException {
-            reportCount++;
+            reportCount.incrementAndGet();
             lastRequestCount = session.getRequests().size();
             lastIoEventCount = session.getRequests().isEmpty()
                     ? 0
@@ -219,7 +365,7 @@ public class RecorderTest {
         }
 
         int getReportCount() {
-            return reportCount;
+            return reportCount.get();
         }
 
         int getLastRequestCount() {
@@ -244,6 +390,46 @@ public class RecorderTest {
 
         String getLastHttpMethodName() {
             return lastHttpMethodName;
+        }
+    }
+
+    private static class BlockingEvidenceReporter extends DynamicEvidenceReporter {
+
+        private final CountDownLatch reportStarted = new CountDownLatch(1);
+        private final CountDownLatch release = new CountDownLatch(1);
+        private final CountDownLatch reportCompleted = new CountDownLatch(1);
+        private final AtomicInteger reportCount = new AtomicInteger();
+
+        BlockingEvidenceReporter() {
+            super(null);
+        }
+
+        @Override
+        public void report(SessionData session) throws IOException {
+            reportStarted.countDown();
+            try {
+                release.await(5, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            reportCount.incrementAndGet();
+            reportCompleted.countDown();
+        }
+
+        boolean awaitReportStarted() throws InterruptedException {
+            return reportStarted.await(2, TimeUnit.SECONDS);
+        }
+
+        void release() {
+            release.countDown();
+        }
+
+        boolean awaitReportCompleted() throws InterruptedException {
+            return reportCompleted.await(2, TimeUnit.SECONDS);
+        }
+
+        int getReportCount() {
+            return reportCount.get();
         }
     }
 }

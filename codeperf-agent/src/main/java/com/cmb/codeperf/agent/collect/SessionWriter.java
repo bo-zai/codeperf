@@ -26,7 +26,7 @@ public class SessionWriter {
         this.mapper.enable(SerializationFeature.INDENT_OUTPUT);
     }
 
-    public synchronized void write(SessionData session) {
+    public synchronized boolean write(SessionData session) {
         try {
             File parent = output.getParent() == null ? null : output.getParent().toFile();
             if (parent != null && !parent.exists()) {
@@ -37,8 +37,10 @@ public class SessionWriter {
             Path done = Paths.get(output.toString() + ".done");
             Files.write(done, Long.toString(System.currentTimeMillis()).getBytes("UTF-8"));
             AgentLogger.info("session data written to " + output);
+            return true;
         } catch (Throwable t) {
             AgentLogger.error("failed to write session data: " + t);
+            return false;
         }
     }
 
